@@ -1,0 +1,61 @@
+version: 1
+name: ftn-remote-control-policy
+mode: allowlist
+approval_required: true
+
+# Authorized infrastructure management only.
+# No arbitrary shell/command execution is permitted by the control plane.
+
+capabilities:
+  read:
+    - server.health
+    - server.info
+    - server.services
+    - server.logs
+    - network.interfaces
+    - network.routes
+    - network.vlans
+    - network.bgp.status
+    - network.dns.status
+    - app.status
+    - app.logs
+    - app.config.read
+    - container.list
+    - container.logs
+    - metrics.read
+
+  operate:
+    - service.start
+    - service.stop
+    - service.restart
+    - container.start
+    - container.stop
+    - container.restart
+    - app.deploy
+    - app.rollback
+    - dns.reload
+    - network.reload
+    - backup.create
+
+high_risk:
+  - firewall.change
+  - routing.change
+  - bgp.change
+  - vlan.change
+  - dns.zone.write
+  - system.package.install
+  - system.reboot
+
+high_risk_requires:
+  - authenticated_user
+  - explicit_approval
+  - second_confirmation
+  - audit_log
+
+security:
+  transport: mTLS
+  socket_local_only: true
+  rbac: true
+  audit_log: true
+  command_allowlist: true
+  secrets_in_environment: false
