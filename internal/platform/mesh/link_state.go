@@ -9,24 +9,24 @@ import (
 type LinkState string
 
 const (
-	LinkUp       LinkState = "up"
-	LinkDown     LinkState = "down"
+	LinkUp LinkState = "up"
+	LinkDown LinkState = "down"
 	LinkDegraded LinkState = "degraded"
 )
 
 type Link struct {
-	ID          string    `json:"id"`
-	From        string    `json:"from"`
-	To          string    `json:"to"`
-	State       LinkState `json:"state"`
-	LatencyMS   float64   `json:"latency_ms"`
-	LossPercent float64   `json:"loss_percent"`
-	Metric      uint32    `json:"metric"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID string `json:"id"`
+	From string `json:"from"`
+	To string `json:"to"`
+	State LinkState `json:"state"`
+	LatencyMS float64 `json:"latency_ms"`
+	LossPercent float64 `json:"loss_percent"`
+	Metric uint32 `json:"metric"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type LinkStateStore struct {
-	mu    sync.RWMutex
+	mu sync.RWMutex
 	links map[string]Link
 }
 
@@ -67,4 +67,15 @@ func (s *LinkStateStore) Snapshot() []Link {
 func (s *LinkStateStore) Healthy(id string) bool {
 	l, ok := s.Get(id)
 	return ok && l.State == LinkUp
+}
+
+// HealthyLinks returns links observed recently enough to participate in route calculation.
+func (s *LinkStateStore) HealthyLinks(now time.Time, maxAge time.Duration) []Link {
+	out := make([]Link, 0)
+	for _, l := range s.Snapshot() {
+		if l.State == LinkUp && !l.UpdatedAt.IsZero() && now.Sub(l.UpdatedAt) <= maxAge {
+			out = append(out, l)
+		}
+	}
+	return out
 }
