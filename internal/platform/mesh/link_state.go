@@ -36,9 +36,7 @@ func (s *LinkStateStore) Upsert(l Link) {
 	if l.ID == "" || l.From == "" || l.To == "" || l.From == l.To { return }
 	if l.UpdatedAt.IsZero() { l.UpdatedAt = time.Now().UTC() }
 	if l.Metric == 0 { l.Metric = healthMetric(l.LatencyMS, l.LossPercent) }
-	s.mu.Lock()
-	s.links[l.ID] = l
-	s.mu.Unlock()
+	s.mu.Lock(); s.links[l.ID] = l; s.mu.Unlock()
 }
 
 func healthMetric(latencyMS, lossPercent float64) uint32 {
@@ -56,26 +54,16 @@ func (s *LinkStateStore) Get(id string) (Link, bool) {
 }
 
 func (s *LinkStateStore) Snapshot() []Link {
-	s.mu.RLock()
-	out := make([]Link, 0, len(s.links))
-	for _, l := range s.links { out = append(out, l) }
-	s.mu.RUnlock()
+	s.mu.RLock(); out := make([]Link, 0, len(s.links)); for _, l := range s.links { out = append(out, l) }; s.mu.RUnlock()
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
 
-func (s *LinkStateStore) Healthy(id string) bool {
-	l, ok := s.Get(id)
-	return ok && l.State == LinkUp
-}
+func (s *LinkStateStore) Healthy(id string) bool { l, ok := s.Get(id); return ok && l.State == LinkUp }
 
-// HealthyLinks returns links observed recently enough to participate in route calculation.
+// HealthyLinks returns recently observed links suitable for route calculation.
 func (s *LinkStateStore) HealthyLinks(now time.Time, maxAge time.Duration) []Link {
 	out := make([]Link, 0)
-	for _, l := range s.Snapshot() {
-		if l.State == LinkUp && !l.UpdatedAt.IsZero() && now.Sub(l.UpdatedAt) <= maxAge {
-			out = append(out, l)
-		}
-	}
+	for _, l := range s.Snapshot() { if l.State == LinkUp && !l.UpdatedAt.IsZero() && now.Sub(l.UpdatedAt) <= maxAge { out = append(out, l) } }
 	return out
 }
