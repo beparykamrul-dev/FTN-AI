@@ -1,0 +1,14 @@
+domain: familytimenet.com
+mailboxes:
+  - name: billing
+    purpose: billing-and-invoices
+    account_event_tracking: true
+  - name: accounts
+    purpose: financial-accounting
+    account_event_tracking: true
+  - name: support
+    purpose: support
+    account_event_tracking: false
+  - name: noreply
+    purpose: transactional-notifications
+    account_event_tracking: false
