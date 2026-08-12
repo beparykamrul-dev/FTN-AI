@@ -1,0 +1,39 @@
+# FTN Mail is private infrastructure for the owner, family, and Family Time Network.
+# It is not a public mailbox provider and must not expose self-service public signup.
+service:
+  name: ftn-mail
+  domain: familytimenet.com
+  visibility: private
+  public_signup: false
+  open_relay: false
+  external_forwarding_default: false
+
+principals:
+  owner:
+    enabled: true
+    scope: [personal, family, business]
+  family:
+    enabled: true
+    scope: [family]
+  business:
+    enabled: true
+    scope: [business]
+
+access:
+  require_authenticated_user: true
+  require_verified_mailbox: true
+  default_role: member
+  admin_role: mail_admin
+  audit_all_admin_actions: true
+
+mail:
+  local_delivery_only_by_default: false
+  outbound_requires_auth: true
+  inbound_unknown_recipient: reject
+  catch_all: false
+
+account_tracking:
+  enabled: true
+  allowed_scopes: [business]
+  financial_posting: never
+  requires_account_engine: true
