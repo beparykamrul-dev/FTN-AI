@@ -1,0 +1,18 @@
+domain: familytimenet.com
+mail_domain: familytimenet.com
+submission:
+  enabled: true
+  require_authentication: true
+imap:
+  enabled: true
+  require_tls: true
+smtp:
+  require_tls_for_submission: true
+security:
+  reject_invalid_auth: true
+  rate_limit_enabled: true
+  audit_enabled: true
+account_events:
+  enabled: true
+  endpoint: ${FTN_ACCOUNT_EVENTS_ENDPOINT}
+  authentication: service_token
