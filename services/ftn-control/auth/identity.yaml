@@ -1,0 +1,17 @@
+version: 1
+identity:
+  provider: ftn-local
+  signup: disabled
+  password_authentication: true
+  session_policy:
+    max_age_hours: 24
+    revoke_on_service_removal: true
+
+provisioning:
+  authority: ftn-control-panel
+  assignment_required: true
+  mailbox_creation: control-panel-only
+
+authorization:
+  default_deny: true
+  service_assignment_required: true
