@@ -1,0 +1,30 @@
+version: "1"
+
+routes:
+  - /overview
+  - /infrastructure
+  - /services
+  - /dns
+  - /database
+  - /certificates
+  - /mesh
+  - /consistency
+  - /observability
+  - /incidents
+  - /ai
+  - /billing
+  - /communication
+  - /builders
+  - /app-store
+  - /source-catalog
+  - /deployments
+  - /audit
+  - /settings
+
+shell:
+  sidebar: adaptive
+  topbar: true
+  mobile_navigation: true
+  command_search: true
+  global_health_indicator: true
+  realtime_notifications: true
