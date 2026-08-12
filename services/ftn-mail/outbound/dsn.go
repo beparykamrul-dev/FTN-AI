@@ -1,0 +1,35 @@
+package outbound
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"errors"
+	"strings"
+)
+
+type DeliveryStatus struct {
+	QueueID string
+	Status string
+	Action string
+	Diagnostic string
+}
+
+type DSNParser struct{}
+
+func (DSNParser) Parse(ctx context.Context, raw []byte) (DeliveryStatus,error) {
+	select { case <-ctx.Done(): return DeliveryStatus{},ctx.Err(); default: }
+	if len(bytes.TrimSpace(raw))==0 { return DeliveryStatus{},errors.New("empty DSN") }
+	status:=DeliveryStatus{Status:"unknown"}
+	sc:=bufio.NewScanner(bytes.NewReader(raw))
+	for sc.Scan(){line:=strings.TrimSpace(sc.Text());lower:=strings.ToLower(line)
+		if strings.HasPrefix(lower,"action:"){status.Action=strings.TrimSpace(line[len("action:"):])}
+		if strings.HasPrefix(lower,"status:"){status.Status=strings.TrimSpace(line[len("status:"):])}
+		if strings.HasPrefix(lower,"diagnostic-code:"){status.Diagnostic=strings.TrimSpace(line[len("diagnostic-code:"):])}
+		if strings.HasPrefix(lower,"x-ftn-queue-id:"){status.QueueID=strings.TrimSpace(line[len("x-ftn-queue-id:"):])}
+	}
+	if err:=sc.Err();err!=nil{return DeliveryStatus{},err};return status,nil
+}
+
+func (s DeliveryStatus) PermanentFailure() bool { return strings.HasPrefix(s.Status,"5.") || strings.EqualFold(s.Action,"failed") }
+func (s DeliveryStatus) TemporaryFailure() bool { return strings.HasPrefix(s.Status,"4.") || strings.EqualFold(s.Action,"delayed") }
