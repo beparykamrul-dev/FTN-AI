@@ -23,16 +23,24 @@ export type MapFeature = {
   properties: Record<string, string | number | boolean | null>;
 };
 
+const SAFE_STATUSES = new Set<GeoNode["status"]>([
+  "healthy", "degraded", "warning", "critical", "unknown", "maintenance",
+]);
+
+const safeStatus = (status: GeoNode["status"]): GeoNode["status"] =>
+  SAFE_STATUSES.has(status) ? status : "unknown";
+
 /**
  * Converts FTN-safe geographic state into provider-safe map features.
- * Private telemetry, credentials, raw logs and secrets must never enter this adapter.
+ * Private telemetry, credentials, raw logs, MAC addresses and secrets
+ * must never enter this adapter.
  */
 export function buildMapFeatures(nodes: GeoNode[], links: GeoLink[]): MapFeature[] {
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const features: MapFeature[] = nodes.map((node) => ({
     type: "Feature",
     geometry: { type: "Point", coordinates: [node.longitude, node.latitude] },
-    properties: { id: node.id, name: node.name, status: node.status },
+    properties: { id: node.id, name: node.name, status: safeStatus(node.status) },
   }));
 
   for (const link of links) {
@@ -51,8 +59,10 @@ export function buildMapFeatures(nodes: GeoNode[], links: GeoLink[]): MapFeature
       },
       properties: {
         id: link.id,
-        status: link.status,
-        latencyMs: link.latencyMs,
+        status: safeStatus(link.status),
+        latencyMs: typeof link.latencyMs === "number" && Number.isFinite(link.latencyMs)
+          ? link.latencyMs
+          : null,
       },
     });
   }
