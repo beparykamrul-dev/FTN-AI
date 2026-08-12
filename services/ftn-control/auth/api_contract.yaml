@@ -1,0 +1,34 @@
+openapi: 3.0.3
+info:
+  title: FTN Central Identity API
+  version: 0.1.0
+paths:
+  /api/v1/auth/sign-in:
+    post:
+      summary: Authenticate an FTN identity
+      requestBody:
+        required: true
+      responses:
+        '200': {description: Authenticated}
+        '401': {description: Authentication failed}
+  /api/v1/auth/sign-out:
+    post:
+      summary: Revoke the current session
+      responses:
+        '204': {description: Signed out}
+  /api/v1/auth/session:
+    get:
+      summary: Return current identity and active service assignments
+      responses:
+        '200': {description: Current session}
+        '401': {description: Unauthorized}
+  /api/v1/control/identities:
+    post:
+      summary: Provision an identity from FTN Control Panel
+      responses:
+        '201': {description: Identity provisioned}
+  /api/v1/control/service-assignments:
+    post:
+      summary: Assign an enabled FTN service to an identity
+      responses:
+        '201': {description: Service assigned}
