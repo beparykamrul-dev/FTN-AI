@@ -1,0 +1,44 @@
+version: 1
+dns:
+  health:
+    interval: ${DNS_HEALTH_INTERVAL}
+    probe_timeout: ${DNS_PROBE_TIMEOUT}
+    collect:
+      - reachability
+      - latency_ms
+      - query_success
+      - query_errors
+      - availability
+      - query_rate
+      - error_rate
+
+  sources:
+    live_state: authoritative_dns_service
+    historical_metrics: postgresql
+    combine_sources: true
+
+  metrics:
+    retention_days: ${DNS_METRICS_RETENTION_DAYS}
+    history_retention_days: ${DNS_HISTORY_RETENTION_DAYS}
+    index:
+      - server_id,checked_at_desc
+      - zone_id,checked_at_desc
+
+  safety:
+    read_only_ai_tools: true
+    preserve_existing_schema: true
+    destructive_schema_changes: false
+
+  ai_tools:
+    - id: dns.health
+      risk: READ
+      approval_required: false
+      audit: true
+    - id: dns.zone.list
+      risk: READ
+      approval_required: false
+      audit: true
+    - id: dns.record.list
+      risk: READ
+      approval_required: false
+      audit: true
