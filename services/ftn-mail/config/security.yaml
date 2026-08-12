@@ -1,0 +1,22 @@
+mail_security:
+  open_relay: false
+  public_signup: false
+  auth_required_for_submission: true
+  tls_required_for_submission: true
+  tls_required_for_imap: true
+  unknown_recipient_policy: reject
+  catch_all: false
+  brute_force_protection: true
+  per_user_rate_limit: true
+  per_ip_rate_limit: true
+  attachment_size_limit_mb: 25
+  message_size_limit_mb: 40
+  quarantine_attachments: true
+  audit_authentication: true
+  audit_delivery: true
+
+account_integration:
+  enabled: true
+  financial_write_access: false
+  event_publish_only: true
+  service_authentication: required
