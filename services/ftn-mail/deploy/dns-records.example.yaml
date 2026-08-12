@@ -1,0 +1,19 @@
+# Replace placeholders with the actual production mail host/IP before publishing.
+domain: familytimenet.com
+records:
+  - type: MX
+    name: "@"
+    priority: 10
+    value: mail.familytimenet.com.
+  - type: A
+    name: mail
+    value: ${FTN_MAIL_IPV4}
+  - type: TXT
+    name: "@"
+    value: "v=spf1 mx -all"
+  - type: TXT
+    name: _dmarc
+    value: "v=DMARC1; p=quarantine; adkim=s; aspf=s"
+  - type: TXT
+    name: ${DKIM_SELECTOR}._domainkey
+    value: "${DKIM_PUBLIC_KEY}"
