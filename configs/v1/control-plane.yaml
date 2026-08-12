@@ -1,0 +1,111 @@
+version: "1"
+
+control_plane:
+  name: FTN Universal Control Plane
+  mode: production
+
+  registry:
+    services: true
+    modules: true
+    apps: true
+    versions: true
+    dependencies: true
+    deployment_targets: true
+
+  services:
+    - ftn-ai-agent
+    - ftn-dns
+    - ftn-metrics
+    - ftn-api
+    - ftn-proxy
+    - ftn-websocket
+    - ftn-socket
+    - ftn-observability
+    - ftn-incident
+    - ftn-diagnostic
+    - ftn-service-runtime
+    - ftn-workload-scheduler
+    - ftn-service-registry
+    - ftn-mesh
+    - ftn-consistency
+    - ftn-ai-call-center
+    - ftn-ai-billing-gateway
+    - ftn-messenger
+    - ftn-mail
+    - ftn-notification
+    - ftn-file-store
+    - ftn-search
+    - ftn-workflow
+    - ftn-dashboard-builder
+    - ftn-android-builder
+    - ftn-app-builder
+    - ftn-app-registry
+    - ftn-app-store
+
+  source_management:
+    repository_backed: true
+    keep_source_catalog: true
+    build_on_demand: true
+    deploy_on_demand: true
+    automatic_server_selection: true
+    record_deployment_target: true
+
+  deployment:
+    flow:
+      - source
+      - validate
+      - build
+      - analyze
+      - select_server
+      - policy_check
+      - approval
+      - deploy
+      - verify
+      - register
+    preserve_working_deployment: true
+    destructive_migration: false
+    blind_restart: false
+    blind_failover: false
+
+  server_fabric:
+    unified_resource_view: true
+    capacity_aware: true
+    health_aware: true
+    latency_aware: true
+    mesh_aware: true
+    consistency_aware: true
+    failure_domain_aware: true
+
+  dashboard:
+    summary_view: true
+    module_detail_view: true
+    service_graph: true
+    dependency_graph: true
+    deployment_history: true
+    incident_drilldown: true
+    mac_ip_diagnosis: true
+    global_to_ftn_path_view: true
+
+  app_platform:
+    registry_required: true
+    manifest_required: true
+    permission_review: true
+    compatibility_check: true
+    security_validation: true
+    publish_to_ftn_app_store: true
+    versioned_release: true
+
+  ai:
+    use_ftn_metrics_first: true
+    use_ftn_api_first: true
+    deterministic_first: true
+    advisory_only: true
+    privileged_execution: false
+    credentials_access: false
+
+  security:
+    external_telemetry_export: false
+    secrets_in_telemetry: false
+    redact_before_ai: true
+    immutable_audit: true
+    approval_for_privileged_actions: true
