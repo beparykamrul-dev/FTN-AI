@@ -1,0 +1,22 @@
+version: 1
+scope: private
+owner: FTN
+
+# Services become available in the shared FTN Sign In / Sign Up UI
+# only after an administrator provisions and enables them here.
+services:
+  - id: account
+    name: FTN Account
+    enabled: true
+    login_required: true
+    signup_mode: provisioned_only
+
+  - id: mail
+    name: FTN Mail
+    domain: familytimenet.com
+    enabled: true
+    login_required: true
+    signup_mode: provisioned_only
+
+  # Future FTN services can be added by the Control Panel.
+  # Public self-registration remains disabled by default.
