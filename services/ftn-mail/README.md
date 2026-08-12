@@ -1,6 +1,6 @@
 # FTN Mail Server
 
-Lightweight self-hosted mail service for `familytimenet.com`.
+Private, lightweight, self-hosted mail infrastructure for the owner, family, and Family Time Network business under `familytimenet.com`.
 
 ## Service boundary
 
@@ -11,14 +11,26 @@ Lightweight self-hosted mail service for `familytimenet.com`.
 - Mail event publishing to FTN Account
 - DKIM/SPF/DMARC deployment configuration
 - Rate limiting, abuse controls and audit hooks
+- No public self-service mailbox signup
+- No open relay
 
-The mail transport remains independent from the FTN Account Engine. Financial interpretation is performed by the account/event pipeline, never by SMTP/IMAP transport code.
+The mail transport remains independent from the FTN Account Engine. Financial interpretation is performed by the account/event pipeline, never by SMTP/IMAP transport code. The mail service has no direct financial posting permission.
 
-## Planned mail identities
+## Ownership scopes
 
-- `@familytimenet.com`
-- configurable service mailboxes such as `billing@familytimenet.com`, `support@familytimenet.com`, and `accounts@familytimenet.com`
+- `personal` — owner's private mail
+- `family` — explicitly provisioned family mailboxes
+- `business` — Family Time Network operational mail
+
+## Example service mailboxes
+
+- `billing@familytimenet.com`
+- `accounts@familytimenet.com`
+- `support@familytimenet.com`
+- `noreply@familytimenet.com`
+
+Personal and family addresses are provisioned only after explicit owner selection.
 
 ## Deployment
 
-This directory contains FTN-owned configuration and integration code. Actual DNS records and TLS certificates must be provisioned for the production host before public mail delivery is enabled.
+This directory contains FTN-owned configuration and integration code. Production DNS, TLS certificates, DKIM private keys, mailbox passwords, and service tokens must remain in the deployment secret store and must never be committed to Git.
