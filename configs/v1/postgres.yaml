@@ -1,0 +1,25 @@
+version: 1
+postgres:
+  host: ${PGHOST}
+  port: ${PGPORT}
+  database: ${PGDATABASE}
+  user: ${PGUSER}
+  password_env: PGPASSWORD
+  sslmode: ${PGSSLMODE}
+  pool:
+    min_conns: 2
+    max_conns: 20
+    max_conn_lifetime: 1h
+    max_conn_idle_time: 15m
+    health_check_period: 30s
+  readiness:
+    enabled: true
+    ping_timeout: 5s
+    schema_version_check: true
+  migrations:
+    enabled: true
+    automatic_destructive_changes: false
+    require_clean_failure: true
+  safety:
+    preserve_existing_dns_schema: true
+    preserve_existing_mail_data: true
