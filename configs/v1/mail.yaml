@@ -1,0 +1,41 @@
+version: 1
+mail:
+  authorization:
+    require_identity_context: true
+    mailbox_scope_required: true
+    message_scope_required: true
+    attachment_scope_required: true
+
+  storage:
+    blob_root: ${MAIL_BLOB_ROOT}
+    chunk_size: ${MAIL_BLOB_CHUNK_SIZE}
+    stream_buffer_size: ${MAIL_STREAM_BUFFER_SIZE}
+    max_attachment_size: ${MAIL_MAX_ATTACHMENT_SIZE}
+    whole_file_memory_load: false
+
+  blobstore:
+    interface:
+      put: true
+      open: true
+      delete: true
+    formats:
+      legacy_v1:
+        read: true
+        write: false
+      encrypted_v2:
+        read: true
+        write: true
+    encryption:
+      algorithm: AES-GCM
+      key_material_from_secret_store: true
+      key_material_in_database: false
+      key_rotation_supported: true
+
+  streaming:
+    enabled: true
+    chunk_authenticated: true
+    abort_on_authentication_failure: true
+
+  safety:
+    preserve_existing_attachments: true
+    destructive_migration: false
