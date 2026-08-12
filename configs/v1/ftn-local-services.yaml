@@ -1,0 +1,68 @@
+version: "1"
+name: ftn-local-services
+purpose: local-network media, storage, family and learning ecosystem
+
+services:
+  - id: ftn-fiber-gis
+    category: network
+    features: [fiber-map, splice-map, route-table, olt-onu-map, auto-discovery]
+  - id: ftn-ftp
+    category: storage
+  - id: ftn-drive
+    category: storage
+    features: [private-files, sharing, backup, quotas]
+  - id: ftn-media-server
+    category: media
+    features: [movie-library, local-cache, metadata]
+  - id: ftn-ip-tv
+    category: media
+    features: [iptv, m3u, epg, token-access, local-edge-cache]
+  - id: ftn-cctv
+    category: media
+    features: [camera-management, live-view, recording, playback, ai-events]
+  - id: ftn-smart-tv
+    category: client
+    features: [iptv, media, cctv]
+  - id: ftn-app-store
+    category: platform
+    features: [app-catalog, install, update, rollback, signed-packages]
+  - id: ftn-tools
+    category: platform
+    features: [file-tools, diagnostics, speed-test, network-tools]
+  - id: ftn-baby-home
+    category: family
+    features: [family-dashboard, parental-controls, approved-content]
+  - id: ftn-baby-game-store
+    category: family
+    features: [age-appropriate-games, parental-approval, offline-content]
+  - id: ftn-learning
+    category: education
+    features: [learning-video, courses, quizzes, progress]
+  - id: ftn-ai-assistant
+    category: ai
+    features: [local-assistant, learning-help, service-help]
+
+architecture:
+  control_plane: ftn-control-plane
+  api: ftn-api
+  identity: ftn-control-plane
+  database: ftn-database
+  metrics: ftn-metrics
+  storage: ftn-drive
+  app_distribution: ftn-app-store
+
+network:
+  prefer_local_edge: true
+  local_cache: true
+  global_fallback: true
+  offline_capable: true
+
+safety:
+  child_accounts_require_parental_controls: true
+  age_appropriate_content: true
+  external_telemetry_export: false
+  secrets_in_telemetry: false
+  destructive_migration: false
+
+roadmap:
+  mesh_v2_blocked_until_core_services_complete: true
