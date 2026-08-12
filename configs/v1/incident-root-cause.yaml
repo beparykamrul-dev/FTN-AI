@@ -1,0 +1,85 @@
+version: 1
+incident_root_cause:
+  identity:
+    service: ftn-incident-root-cause
+    schema_version: 1
+
+  detection:
+    enabled: true
+    sources:
+      - metrics
+      - logs
+      - traces
+      - events
+      - service_dependencies
+      - mesh_paths
+      - consistency_state
+    correlate_temporal_events: true
+    preserve_evidence: true
+
+  impact:
+    enabled: true
+    scopes:
+      - node
+      - interface
+      - service
+      - dependency
+      - mesh_path
+      - region
+      - user_centre
+      - global
+    dependency_graph: true
+    blast_radius_estimation: true
+
+  diagnosis:
+    mac_lookup: true
+    ip_lookup: true
+    interface_lookup: true
+    node_lookup: true
+    service_lookup: true
+    path_lookup: true
+    root_cause_confidence: true
+    evidence_required: true
+    authorized_infrastructure_only: true
+
+  analysis:
+    correlate_latency: true
+    correlate_packet_loss: true
+    correlate_jitter: true
+    correlate_route_changes: true
+    correlate_dns_health: true
+    correlate_cache_health: true
+    correlate_service_errors: true
+    correlate_consistency_drift: true
+    distinguish_symptom_from_cause: true
+
+  ai:
+    enabled: true
+    mode: advisory
+    evidence_required: true
+    explain_findings: true
+    confidence_required: true
+    arbitrary_infrastructure_credentials: false
+    privileged_actions_require_approval: true
+    autonomous_external_changes: false
+
+  response:
+    recommendations: true
+    remediation_plan: true
+    rollback_plan: true
+    failover_recommendation: true
+    automatic_remediation: false
+    approval_required_for_privileged_actions: true
+
+  safety:
+    preserve_existing_data: true
+    destructive_migration: false
+    no_secrets_in_telemetry: true
+    redact_secrets_before_correlation: true
+    external_telemetry_export: false
+    allow_explicit_authorized_export: false
+    immutable_audit_trail: true
+
+  retention:
+    incident_history_days: ${INCIDENT_HISTORY_RETENTION_DAYS}
+    evidence_history_days: ${INCIDENT_EVIDENCE_RETENTION_DAYS}
