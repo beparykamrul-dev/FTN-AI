@@ -23,16 +23,14 @@ type Result struct {
 	Error     string
 }
 
-// Probe performs a lightweight TCP reachability/latency check. DNS protocol
-// validation is intentionally kept separate so the transport layer stays small.
+// Probe performs a lightweight transport reachability/latency check.
+// DNS protocol validation remains separate so the transport layer stays small.
 func Probe(ctx context.Context, p ResolverProbe, timeout time.Duration) Result {
 	start := time.Now()
 	result := Result{Name: p.Name, Address: p.Address}
-
 	if p.Network == "" {
 		p.Network = "tcp"
 	}
-
 	dialer := net.Dialer{Timeout: timeout}
 	conn, err := dialer.DialContext(ctx, p.Network, p.Address)
 	result.Latency = time.Since(start)
@@ -43,4 +41,30 @@ func Probe(ctx context.Context, p ResolverProbe, timeout time.Duration) Result {
 	_ = conn.Close()
 	result.Reachable = true
 	return result
+}
+
+// RankByLatency returns probes ordered by measured latency, placing
+// unreachable endpoints last. The input is copied so callers retain ownership.
+func RankByLatency(results []Result) []Result {
+	out := append([]Result(nil), results...)
+	for i := 1; i < len(out); i++ {
+		for j := i; j > 0; j-- {
+			left, right := out[j-1], out[j]
+			if betterOrEqual(left, right) {
+				break
+			}
+			out[j-1], out[j] = out[j], out[j-1]
+		}
+	}
+	return out
+}
+
+func betterOrEqual(a, b Result) bool {
+	if a.Reachable != b.Reachable {
+		return a.Reachable
+	}
+	if !a.Reachable {
+		return true
+	}
+	return a.Latency <= b.Latency
 }
