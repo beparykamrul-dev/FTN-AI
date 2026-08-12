@@ -1,0 +1,58 @@
+version: "1"
+
+control_plane_security:
+  mode: production
+  identity: ftn-identity
+  rbac: true
+  roles:
+    - super_admin
+    - admin
+    - noc_operator
+    - network_engineer
+    - dns_operator
+    - database_operator
+    - security_operator
+    - billing_operator
+    - developer
+    - app_manager
+    - auditor
+    - read_only
+
+  authorization:
+    resource_scoped: true
+    service_scoped: true
+    environment_scoped: true
+    node_scoped: true
+    action_scoped: true
+
+  privileged_actions:
+    approval_required: true
+    impact_analysis_required: true
+    policy_check_required: true
+    backend_only: true
+
+  audit:
+    immutable: true
+    record_actor: true
+    record_time: true
+    record_target: true
+    record_reason: true
+    record_before_after: true
+    record_approval: true
+    record_result: true
+    record_evidence: true
+
+  ai:
+    direct_privileged_execution: false
+    advisory_only: true
+
+  privacy:
+    external_telemetry_export: false
+    secrets_in_telemetry: false
+    secrets_rendered_in_ui: false
+    redact_before_ai: true
+
+  safety:
+    destructive_migration: false
+    blind_restart: false
+    blind_failover: false
