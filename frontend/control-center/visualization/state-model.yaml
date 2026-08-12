@@ -1,0 +1,39 @@
+version: "1"
+
+visualization_state:
+  entities:
+    node:
+      required: [id, name, status, latitude, longitude]
+    link:
+      required: [id, from, to, status, latency]
+    service:
+      required: [id, name, status]
+    incident:
+      required: [id, severity, status, affected_entities]
+
+  layers:
+    - gis
+    - topology
+    - services
+    - latency
+    - traffic
+    - incidents
+    - deployments
+
+  drilldown:
+    global: [region, pop, node]
+    node: [interface, service, metric]
+    service: [dependency, metric, incident]
+    incident: [evidence, dependency, root_cause]
+
+  update_policy:
+    source_priority: [ftn_metrics, ftn_api, websocket]
+    changed_entities_only: true
+    stale_after_seconds: 30
+    preserve_last_known_state: true
+    unknown_state_on_expiry: true
+
+  privacy:
+    provider_safe_geometry_only: true
+    private_telemetry_external: false
+    secrets_external: false
