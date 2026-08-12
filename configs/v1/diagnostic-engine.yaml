@@ -1,0 +1,74 @@
+version: 1
+diagnostic_engine:
+  identity:
+    service: ftn-diagnostic-engine
+    schema_version: 1
+
+  inputs:
+    observability: true
+    incident_root_cause: true
+    service_registry: true
+    dependency_graph: true
+    resource_fabric: true
+    workload_scheduler: true
+    mesh: true
+    consistency: true
+
+  lookup:
+    mac: true
+    ip: true
+    interface: true
+    node: true
+    service: true
+    dependency: true
+    path: true
+    global_to_ftn: true
+    authorized_infrastructure_only: true
+
+  analysis:
+    timeline_reconstruction: true
+    causal_chain: true
+    blast_radius: true
+    path_comparison: true
+    consistency_drift: true
+    deployment_correlation: true
+    security_event_correlation: true
+    multi_signal_confirmation: true
+
+  ai:
+    enabled: true
+    mode: advisory
+    evidence_required: true
+    confidence_required: true
+    explain_findings: true
+    arbitrary_infrastructure_credentials: false
+    privileged_actions_require_approval: true
+    autonomous_external_changes: false
+
+  remediation:
+    recommendations_only: true
+    approval_required: true
+    preflight_validation: true
+    post_change_verification: true
+    rollback_plan_required: true
+    no_blind_restart: true
+    no_blind_failover: true
+
+  safety:
+    preserve_existing_data: true
+    destructive_migration: false
+    external_telemetry_export: false
+    allow_explicit_authorized_export: false
+    secrets_in_telemetry: false
+    redact_secrets_before_correlation: true
+    credentials_in_diagnostics: false
+    immutable_audit_trail: true
+
+  output:
+    dashboard_summary: true
+    detailed_module_view: true
+    evidence_timeline: true
+    dependency_graph: true
+    path_view: true
+    ai_explanation: true
+    remediation_plan: true
