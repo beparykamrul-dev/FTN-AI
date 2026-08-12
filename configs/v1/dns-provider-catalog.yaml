@@ -1,0 +1,81 @@
+version: "1"
+name: ftn-dns-provider-catalog
+
+portal:
+  name: FTN DNS Portal
+  control_plane: aspnet-core
+  backend: go
+  database: postgresql
+  connection_pool: pgbouncer
+  edge_proxy: cloudflare
+
+providers:
+  authoritative:
+    - name: powerdns-enterprise
+      category: authoritative
+      adapter: powerdns
+    - name: technitium-dns-enterprise
+      category: authoritative
+      adapter: technitium
+    - name: coredns
+      category: authoritative
+      adapter: coredns
+    - name: godns
+      category: authoritative
+      adapter: godns
+
+  recursive:
+    - name: unbound
+      category: recursive
+      adapter: unbound
+
+  traffic:
+    - name: dnsdist
+      category: dns-load-balancer
+      adapter: dnsdist
+
+  managed:
+    - name: dnspod-tencent-cloud
+      category: managed-dns
+      adapter: dnspod
+    - name: cloudflare-dns
+      category: managed-dns
+      adapter: cloudflare
+    - name: akamai-dns
+      category: managed-dns
+      adapter: akamai
+
+  fabric:
+    - name: anycast-dns
+      category: dns-fabric
+      adapter: anycast
+    - name: global-dns-mesh
+      category: dns-fabric
+      adapter: ftn-mesh
+
+  cache_and_edge:
+    - name: netflix-open-connect
+      category: content-edge-reference
+      adapter: integration
+      notes: "Represent Netflix/Open Connect integration as an optional edge/cache integration, not as a DNS provider."
+
+platform:
+  control_plane:
+    aspnet_core: true
+    go_backend: true
+  data:
+    postgresql: true
+    pgbouncer: true
+  edge:
+    cloudflare: true
+
+policy:
+  provider_independent_contract: true
+  health_checks: true
+  failover_policy: controlled
+  configuration_preview: true
+  audit_required: true
+  approval_required_for_mutation: true
+  external_telemetry_export: false
+  secrets_in_telemetry: false
+  destructive_migration: false
