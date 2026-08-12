@@ -1,0 +1,56 @@
+version: "1"
+
+visualization:
+  mode: production
+  gis:
+    enabled: true
+    provider: mapbox
+    map_data_boundary:
+      private_telemetry_to_provider: false
+      secrets_to_provider: false
+    layers:
+      - servers
+      - pop
+      - dns
+      - database
+      - certificates
+      - services
+      - ftnmesh
+      - consistency
+      - incidents
+      - latency
+      - routes
+      - fiber
+
+  operational_views:
+    global_map: true
+    service_graph: true
+    dependency_graph: true
+    server_fabric: true
+    traffic_flow: true
+    latency_heatmap: true
+    incident_overlay: true
+    deployment_path: true
+    evidence_timeline: true
+
+  interaction:
+    drilldown: true
+    global_to_node: true
+    node_to_interface: true
+    interface_to_metric: true
+    metric_to_incident: true
+    incident_to_root_cause: true
+
+  realtime:
+    websocket: true
+    live_node_health: true
+    live_incidents: true
+    live_latency: true
+    live_routes: true
+
+  policy:
+    ftn_metrics_first: true
+    ftn_api_first: true
+    ai_advisory_only: true
+    external_telemetry_export: false
+    secrets_in_visualization: false
