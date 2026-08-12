@@ -12,6 +12,7 @@ type ListenerConfig struct {
 	MaxConnections    int
 	ConnectionTimeout time.Duration
 	Session           SessionConfig
+	Admission         *AdmissionMiddleware
 }
 
 type Listener struct {
@@ -34,16 +35,20 @@ func (l *Listener) Serve(ctx context.Context, ln net.Listener, auth Authenticato
 		if err != nil {
 			select { case <-ctx.Done(): return nil; default: return err }
 		}
+		if l.cfg.Admission != nil && l.cfg.Admission.Accept(ctx, conn) != nil {
+			_ = conn.Close()
+			continue
+		}
 		select {
 		case l.sem <- struct{}{}:
-			go func() {
-				defer func() { <-l.sem; _ = conn.Close() }()
+			go func(c net.Conn) {
+				defer func() { <-l.sem; _ = c.Close() }()
 				if l.cfg.ConnectionTimeout > 0 {
-					_ = conn.SetDeadline(time.Now().Add(l.cfg.ConnectionTimeout))
-					defer conn.SetDeadline(time.Time{})
+					_ = c.SetDeadline(time.Now().Add(l.cfg.ConnectionTimeout))
+					defer c.SetDeadline(time.Time{})
 				}
-				_ = ServeSession(ctx, conn, l.cfg.Session, auth, delivery)
-			}()
+				_ = ServeSession(ctx, c, l.cfg.Session, auth, delivery)
+			}(conn)
 		default:
 			_ = conn.Close()
 		}
