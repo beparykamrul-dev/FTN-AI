@@ -1,0 +1,35 @@
+version: 1
+service: ftn-sms
+mode: self_hosted
+
+transport:
+  primary: gsm_modem
+  alternatives:
+    - authorized_smpp
+  third_party_cloud_provider: false
+
+sender:
+  require_operator_approval: true
+  allow_unregistered_sender_id: false
+  allow_sender_spoofing: false
+
+queue:
+  enabled: true
+  max_attempts: 5
+  backoff: exponential
+  durable: true
+
+security:
+  require_account_identity: true
+  require_permission: true
+  audit_events: true
+  rate_limit_enabled: true
+
+privacy:
+  message_data_external_processing: false
+  retain_delivery_events: true
+
+observability:
+  health_endpoint: /health/ready
+  metrics_enabled: true
+  delivery_events_enabled: true
