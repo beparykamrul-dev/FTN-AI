@@ -1,0 +1,34 @@
+version: "1"
+name: ftn-social
+kind: optional-ftn-app
+
+runtime:
+  api: ftn-api
+  realtime: ftn-websocket
+  socket: ftn-socket
+  identity: ftn-control-plane
+  database: ftn-database
+  notifications: ftn-notification
+
+features:
+  direct_messages: true
+  group_messages: true
+  channels: true
+  notifications: true
+  file_sharing: true
+  search: true
+  sessions: true
+  moderation: true
+
+lifecycle:
+  enabled_by_default: false
+  deploy_from_app_store: true
+  health_monitored: true
+  audit_enabled: true
+
+security:
+  authentication_required: true
+  authorization_required: true
+  privileged_operations_approval: true
+  external_telemetry_export: false
+  secrets_in_telemetry: false
