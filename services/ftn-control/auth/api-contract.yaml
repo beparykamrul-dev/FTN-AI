@@ -1,0 +1,32 @@
+version: 1
+endpoints:
+  - method: POST
+    path: /api/v1/control/services/:service_id/assignments
+    purpose: assign an enabled FTN service to an existing identity
+
+  - method: DELETE
+    path: /api/v1/control/services/:service_id/assignments/:assignment_id
+    purpose: revoke service access
+
+  - method: GET
+    path: /api/v1/auth/services
+    purpose: list services available to the signed-in identity
+
+  - method: POST
+    path: /api/v1/auth/sign-in
+    purpose: authenticate an FTN identity
+
+  - method: POST
+    path: /api/v1/auth/sign-out
+    purpose: revoke the current session
+
+  - method: GET
+    path: /api/v1/auth/session
+    purpose: return identity and active service assignments
+
+rules:
+  - public_signup: false
+  - service_assignment_required: true
+  - disabled_service_denied: true
+  - revoked_assignment_denied: true
+  - mailbox_provisioning_controlled_by_control_panel: true
