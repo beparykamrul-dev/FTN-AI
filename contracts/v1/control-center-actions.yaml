@@ -1,0 +1,45 @@
+version: "1"
+
+actions:
+  service:
+    - health_check
+    - inspect
+    - reload
+    - restart
+    - maintenance
+  dns:
+    - resolver_health_check
+    - upstream_inspect
+    - zone_preview
+    - record_change
+    - dnssec_check
+    - propagation_check
+  server:
+    - health_diagnostics
+    - resource_inspection
+    - network_inspection
+    - maintenance
+    - deployment
+  incident:
+    - inspect
+    - correlate
+    - root_cause
+    - remediation_preview
+
+workflow:
+  - request
+  - permission_check
+  - policy_check
+  - impact_analysis
+  - approval
+  - backend_execute
+  - verify
+  - audit
+
+safety:
+  ai_direct_execution: false
+  blind_restart: false
+  blind_failover: false
+  destructive_migration: false
+  secrets_returned: false
+  external_telemetry_export: false

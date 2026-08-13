@@ -1,0 +1,30 @@
+version: "1"
+name: ftn-os
+kind: native-runtime
+
+runtime:
+  lifecycle: managed
+  health: required
+  readiness: required
+  graceful_shutdown: true
+  dependency_ordering: true
+
+modules:
+  registry: ftn-module-registry
+  service_manager: ftn-service-manager
+  event_bus: ftn-event-bus
+  metrics: ftn-metrics
+  policy: ftn-policy
+  audit: ftn-audit
+
+execution:
+  privileged_actions: backend_policy_only
+  ai_execution: advisory_only
+
+privacy:
+  external_telemetry_export: false
+  secrets_in_telemetry: false
+
+data:
+  migration_mode: additive_only
+  destructive_migration: false

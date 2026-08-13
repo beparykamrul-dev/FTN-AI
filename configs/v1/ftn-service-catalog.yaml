@@ -1,0 +1,86 @@
+version: "1"
+name: ftn-service-catalog
+
+services:
+  - id: ftn-os
+    category: platform
+  - id: ftn-api
+    category: control
+  - id: ftn-dns
+    category: network
+    backends: [powerdns, godns]
+  - id: ftn-dns-resolver
+    category: network
+    backends: [unbound, technitium, coredns]
+  - id: ftn-ptr
+    category: dns
+  - id: ftn-metrics
+    category: observability
+  - id: ftn-monitoring
+    category: observability
+  - id: ftn-alerting
+    category: observability
+  - id: ftn-proxy
+    category: network
+  - id: ftn-mesh
+    category: network
+  - id: ftn-consistency
+    category: platform
+  - id: ftn-anycast
+    category: network
+  - id: ftn-websocket
+    category: realtime
+  - id: ftn-socket
+    category: realtime
+  - id: ftn-ai-agent
+    category: ai
+  - id: ftn-ai-dashboard-builder
+    category: builder
+  - id: ftn-android-builder
+    category: builder
+  - id: ftn-app-builder
+    category: builder
+  - id: ftn-app-store
+    category: platform
+  - id: ftn-call-center
+    category: ai
+  - id: ftn-billing-gateway
+    category: billing
+  - id: ftn-messenger
+    category: communication
+  - id: ftn-database
+    category: data
+    backends: [postgresql, pgbouncer]
+  - id: ftn-acme
+    category: security
+    issuers: [letsencrypt]
+  - id: ftn-certificate-monitor
+    category: security
+  - id: ftn-gis
+    category: visualization
+    provider_boundary: mapbox_safe
+  - id: ftn-control-plane
+    category: control
+  - id: ftn-source-registry
+    category: platform
+  - id: ftn-deployment
+    category: platform
+  - id: ftn-server-fabric
+    category: infrastructure
+  - id: ftn-incident-engine
+    category: observability
+  - id: ftn-audit
+    category: security
+
+runtime:
+  discovery: registry
+  lifecycle: ftn-os
+  health: ftn-metrics
+  authorization: ftn-control-plane
+  audit: ftn-audit
+
+safety:
+  ai_direct_privileged_execution: false
+  external_telemetry_export: false
+  secrets_in_telemetry: false
+  destructive_migration: false

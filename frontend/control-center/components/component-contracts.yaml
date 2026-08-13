@@ -1,0 +1,34 @@
+version: "1"
+
+components:
+  - name: HealthCard
+    data: health
+    realtime: true
+  - name: MetricCard
+    data: ftn_metrics
+    realtime: true
+  - name: ServiceStatus
+    data: ftn_api
+    realtime: true
+  - name: IncidentPanel
+    data: incidents
+    realtime: true
+  - name: DependencyGraph
+    data: dependencies
+    realtime: true
+  - name: ServerFabric
+    data: deployment_targets
+    realtime: true
+  - name: LatencyChart
+    data: latency_metrics
+    realtime: true
+  - name: ActivityTimeline
+    data: audit_events
+    realtime: true
+
+rules:
+  progressive_disclosure: true
+  evidence_on_drilldown: true
+  secrets_never_rendered: true
+  privileged_actions_backend_only: true
+  ai_advisory_only: true

@@ -1,0 +1,100 @@
+version: "1"
+
+control_plane_ui:
+  name: FTN Universal Control Center
+  mode: production
+  responsive: true
+  adaptive_layout: true
+  accessibility: true
+
+  navigation:
+    style: sidebar
+    sections:
+      - overview
+      - infrastructure
+      - services
+      - dns
+      - database
+      - certificates
+      - mesh
+      - consistency
+      - observability
+      - incidents
+      - ai
+      - billing
+      - communication
+      - builders
+      - app_store
+      - source_catalog
+      - deployments
+      - audit
+      - settings
+
+  overview:
+    summary_cards: true
+    global_health: true
+    service_health: true
+    server_fabric: true
+    active_incidents: true
+    deployment_activity: true
+    latency_summary: true
+    dns_summary: true
+    database_summary: true
+    certificate_summary: true
+
+  modules:
+    detailed_drilldown: true
+    dependency_graph: true
+    service_graph: true
+    global_to_ftn_path: true
+    mac_ip_diagnosis: true
+    evidence_timeline: true
+    logs: true
+    metrics: true
+    traces: true
+
+  visual:
+    density: adaptive
+    cards: compact
+    charts: interactive
+    tables: sortable_filterable
+    status_indicators: semantic
+    dark_mode: true
+    light_mode: true
+    mobile_layout: true
+
+  realtime:
+    websocket: true
+    event_stream: true
+    incident_updates: true
+    deployment_updates: true
+
+  ai:
+    contextual_assistant: true
+    use_ftn_metrics_first: true
+    use_ftn_api_first: true
+    advisory_only: true
+    show_evidence: true
+    show_confidence: true
+
+  deployment:
+    source_preview: true
+    diff_preview: true
+    target_selection: true
+    health_gate: true
+    approval_gate: true
+    rollback_view: true
+
+  app_store:
+    catalog: true
+    app_preview: true
+    versions: true
+    permissions: true
+    compatibility: true
+    release_channels: true
+
+  security:
+    role_based_access: true
+    audit_visible: true
+    secrets_never_rendered: true
+    external_telemetry_export: false

@@ -1,0 +1,59 @@
+version: "1"
+
+control_center_contract:
+  api:
+    base: /api/v1/control-center
+    endpoints:
+      - GET /overview
+      - GET /services
+      - GET /services/{service}
+      - GET /dns
+      - GET /databases
+      - GET /certificates
+      - GET /mesh
+      - GET /consistency
+      - GET /incidents
+      - GET /incidents/{id}
+      - GET /deployments
+      - GET /apps
+      - GET /audit
+
+  metrics:
+    namespace: ftn
+    required:
+      - health
+      - availability
+      - latency
+      - errors
+      - resource_usage
+
+  websocket:
+    path: /api/v1/control-center/events
+    events:
+      - service.health.changed
+      - metric.updated
+      - incident.created
+      - incident.updated
+      - deployment.changed
+      - certificate.changed
+      - dns.health.changed
+      - server.health.changed
+
+  response:
+    service: true
+    status: true
+    health: true
+    metrics: true
+    dependencies: true
+    incidents: true
+    latency: true
+    last_update: true
+    source: true
+
+  policy:
+    ftn_metrics_first: true
+    ftn_api_first: true
+    ai_advisory_only: true
+    privileged_actions_backend_only: true
+    secrets_never_returned: true
+    external_telemetry_export: false

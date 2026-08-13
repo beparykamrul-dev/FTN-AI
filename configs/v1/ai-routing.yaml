@@ -1,0 +1,50 @@
+version: "1"
+
+# AI is selective. Core FTN services use deterministic FTN metrics/APIs first.
+ai_routing:
+  default_mode: ftn_native
+  enabled: true
+
+  routing_order:
+    - ftn_metric
+    - ftn_api
+    - deterministic_rules
+    - ai_advisor
+
+  ai_usage:
+    enabled_for:
+      - root_cause_explanation
+      - anomaly_correlation
+      - incident_summary
+      - dependency_analysis
+      - remediation_advice
+    disabled_for:
+      - basic_health_checks
+      - raw_metric_collection
+      - routine_service_discovery
+      - deterministic_state_updates
+      - high_frequency_polling
+
+  ftn_native:
+    metrics:
+      enabled: true
+      authoritative: true
+    api:
+      enabled: true
+      authoritative: true
+
+  ai_boundary:
+    advisory_only: true
+    privileged_execution: false
+    credentials_access: false
+    automatic_external_changes: false
+
+  privacy:
+    external_telemetry_export: false
+    secrets_in_telemetry: false
+    redact_before_ai: true
+
+  efficiency:
+    cache_repeated_analysis: true
+    prefer_deterministic_results: true
+    avoid_ai_for_known_states: true

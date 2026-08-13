@@ -1,0 +1,80 @@
+version: "1"
+
+platform_monitoring:
+  mode: production
+
+  database:
+    enabled: true
+    engines:
+      postgresql: true
+      redis: true
+    metrics:
+      connections: true
+      active_queries: true
+      query_latency: true
+      slow_queries: true
+      errors: true
+      locks: true
+      replication_lag: true
+      cache_hit_ratio: true
+      storage_usage: true
+      transaction_rate: true
+      connection_pool: true
+    health:
+      liveness: true
+      readiness: true
+      dependency_checks: true
+    backup:
+      monitoring: true
+      last_success: true
+      age: true
+      restore_test_status: true
+    safety:
+      destructive_migration: false
+      automatic_schema_drop: false
+      secrets_in_metrics: false
+
+  acme_certificate_manager:
+    enabled: true
+    issuers:
+      acme: true
+    lifecycle:
+      discovery: true
+      issuance: true
+      renewal: true
+      revocation_tracking: true
+      expiry_tracking: true
+    monitoring:
+      certificate_expiry: true
+      days_to_expiry: true
+      issuer_status: true
+      order_status: true
+      challenge_status: true
+      renewal_failures: true
+      tls_handshake: true
+      certificate_chain: true
+    alerts:
+      expiry_warning: true
+      expiry_critical: true
+      renewal_failure: true
+      invalid_chain: true
+    security:
+      private_key_export: false
+      secrets_in_telemetry: false
+      redact_before_ai: true
+      external_telemetry_export: false
+
+  correlation:
+    database_to_service: true
+    certificate_to_service: true
+    dns_to_certificate: true
+    dns_to_database: true
+    mesh_path_to_service: true
+    incident_engine: true
+    root_cause_analysis: true
+
+  ai:
+    use_ftn_metrics_first: true
+    use_ftn_api_first: true
+    deterministic_first: true
+    advisory_only: true

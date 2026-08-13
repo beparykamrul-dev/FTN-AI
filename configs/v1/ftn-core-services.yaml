@@ -1,0 +1,48 @@
+version: "1"
+
+services:
+  ftn_api:
+    role: control-api
+    source_of_truth: ftn-metrics-and-api-contracts
+    privileged_execution: policy-gated
+
+  ftn_dns:
+    role: authoritative-and-management-dns
+    backends:
+      - powerdns
+      - godns
+    reverse_dns: true
+
+  ftn_metrics:
+    role: observability
+    telemetry:
+      external_export: false
+      secrets: false
+
+  ftn_proxy:
+    role: traffic-entry-and-routing
+    policy_controlled: true
+
+  ftn_mesh:
+    role: service-and-network-mesh
+    consistency: ftn-consistency
+    global_scope: true
+
+  anycast:
+    role: distributed-service-advertisement
+    control_plane: ftn_api
+    health_source: ftn_metrics
+    failover: policy-gated
+
+integration:
+  dashboard: ftn_control_plane
+  audit: ftn_audit
+  identity: ftn_identity
+  database: postgresql
+  connection_pool: pgbouncer
+
+invariants:
+  no_external_telemetry_export: true
+  no_secrets_in_telemetry: true
+  destructive_migration: false
+  ai_direct_privileged_execution: false

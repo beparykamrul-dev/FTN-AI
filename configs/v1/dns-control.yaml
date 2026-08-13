@@ -1,0 +1,70 @@
+version: "1"
+
+dns_control:
+  mode: production
+
+  resolver:
+    enabled: true
+    recursive: true
+    cache: true
+    health_checks: true
+    latency_tracking: true
+    upstream_health: true
+    failover: true
+    transports:
+      udp: true
+      tcp: true
+      doh: true
+      dot: true
+
+  domain:
+    registry: true
+    zones: true
+    records: true
+    dnssec: true
+    soa: true
+    ns: true
+    ttl: true
+    change_audit: true
+
+  monitoring:
+    enabled: true
+    metrics:
+      qps: true
+      cache_hit_ratio: true
+      latency: true
+      p95_latency: true
+      p99_latency: true
+      servfail: true
+      nxdomain: true
+      timeout: true
+      packet_loss: true
+      resource_usage: true
+      upstream_health: true
+    synthetic_queries: true
+    authoritative_checks: true
+    recursive_checks: true
+    nameserver_checks: true
+    zone_checks: true
+
+  incident:
+    correlation: true
+    dependency_graph: true
+    root_cause_analysis: true
+    mac_ip_diagnosis: true
+
+  ai:
+    enabled: true
+    use_ftn_metrics_first: true
+    use_ftn_api_first: true
+    advisory_only: true
+
+  external:
+    authorized_monitoring_only: true
+    external_telemetry_export: false
+
+  security:
+    secrets_in_telemetry: false
+    redact_before_ai: true
+    destructive_migration: false
+    immutable_audit: true

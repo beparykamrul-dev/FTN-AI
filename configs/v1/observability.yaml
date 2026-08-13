@@ -1,0 +1,129 @@
+version: 1
+observability:
+  identity:
+    service: ftn-observability
+    schema_version: 1
+
+  collection:
+    metrics: true
+    logs: true
+    traces: true
+    events: true
+    health_checks: true
+
+  sources:
+    node_runtime: true
+    kernel: true
+    network: true
+    mesh: true
+    consistency: true
+    services: true
+    dependencies: true
+    dns: true
+    cache: true
+    global_paths: true
+    user_centres: true
+
+  metrics:
+    interval: ${OBS_METRICS_INTERVAL}
+    retention_days: ${OBS_METRICS_RETENTION_DAYS}
+    collect:
+      - cpu_usage
+      - memory_usage
+      - storage_usage
+      - io_operations
+      - network_throughput
+      - latency_ms
+      - jitter_ms
+      - packet_loss_percent
+      - connection_count
+      - request_rate
+      - error_rate
+      - availability
+      - dns_response_time_ms
+      - cache_hit_ratio
+      - service_health
+      - mesh_path_health
+      - consistency_drift
+
+  logs:
+    enabled: true
+    retention_days: ${OBS_LOG_RETENTION_DAYS}
+    sources:
+      - node
+      - service
+      - security
+      - audit
+      - mesh
+      - consistency
+    normalize: true
+    preserve_event_time: true
+
+  traces:
+    enabled: true
+    sampling: ${OBS_TRACE_SAMPLING}
+    flows:
+      - user_to_edge
+      - edge_to_ftn
+      - service_to_dependency
+      - global_to_ftn
+
+  events:
+    persistence: postgresql
+    replay_enabled: ${OBS_EVENT_REPLAY_ENABLED}
+    retention_days: ${OBS_EVENT_RETENTION_DAYS}
+    types:
+      - health
+      - degradation
+      - failover
+      - recovery
+      - consistency
+      - deployment
+      - security
+
+  correlation:
+    enabled: true
+    correlate:
+      - metrics
+      - logs
+      - traces
+      - events
+      - service_dependencies
+      - mesh_paths
+    preserve_evidence: true
+
+  alerts:
+    enabled: true
+    levels:
+      - INFO
+      - WARNING
+      - DEGRADED
+      - CRITICAL
+      - OUTAGE
+      - SECURITY
+    suppress_duplicate_events: true
+    dependency_impact_analysis: true
+
+  diagnosis:
+    mac_lookup: true
+    ip_lookup: true
+    interface_lookup: true
+    node_lookup: true
+    service_lookup: true
+    path_lookup: true
+    authorized_infrastructure_only: true
+
+  ai:
+    enabled: true
+    mode: advisory
+    evidence_required: true
+    arbitrary_infrastructure_credentials: false
+    privileged_actions_require_approval: true
+    explain_findings: true
+    confidence_required: true
+
+  safety:
+    preserve_existing_data: true
+    destructive_migration: false
+    external_data_export: false
+    secrets_in_telemetry: false

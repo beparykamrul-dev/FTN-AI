@@ -1,0 +1,88 @@
+version: "1"
+name: ftn-dns
+mode: unified-multi-provider
+
+primary:
+  authoritative:
+    - powerdns
+    - godns
+  control_plane: aspnet-core
+  api_backend: go
+  database: postgresql
+  pooler: pgbouncer
+  traffic_policy: ftn-sdn
+  mesh: ftn-mesh
+
+resolver:
+  preferred:
+    - unbound
+    - coredns
+    - technitium
+  edge_routing: dnsdist
+
+providers:
+  - cloudflare-dns
+  - akamai-dns
+  - dnspod-tencent
+  - anycast-dns
+  - global-dns-mesh
+
+portal:
+  domain_management: true
+  zone_management: true
+  ptr_reverse_dns: true
+  dnssec: true
+  propagation_checks: true
+  health_checks: true
+  audit: true
+
+edge:
+  local_first: true
+  cache_aware: true
+  anycast_aware: true
+  path_quality_aware: true
+  metrics_feedback: true
+
+performance:
+  lightweight_components: true
+  avoid_duplicate_dns_services: true
+  prefer_local_cache: true
+  connection_pooling: true
+  asynchronous_control_plane: true
+  graceful_degradation: true
+
+routing:
+  policy_engine: ftn-sdn
+  preferred_path: measured_best
+  metrics:
+    - latency
+    - packet_loss
+    - jitter
+    - availability
+    - capacity
+  fallback:
+    - ftn-mesh
+    - anycast
+    - approved-provider-path
+
+root_dns:
+  role: resolution-fallback-and-bootstrap
+  authoritative_control: false
+  dns_integrity_validation: true
+
+external_provider_policy:
+  provider_neutral: true
+  traffic_hijacking: false
+  forced_rerouting: false
+  provider_health_based_selection: true
+
+telemetry:
+  external_export: false
+  secrets: false
+
+migration:
+  destructive: false
+
+notes:
+  - "Netflix is treated as an optional content/edge ecosystem integration, not as a DNS authority."
+  - "Government and institutional workloads can use FTN services through normal public DNS/root-DNS resolution paths without requiring provider-specific DNS infrastructure."

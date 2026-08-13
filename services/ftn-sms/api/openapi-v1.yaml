@@ -1,0 +1,80 @@
+openapi: 3.0.3
+info:
+  title: FTN SMS API
+  version: 1.0.0
+  description: Self-hosted FTN SMS API. Transport is limited to FTN-controlled GSM modem or authorized operator SMPP.
+paths:
+  /v1/sms/messages:
+    post:
+      summary: Queue an SMS
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendSMSRequest'
+      responses:
+        '202':
+          description: Accepted into queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueuedSMSResponse'
+        '400':
+          description: Invalid request
+        '401':
+          description: Authentication required
+        '403':
+          description: Permission, policy, approval, or Sender ID violation
+        '429':
+          description: Rate limit exceeded
+        '503':
+          description: SMS service unavailable
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    SendSMSRequest:
+      type: object
+      required: [sender_id, recipient, body]
+      properties:
+        sender_id:
+          type: string
+          minLength: 1
+          maxLength: 32
+        recipient:
+          type: string
+          minLength: 1
+          maxLength: 32
+        body:
+          type: string
+          minLength: 1
+          maxLength: 4096
+        scheduled_at:
+          type: string
+          format: date-time
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 100
+    QueuedSMSResponse:
+      type: object
+      required: [message_id, status]
+      properties:
+        message_id:
+          type: string
+        status:
+          type: string
+          enum: [QUEUED, PENDING_APPROVAL]
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

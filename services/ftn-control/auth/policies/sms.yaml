@@ -1,0 +1,43 @@
+version: 1
+service:
+  id: sms
+  enabled: true
+  display_name: FTN SMS
+
+capabilities:
+  - sms.send
+  - sms.schedule
+  - sms.status.read
+  - sms.resend
+  - sms.cancel
+
+policies:
+  - id: sms-send
+    effect: allow
+    capability: sms.send
+    resource: sms:message
+  - id: sms-schedule
+    effect: allow
+    capability: sms.schedule
+    resource: sms:message
+  - id: sms-status-read
+    effect: allow
+    capability: sms.status.read
+    resource: sms:message
+  - id: sms-resend
+    effect: allow
+    capability: sms.resend
+    resource: sms:message
+  - id: sms-cancel
+    effect: allow
+    capability: sms.cancel
+    resource: sms:message
+
+guardrails:
+  sender_id_must_be_approved: true
+  sender_id_must_be_active: true
+  transport_must_be_authorized: true
+  rate_limit_required: true
+  audit_required: true
+  ai_generated_requires_approval: true
+  third_party_cloud_provider: false
