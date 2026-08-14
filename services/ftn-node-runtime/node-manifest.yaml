@@ -1,0 +1,51 @@
+version: "1"
+name: ftn-node-runtime
+kind: ftos-node
+
+roles:
+  main:
+    global_peering: true
+    core_gateway: true
+    bgp: true
+  pop:
+    local_relay: true
+    edge_bridge: true
+    cache: true
+  client:
+    customer_edge: true
+    localized_mesh: true
+  backup:
+    failover: true
+    state_replication: true
+    bgp_convergence_assist: true
+
+common:
+  identity: required
+  authorization: required
+  health: required
+  telemetry: local-first
+  reconciliation: required
+  signed_releases: required
+  rollback: required
+  ai_assistant:
+    enabled: true
+    privileged_mutation: policy-gated
+
+network:
+  ipv4: true
+  ipv6: true
+  vlan: true
+  pppoe: true
+  nat: true
+  qos: true
+  conntrack: true
+  tcp_filtering: true
+  udp_filtering: true
+  http_filtering: true
+  vpn: true
+  mesh: true
+
+privacy:
+  third_party_access: false
+  external_data_export: false
+  secrets_in_logs: false
