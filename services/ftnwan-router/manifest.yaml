@@ -1,0 +1,69 @@
+version: "1"
+name: ftnwan-router
+kind: native-ftn-router
+mode: production
+
+control_plane:
+  identity: ftn-control-plane
+  policy: ftn-policy
+  audit: ftn-audit
+  metrics: ftn-metrics
+  reconciliation: ftn-consistency
+
+planes:
+  dataplane:
+    kernel: true
+    vpp: true
+    dpdk: true
+    provider_neutral_contract: true
+  control:
+    routing: true
+    bgp: true
+    ibgp: true
+    gtsm: true
+    failover: true
+  access:
+    vlan: true
+    pppoe: true
+    nat: true
+    qos: true
+    conntrack: true
+  filtering:
+    tcp: true
+    udp: true
+    http: true
+    connection_rate_limit: true
+  tunnels:
+    wireguard: true
+    vpn: true
+    mesh_adapters: true
+  management:
+    ssh: true
+    telnet: true
+    router_api: true
+    mikrotik_adapter: true
+    device_capability_discovery: true
+  provisioning:
+    zero_touch: true
+    transaction_boundary: true
+    rollback: true
+
+mikrotik:
+  integration: adapter
+  npk_build_pipeline: signed-and-versioned
+  direct_credentials_in_source: false
+  arbitrary_remote_command_execution: false
+
+security:
+  default_policy: deny
+  privileged_mutation: policy_and_approval
+  raw_command_passthrough: false
+  secrets_in_telemetry: false
+  external_telemetry_export: false
+  immutable_audit: true
+
+lifecycle:
+  preflight_required: true
+  health_gate_required: true
+  post_change_verification: true
+  rollback_plan_required: true
