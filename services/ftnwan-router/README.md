@@ -18,10 +18,11 @@ Production router subsystem boundary for FTN.OS / FTNWAN.
 - policy-gated configuration transactions
 - health verification and rollback
 - FTN Metrics, audit and reconciliation integration
+- shared AI assistant contract for local router, Android, PC, VPN and mesh access
 
-## Execution boundary
+## Security boundary
 
-The router control plane never accepts arbitrary shell commands, credentials, or AI-generated infrastructure mutations. Changes are represented as validated plans and passed through identity, policy, approval, preflight, transaction, verification and rollback controls.
+The router control plane does not accept arbitrary shell commands, credentials, or unrestricted AI-generated infrastructure mutations. Changes are represented as validated plans and passed through identity, policy, authorization, preflight, transaction, verification and rollback controls.
 
 ## Dataplane boundary
 
@@ -30,6 +31,14 @@ VPP and DPDK are acceleration backends, not separate control planes. FTNWAN cons
 ## MikroTik boundary
 
 MikroTik is integrated through a dedicated adapter. NPK artifacts are versioned/signed build outputs; production credentials and private signing material remain outside the repository.
+
+## Access AI
+
+Local router, Android, PC, VPN and mesh access surfaces share a bounded assistant contract. The assistant can explain, diagnose and recommend; privileged mutations remain behind authorization and transaction controls.
+
+## CCTV
+
+CCTV/cloud-player functionality is intentionally deferred until the core router and access/tunnel stack is complete.
 
 ## Completion gate
 
