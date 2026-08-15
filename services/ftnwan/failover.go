@@ -7,11 +7,11 @@ type FailoverPlan struct {
 	Reason  string
 }
 
+// BuildFailover selects the best healthy path other than the current path.
 func BuildFailover(paths []Path, current string) (FailoverPlan, bool) {
-	for _, p := range SelectBest(paths) {
-		if p.ID != current {
-			return FailoverPlan{Current: current, Next: p.ID, Reason: "current path is not preferred"}, true
-		}
+	best, ok := SelectPath(paths)
+	if !ok || best.ID == current {
+		return FailoverPlan{}, false
 	}
-	return FailoverPlan{}, false
+	return FailoverPlan{Current: current, Next: best.ID, Reason: "health or path quality changed"}, true
 }
