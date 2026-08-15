@@ -1,6 +1,9 @@
 package dynamic
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 // Backend is the storage/provider boundary for FTNDNS reconciliation.
 // Implementations may target FTN-owned authoritative DNS systems or other
@@ -8,6 +11,8 @@ import "context"
 type Backend interface {
 	Apply(ctx context.Context, add, remove []Record) error
 }
+
+var ErrBackendUnavailable = errors.New("FTNDNS backend unavailable")
 
 // Reconciler applies only the deterministic delta produced by Reconcile.
 type Reconciler struct {
