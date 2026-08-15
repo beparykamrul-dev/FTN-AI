@@ -1,0 +1,73 @@
+version: "1"
+name: ftn-auto-import
+purpose: auto-register FTN local ecosystem services into the existing service/module control plane
+
+# Import is registration-only. Discovery must never execute production actions.
+import:
+  mode: registry-only
+  source: ftn-local-services.yaml
+  target: ftn-service-catalog.yaml
+  idempotent: true
+  preserve_existing: true
+  require_definition: true
+  require_version: true
+
+services:
+  - id: ftn-ftp
+    category: storage
+    source: local
+  - id: ftn-media-server
+    category: media
+    source: local
+  - id: ftn-ip-tv
+    category: media
+    source: local
+  - id: ftn-cctv
+    category: media
+    source: local
+  - id: ftn-drive
+    category: storage
+    source: local
+  - id: ftn-app-store
+    category: platform
+    source: local
+  - id: ftn-tools
+    category: platform
+    source: local
+  - id: ftn-baby-home
+    category: family
+    source: local
+  - id: ftn-baby-game-store
+    category: family
+    source: local
+  - id: ftn-learning
+    category: education
+    source: local
+  - id: ftn-ai-assistant
+    category: ai
+    source: local
+  - id: ftn-smart-tv
+    category: client
+    source: local
+
+ai:
+  assistant_context: service-scoped
+  auto_build_from_demand: true
+  auto_import_new_service: true
+  auto_publish_app: release-gated
+
+security:
+  require_authorized_source: true
+  child_accounts_require_parental_controls: true
+  age_appropriate_content: true
+  external_telemetry_export: false
+  secrets_in_telemetry: false
+  direct_privileged_ai_execution: false
+
+runtime:
+  control_plane: ftn-control-plane
+  module_loader: internal/platform/module
+  lifecycle: ftn-os
+  health: ftn-metrics
+  audit: ftn-audit
+  distribution: ftn-app-store
