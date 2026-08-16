@@ -1,0 +1,68 @@
+version: "1"
+name: ftn-media-server
+
+branding:
+  public_name: "FTN Media Server"
+  default_locale: "bn-BD"
+  preserve_source_brand: false
+  source_names_are_internal_only: true
+
+purpose: "একটি FTN-branded media catalog যা অনুমোদিত Jellyfin ও Kodi sources থেকে content metadata গ্রহণ করে।"
+
+sources:
+  jellyfin:
+    enabled: true
+    adapter: "jellyfin"
+    ingest: [libraries, items, genres, seasons, episodes, artwork, playback_metadata]
+  kodi:
+    enabled: true
+    adapter: "kodi"
+    ingest: [libraries, items, genres, seasons, episodes, artwork, playback_metadata]
+
+aggregation:
+  enabled: true
+  normalize_ids: true
+  deduplicate: true
+  source_priority: jellyfin
+  merge_metadata: true
+  preserve_source_reference_internal: true
+  publish_only_approved_sources: true
+
+localization:
+  enabled: true
+  locale: "bn-BD"
+  translate:
+    title: true
+    description: true
+    genre: true
+    category: true
+    labels: true
+    navigation: true
+  keep_original_metadata_internal: true
+  user_can_switch_locale: true
+  fallback_locale: "en-US"
+
+presentation:
+  source_label: "FTN Media Server"
+  media_types: [movie, tv_series, episode, documentary, music, educational]
+  clients: [web, android, desktop, smart_tv]
+  download: true
+  upload: false
+  streaming: true
+  resume: true
+  range_requests: true
+
+security:
+  authorization_required: true
+  tenant_isolation: true
+  source_credentials_server_side_only: true
+  external_telemetry_export: false
+  unapproved_source_auto_publish: false
+
+sync:
+  auto_discover: true
+  scheduled_refresh: true
+  health_check: true
+  stale_source_disable: true
+  retry_with_backoff: true
+  last_successful_catalog_retained: true
