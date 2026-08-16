@@ -1,0 +1,28 @@
+rules:
+  - id: ftn-go-unsafe-shell-exec
+    languages: [go]
+    message: Review dynamic shell execution; prefer validated argument lists and explicit allowlists.
+    severity: WARNING
+    patterns:
+      - pattern-either:
+          - pattern: exec.Command($CMD, ...$ARGS)
+          - pattern: exec.CommandContext($CTX, $CMD, ...$ARGS)
+      - pattern-not: exec.Command("$SAFE", ...$ARGS)
+    metadata:
+      category: security
+      technology: [go]
+      confidence: medium
+      cwe: "CWE-78"
+
+  - id: ftn-node-child-process-shell
+    languages: [javascript, typescript]
+    message: Review child-process shell execution and ensure inputs are allowlisted.
+    severity: WARNING
+    pattern-either:
+      - pattern: child_process.exec($CMD, ...)
+      - pattern: require('child_process').exec($CMD, ...)
+    metadata:
+      category: security
+      technology: [nodejs]
+      confidence: medium
+      cwe: "CWE-78"
