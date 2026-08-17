@@ -1,0 +1,142 @@
+version: "1"
+name: ftn-media-experience-blueprint
+purpose: unify the uploaded FTN platform capabilities into one production-oriented FTN Media Server experience
+
+branding:
+  public_name: "FTN Media Server"
+  product_names_are_english: true
+  internal_adapters: [jellyfin, kodi]
+
+language:
+  ui_default: en
+  selectable_ui: [en, bn]
+  media_language_is_independent_of_ui: true
+  audio_selector: true
+  subtitle_selector: true
+  metadata_translation: true
+  preserve_original_title: true
+  fallback_to_original_audio: true
+  fallback_to_available_subtitle: true
+  bengali_audio_policy: authorized_source_only
+
+catalog:
+  source_adapters:
+    jellyfin:
+      import: [libraries, items, metadata, artwork, playback_capabilities]
+      sync: incremental
+    kodi:
+      import: [libraries, items, metadata, artwork, playback_capabilities]
+      sync: incremental
+  canonical_identity:
+    checksum: sha256
+    deduplicate: true
+    stable_media_id: true
+  categories:
+    - Movie
+    - TV Series
+    - Episodes
+    - Music
+    - Documentary
+    - Kids
+    - Learning
+    - Live Media
+  metadata:
+    preserve_original: true
+    localized_fields: [title_display, description, genre, tags, synopsis]
+    locales: [en, bn]
+
+clients:
+  web:
+    enabled: true
+    features: [search, catalog, player, language, downloads, assistant]
+  android:
+    enabled: true
+    features: [search, catalog, player, language, downloads, offline, assistant]
+  desktop:
+    enabled: true
+    features: [search, catalog, player, language, downloads, assistant]
+  smart_tv:
+    enabled: true
+    features: [search, catalog, player, language, assistant]
+
+player:
+  adaptive_streaming: true
+  resume: true
+  range_requests: true
+  quality_selector: true
+  audio_tracks: true
+  subtitle_tracks: true
+  favorites: true
+  watch_history: true
+  continue_watching: true
+
+transfer:
+  download:
+    enabled: true
+    authorized_only: true
+    resumable: true
+    chunked: true
+    checksum: sha256
+    quota_required: true
+  upload:
+    enabled: false
+    enable_only_for_owned_or_authorized_storage: true
+    resumable: true
+    chunked: true
+    checksum: sha256
+    quota_required: true
+
+assistant:
+  name: "FTN Assistant"
+  enabled: true
+  languages: [bn, en]
+  contextual_help: true
+  media_help: [search, playback, audio, subtitles, downloads, account, quota]
+  escalation:
+    enabled: true
+    target: "FTN Support"
+  privileged_actions:
+    approval_required: true
+
+kids:
+  integrate_existing_baby_home: true
+  integrate_existing_learning: true
+  parental_controls: true
+  age_filter: true
+  safe_search: true
+
+app_store:
+  integrate_existing_ftn_app_store: true
+  categories: [Mobile Tools, PC Tools, Developer Tools, Media Tools, Network Tools]
+  signed_artifacts_only: true
+  platform_match_required: true
+
+source_policy:
+  only_authorized_sources: true
+  third_party_content_ownership_claim: false
+  source_credentials_server_side_only: true
+  stale_catalog_retention: true
+  failed_source_must_not_delete_catalog: true
+  external_telemetry_export: false
+
+sync:
+  auto_discover: true
+  scheduled: true
+  incremental: true
+  retry_with_backoff: true
+  idempotent: true
+  health_check: true
+  auto_disable_unhealthy_source: true
+
+support:
+  integrate_customer_portal: true
+  integrate_ai_call_center: true
+  support_ticket_escalation: true
+  billing_and_quota_context: true
+
+security:
+  tenant_isolation: true
+  authorization_before_delivery: true
+  audit_events: true
+  signed_client_artifacts: true
+  secrets_in_client: false
