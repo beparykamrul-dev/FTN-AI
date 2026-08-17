@@ -1,0 +1,46 @@
+version: v1
+product: FTN.OS
+component: control-reconciliation
+status: implementation-baseline
+control_loop:
+  desired_state_store: true
+  observed_state_store: true
+  reconciliation_interval: configurable
+  drift_detection: true
+  idempotent_actions: true
+  bounded_retry: true
+  exponential_backoff: true
+  action_timeout: true
+  generation_tracking: true
+  optimistic_concurrency: true
+safety:
+  approval_first: true
+  destructive_actions_require_confirmation: true
+  tenant_scope_required: true
+  audit_before_action: true
+  audit_after_action: true
+  dry_run_only_for_planning: true
+state:
+  resource_generation: true
+  controller_generation: true
+  last_observed_revision: true
+  last_applied_revision: true
+  conditions: true
+  failure_reason: true
+recovery:
+  transient_failure_retry: true
+  permanent_failure_quarantine: true
+  stale_node_detection: true
+  safe_reentry_gate: true
+  reconciliation_after_recovery: true
+observability:
+  events: true
+  metrics: true
+  correlation_id: true
+  trace_id: true
+  audit_id: true
+production_gate:
+  no_unbounded_retry: true
+  no_cross_tenant_action: true
+  no_implicit_destructive_action: true
+  no_production_ready_claim_without_tests: true
