@@ -2,14 +2,12 @@ package controlplane
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
 
-var (
-	ErrStaleFence    = errors.New("stale fencing token")
-	ErrLeaseRequired = errors.New("valid lease required")
-)
+var ErrLeaseRequired = errors.New("valid lease required")
 
 type WorkerResult struct {
 	Job      DurableJob
@@ -33,7 +31,7 @@ func (w *IdempotentWorker) Execute(jobID, workerID, leaseKey string, token uint6
 	if err != nil {
 		return WorkerResult{}, err
 	}
-	if !w.Leases.Validate(leaseKey, workerID, token, now) {
+	if err = w.Leases.Validate(leaseKey, workerID, token, now); err != nil {
 		return WorkerResult{}, ErrLeaseRequired
 	}
 	if job.State == JobSucceeded {
@@ -50,12 +48,11 @@ func (w *IdempotentWorker) Execute(jobID, workerID, leaseKey string, token uint6
 	}
 
 	event, err := w.Events.Append(JournalEvent{
-		ID: "job:" + job.ID + ":attempt:" + string(rune(job.Attempt)),
+		ID: fmt.Sprintf("job:%s:attempt:%d", job.ID, job.Attempt),
 		TenantID: job.TenantID,
 		Type: eventType,
 		CorrelationID: job.ID,
 		AggregateID: job.ID,
-		CreatedAt: now,
 	})
 	if err != nil {
 		return WorkerResult{}, err
