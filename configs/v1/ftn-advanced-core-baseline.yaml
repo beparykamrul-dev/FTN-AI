@@ -1,0 +1,72 @@
+version: v1
+product: FTN-AI
+platform: FTN.OS
+purpose: enterprise-production-core
+planes:
+  control:
+    desired_state: true
+    reconciliation: true
+    policy_engine: true
+    workflow_engine: true
+  data:
+    integrity_checks: true
+    manifests: true
+    replication: true
+    repair: true
+  network:
+    locality_aware_scheduling: true
+    failure_domain_awareness: true
+  ai:
+    agent_identity: true
+    scoped_tools: true
+    approval_first: true
+core:
+  distributed_lock: true
+  leader_election: true
+  durable_jobs: true
+  checkpoints: true
+  retries: true
+  drift_detection: true
+  event_journal: true
+  audit_trail: true
+storage:
+  tiers: true
+  watermarks: true
+  migration_cost_model: true
+  weighted_scheduler: true
+  minimum_movement: true
+  quarantine_drain: true
+  safe_reentry: true
+recovery:
+  failure_domains: true
+  replica_repair: true
+  scrubber: true
+  disaster_recovery: true
+observability:
+  events: true
+  metrics: true
+  logs: true
+  traces: true
+  correlation: true
+  slo: true
+security:
+  tls: true
+  acme: true
+  secrets: true
+  scoped_credentials: true
+  security_scan_gate: true
+validation:
+  required_pipeline:
+    - build
+    - unit-test
+    - integration-test
+    - security-scan
+    - migration-test
+    - container-test
+    - node-test
+    - failure-test
+    - recovery-test
+    - load-test
+    - e2e-test
+    - production-validation
+completion_rule: no-production-ready-claim-until-all-required-pipeline-stages-pass
