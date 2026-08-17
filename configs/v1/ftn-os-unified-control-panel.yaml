@@ -1,0 +1,95 @@
+version: "1.0"
+product: FTN.OS
+platform: FTN-AI
+status: production
+
+control_plane:
+  name: FTN.OS Unified Control Panel
+  principle: single_control_plane
+  scope:
+    - ai
+    - media
+    - app_store
+    - customer_services
+    - billing
+    - cloud
+    - network
+    - developer_tools
+    - mobile_tools
+    - pc_tools
+    - kids_learning
+    - iptv
+    - cctv
+    - drive
+  isolation:
+    tenant_aware: true
+    role_based_access: true
+    audit_required: true
+
+modules:
+  ai:
+    enabled: true
+    assistants:
+      - FTN Assistant
+      - Customer Assistant
+      - Developer Assistant
+      - Studio AI
+      - Call Center AI
+      - Billing AI
+      - Network AI
+  media:
+    product_name: FTN Media Server
+    adapters:
+      - jellyfin
+      - kodi
+    user_facing_source_names: false
+    localization:
+      default_ui: en
+      supported_ui: [en, bn]
+      bengali_audio: authorized_only
+      bengali_subtitles: authorized_only
+  app_store:
+    product_name: FTN App Store
+  cloud:
+    product_name: FTN Cloud
+  developer:
+    product_name: FTN Studio
+
+navigation:
+  primary:
+    - Overview
+    - AI
+    - Media
+    - App Store
+    - Cloud
+    - Billing
+    - Network
+    - Services
+    - Developer
+    - Security
+    - Settings
+
+api:
+  control_plane: api.familytimenet.com
+  version_prefix: /v1
+  authentication: token_based
+  authorization: rbac
+  audit: enabled
+
+security:
+  tls: required
+  acme: enabled
+  least_privilege: true
+  approval_required_for_destructive_actions: true
+  external_data_export: disabled_by_default
+
+observability:
+  health_checks: true
+  metrics: true
+  audit_logs: true
+  service_status: true
+
+rollout:
+  mode: incremental
+  backwards_compatible: true
+  auto_discovery: true
