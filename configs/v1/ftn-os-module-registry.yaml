@@ -1,0 +1,56 @@
+version: v1
+product: FTN.OS
+registry:
+  source_of_truth: FTN-AI
+  api_base: https://api.familytimenet.com/v1
+  discovery: enabled
+  health_checks: enabled
+  lifecycle: discover -> authorize -> configure -> health -> publish
+modules:
+  ai:
+    label: AI
+    assistant: true
+  media:
+    label: FTN Media Server
+    adapters: [jellyfin, kodi]
+  app-store:
+    label: FTN App Store
+  cloud:
+    label: FTN Cloud
+  billing:
+    label: Billing
+  network:
+    label: Network
+  customer-services:
+    label: Customer Services
+  developer-studio:
+    label: Developer Studio
+  mobile-tools:
+    label: Mobile Tools
+  pc-tools:
+    label: PC Tools
+  kids-learning:
+    label: Kids & Learning
+  iptv:
+    label: IPTV
+  cctv:
+    label: CCTV
+  drive:
+    label: Drive
+  security:
+    label: Security
+  certificates:
+    label: Certificates
+common:
+  search: true
+  notifications: true
+  assistant: FTN Assistant
+  audit: true
+  localization:
+    ui_names: en
+    content_languages: [en, bn-BD]
+access:
+  authentication: required
+  rbac: true
+  tenant_isolation: true
+  approval_first: true
