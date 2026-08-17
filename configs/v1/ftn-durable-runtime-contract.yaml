@@ -1,0 +1,60 @@
+version: v1
+platform: FTN.OS
+component: durable-runtime
+status: implementation-contract
+job_engine:
+  durable_jobs: true
+  idempotency_keys: true
+  checkpoints: true
+  resume_after_restart: true
+  retry:
+    bounded: true
+    exponential_backoff: true
+    jitter: true
+  timeout: true
+  cancellation: true
+  dead_letter_queue: true
+  dependency_graph: true
+  concurrency_limits: true
+  priority_classes: true
+  tenant_quotas: true
+coordination:
+  distributed_lock: true
+  lease_based: true
+  fencing_tokens: true
+  leader_election: true
+  heartbeat: true
+  stale_leader_detection: true
+  split_brain_protection: true
+event_journal:
+  durable: true
+  append_only: true
+  event_id: true
+  correlation_id: true
+  causation_id: true
+  sequence_number: true
+  replay: true
+  consumer_offsets: true
+  idempotent_consumers: true
+  dead_letter_events: true
+safety:
+  approval_first: true
+  tenant_scope: true
+  audit_before_action: true
+  audit_after_action: true
+  destructive_actions_guarded: true
+  no_unbounded_retry: true
+observability:
+  job_metrics: true
+  lock_metrics: true
+  leader_metrics: true
+  event_metrics: true
+  trace_correlation: true
+production_validation:
+  restart_recovery: required
+  duplicate_delivery: required
+  lock_expiry: required
+  leader_failover: required
+  network_partition: required
+  event_replay: required
+  load_test: required
