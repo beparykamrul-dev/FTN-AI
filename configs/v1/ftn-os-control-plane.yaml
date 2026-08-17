@@ -1,0 +1,46 @@
+version: v1
+product: FTN.OS
+control_plane:
+  name: FTN.OS Unified Control Panel
+  api_base: https://api.familytimenet.com/v1
+  mode: unified
+  source_of_truth: FTN-AI
+modules:
+  - ai
+  - media
+  - app-store
+  - cloud
+  - billing
+  - network
+  - customer-services
+  - developer-studio
+  - mobile-tools
+  - pc-tools
+  - kids-learning
+  - iptv
+  - cctv
+  - drive
+  - security
+  - certificates
+ui:
+  navigation: category-based
+  shared_search: true
+  shared_notifications: true
+  shared_assistant: true
+  shared_audit: true
+access:
+  authentication: required
+  tenant_isolation: true
+  rbac: true
+  approval_first: true
+  destructive_actions_require_confirmation: true
+services:
+  media: FTN Media Server
+  assistant: FTN Assistant
+  store: FTN App Store
+  api: FTN API
+security:
+  audit_events: true
+  scoped_tokens: true
+  tls: true
+  acme_managed_certificates: true
