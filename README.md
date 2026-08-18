@@ -13,7 +13,7 @@ FTN-AI is a comprehensive enterprise platform for managing infrastructure, ident
 ```
 FTN-AI/
 ├── backend/              # Core backend services (Go)
-├���─ frontend/             # Web UI and control centers
+├── frontend/             # Web UI and control centers
 ├── apps/                 # Application modules
 ├── services/             # Microservices
 ├── modules/              # Reusable modules
@@ -117,7 +117,7 @@ go test -cover ./...
 go test -run TestFunctionName ./...
 ```
 
-## 📊 Development
+## 💻 Development
 
 - **Branch Strategy**: Git Flow (main/develop)
 - **Commit Messages**: Conventional Commits
