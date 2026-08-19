@@ -1,0 +1,72 @@
+version: "1"
+name: ftn-media-server-index-api
+purpose: canonical FTN Media Server search, catalog and authorized delivery contract
+
+branding:
+  public_name: "FTN Media Server"
+  default_locale: "bn-BD"
+
+index:
+  canonical_item_id: required
+  content_hash: sha256
+  source_references: internal_only
+  deduplication_key: [content_hash, media_type]
+  preserve_catalog_on_source_failure: true
+
+categories:
+  - movie
+  - tv_series
+  - episode
+  - music
+  - documentary
+  - kids
+  - learning
+
+search:
+  enabled: true
+  fields: [title_bn, title_original, genre, cast, year, category, tags]
+  locale_fallback: [bn-BD, en-US]
+  typo_tolerance: true
+  pagination: cursor
+
+metadata:
+  normalize: true
+  translate: true
+  locale: bn-BD
+  preserve_original: true
+  artwork: true
+
+playback:
+  streaming: authorized
+  resume: true
+  range_requests: true
+  adaptive_source: true
+
+transfer:
+  download: authorized
+  upload: authorized
+  resumable: true
+  chunked: true
+  checksum: sha256
+  quota: required
+
+security:
+  authentication: required
+  authorization: required
+  tenant_isolation: true
+  audit_events: true
+  signed_delivery: true
+  source_credentials_never_exposed: true
+
+sync:
+  incremental: true
+  scheduled: true
+  idempotent: true
+  retry_with_backoff: true
+  stale_item_retention: true
+
+clients:
+  web: true
+  android: true
+  desktop: true
+  smart_tv: true

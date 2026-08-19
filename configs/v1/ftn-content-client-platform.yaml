@@ -1,0 +1,93 @@
+version: "1"
+name: ftn-content-client-platform
+purpose: category-driven FTN content, storage, family and client-tool platform
+
+# Existing services are referenced rather than duplicated.
+service_bindings:
+  ftp: ftn-ftp
+  drive: ftn-drive
+  media: ftn-media-server
+  app_store: ftn-app-store
+  baby_home: ftn-baby-home
+  baby_games: ftn-baby-game-store
+  learning: ftn-learning
+  ai: ftn-ai-assistant
+  tools: ftn-tools
+  android: ftn_mobile_engine
+
+categories:
+  storage:
+    services: [ftn-ftp, ftn-drive]
+    capabilities: [browse, upload, download, resume, delete, rename, share, quota, backup]
+    platforms: [web, android, desktop]
+  media:
+    services: [ftn-media-server]
+    capabilities: [browse, upload, download, stream, metadata, resume]
+    platforms: [web, android, desktop, smart-tv]
+  family:
+    services: [ftn-baby-home, ftn-baby-game-store]
+    capabilities: [browse, install, download, offline, parental-approval]
+    platforms: [web, android, desktop]
+  learning:
+    services: [ftn-learning]
+    capabilities: [browse, stream, download, progress, quiz, offline]
+    platforms: [web, android, desktop]
+  tools:
+    services: [ftn-tools]
+    capabilities: [download, upload, diagnostics, speed-test, network-tools, file-tools]
+    platforms: [web, android, desktop]
+  applications:
+    services: [ftn-app-store]
+    capabilities: [discover, download, install, update, rollback]
+    platforms: [web, android, desktop]
+  assistant:
+    services: [ftn-ai-assistant]
+    capabilities: [service-help, learning-help, tool-help]
+    platforms: [web, android, desktop]
+
+transfer:
+  upload:
+    enabled: true
+    resumable: true
+    chunked: true
+    checksum: sha256
+    quota_required: true
+  download:
+    enabled: true
+    resumable: true
+    range_requests: true
+    checksum: sha256
+    authorization_required: true
+
+# Auto-registration is idempotent and uses the existing module/service loader.
+auto_import:
+  enabled: true
+  source: [ftn-local-services, ftn-service-catalog, this_manifest]
+  idempotent: true
+  preserve_existing: true
+  validate_dependencies: true
+  health_check_before_enable: true
+
+server_runtime:
+  discovery: ftn-control-plane
+  lifecycle: ftn-os
+  deployment: ftn-deployment
+  fleet: ftn-server-fabric
+  health: ftn-metrics
+  audit: ftn-audit
+
+push_run:
+  enabled: true
+  mode: policy-controlled
+  validate_before_start: true
+  health_gate: true
+  rollback_on_failed_start: true
+  destructive_actions_require_approval: true
+
+security:
+  tenant_isolation: true
+  signed_app_packages: true
+  child_content_requires_parental_policy: true
+  external_telemetry_export: false
+  secrets_in_client: false
+  secrets_in_telemetry: false

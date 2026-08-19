@@ -1,0 +1,56 @@
+version: "1"
+name: ftn-client-artifact-policy
+purpose: category-driven artifact discovery, upload/download and auto-registration for FTN clients
+
+categories:
+  ftp:
+    service: ftn-ftp
+    platforms: [web, android, desktop]
+    actions: [browse, upload, download, resume]
+  movie:
+    service: ftn-media-server
+    platforms: [web, android, desktop, smart-tv]
+    actions: [browse, stream, download, resume]
+  baby_items:
+    services: [ftn-baby-home, ftn-baby-game-store]
+    platforms: [web, android, desktop]
+    actions: [browse, download, install, offline]
+  tools:
+    service: ftn-tools
+    platforms: [web, android, desktop]
+    actions: [discover, download, install, update]
+
+artifact_rules:
+  upload:
+    enabled: true
+    resumable: true
+    chunked: true
+    checksum: sha256
+    quota: required
+  download:
+    enabled: true
+    resumable: true
+    range_requests: true
+    checksum: sha256
+    authorization: required
+
+server_push:
+  auto_discover: true
+  auto_register: true
+  validate_dependencies: true
+  health_gate: true
+  rollback_on_failed_start: true
+  destructive_actions_require_approval: true
+
+client_install:
+  signed_artifacts_only: true
+  platform_match_required: true
+  versioned: true
+  update_supported: true
+  rollback_supported: true
+
+security:
+  tenant_isolation: true
+  client_secrets: false
+  external_telemetry_export: false
+  child_content_parental_policy: required
