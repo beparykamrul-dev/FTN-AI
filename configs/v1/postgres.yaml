@@ -1,33 +1,25 @@
-# PostgreSQL Configuration
-
+version: 1
 postgres:
-  # Connection Pool
+  host: ${PGHOST}
+  port: ${PGPORT}
+  database: ${PGDATABASE}
+  user: ${PGUSER}
+  password_env: PGPASSWORD
+  sslmode: ${PGSSLMODE}
   pool:
-    min_size: 5
-    max_size: 20
-    max_idle_time: 600
-    connection_timeout: 30
-  
-  # Health Check
-  health_check:
+    min_conns: 2
+    max_conns: 20
+    max_conn_lifetime: 1h
+    max_conn_idle_time: 15m
+    health_check_period: 30s
+  readiness:
     enabled: true
-    interval: 30
-    timeout: 5
-    
-  # Performance Tuning
-  performance:
-    shared_buffers: "256MB"
-    effective_cache_size: "1GB"
-    work_mem: "16MB"
-    random_page_cost: 1.1
-    
-  # Backup and Recovery
-  backup:
+    ping_timeout: 5s
+    schema_version_check: true
+  migrations:
     enabled: true
-    schedule: "0 2 * * *"  # Daily at 2 AM
-    retention_days: 30
-    
-  # Replication
-  replication:
-    enabled: false
-    standby_servers: []
+    automatic_destructive_changes: false
+    require_clean_failure: true
+  safety:
+    preserve_existing_dns_schema: true
+    preserve_existing_mail_data: true

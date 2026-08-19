@@ -1,8 +1,0 @@
-github.com/gin-gonic/gin v1.9.1 h1:4idEAncQnU5cB7BeipwiNGs8XNQsxX2rZJvpXt1d+E=
-github.com/gin-gonic/gin v1.9.1/go.mod h1:hPrL7YrpYKXt5YId3xz8vor+IG8EyKlXSS+ggkSCt4=
-github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnLKrQQIWM8AqBjZK2sSIc=
-github.com/lib/pq v1.10.9/go.mod h1:AlVN5x4e4A4tnV8dXHNq5dP5KwgL3tLGkj2g9QwrmM=
-github.com/joho/godotenv v1.5.1 h1:7P4SfwW0WvtNUxDraYGrDgzuYultBSxiNujMDyXjyY=
-github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DxwEWRW0=
-go.uber.org/zap v1.26.0 h1:sI7k6L95XOKS281NhVKjGrLalO9kSiE5wY/DwKwUAI=
-go.uber.org/zap v1.26.0/go.mod h1:dtElZfG8FDS2oNT+sSqFlqiQvs9GDQQsDeTckiGym4=

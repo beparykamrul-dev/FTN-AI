@@ -1,45 +1,62 @@
-# AI Governance Policy Configuration
+version: 1
+governance:
+  identity_context:
+    required: true
+    fields:
+      - identity_id
+      - session_id
+      - roles
+      - permissions
+      - scope
 
-ai_governance:
-  enabled: true
-  
-  # Identity and Authorization
-  identity:
-    provider: ftn-identity
-    require_mfa: true
-    session_timeout: 3600
-  
-  # Tool Registration and Permissions
-  tools:
-    - name: database_query
-      requires_approval: true
-      risk_level: high
-      allowed_roles: [admin, dba]
-    
-    - name: file_access
-      requires_approval: false
-      risk_level: medium
-      allowed_roles: [admin, developer]
-    
-    - name: infrastructure_modify
-      requires_approval: true
-      risk_level: critical
-      allowed_roles: [admin]
-  
-  # Risk Assessment
-  risk_policy:
-    high_risk_threshold: 8
-    critical_risk_requires_approval: true
-    approval_timeout: 300
-  
-  # Audit and Logging
-  audit:
-    enabled: true
-    log_all_actions: true
-    retention_days: 365
-    
-  # Data Retention
-  data_retention:
-    user_data: 365
-    audit_logs: 730
-    temporary_files: 7
+  tool_registry:
+    require_registered_tool: true
+    deny_arbitrary_execution: true
+    audit_all_actions: true
+
+  risk:
+    read:
+      approval_required: false
+    write:
+      approval_required: false
+    privileged:
+      approval_required: true
+
+  approval:
+    ttl: ${AI_APPROVAL_TTL}
+    requester_cannot_approve: true
+    ai_cannot_approve: true
+    approver_requires_permission: true
+    request_binding:
+      identity: true
+      tool: true
+      resource: true
+      action: true
+
+  execution:
+    timeout: ${AI_EXECUTION_TIMEOUT}
+    max_retries: ${AI_MAX_RETRIES}
+    idempotency_required: true
+    unknown_side_effect_policy: reconcile_before_retry
+    duplicate_execution: deny
+
+  events:
+    persistence: postgresql
+    replay_enabled: true
+    replay_limit: ${AI_EVENT_REPLAY_LIMIT}
+
+  adapters:
+    dns:
+      allowed:
+        - dns.health
+        - dns.zone.list
+        - dns.record.list
+    mail:
+      allowed:
+        - mail.message.read
+        - mail.attachment.metadata
+    network:
+      allowed:
+        - network.device.status
+        - network.interface.status
+        - network.latency
