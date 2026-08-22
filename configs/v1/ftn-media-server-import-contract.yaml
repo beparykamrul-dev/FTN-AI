@@ -1,0 +1,53 @@
+version: "1"
+name: ftn-media-server-import-contract
+
+branding:
+  public_name: "FTN Media Server"
+  locale: "bn-BD"
+
+sources:
+  - type: jellyfin
+    mode: adapter
+    import: [files, metadata, artwork, libraries]
+  - type: kodi
+    mode: adapter
+    import: [files, metadata, artwork, libraries]
+
+pipeline:
+  discover: true
+  validate_source: true
+  authorize_source: true
+  scan: true
+  checksum: sha256
+  deduplicate: true
+  normalize_metadata: true
+  translate_to_bn_bd: true
+  catalog_as_ftn: true
+  retain_internal_source_reference: true
+
+file_policy:
+  approved_content_only: true
+  copy_or_mount: source_policy
+  download: authorized_only
+  upload: false
+  resume: true
+  range_requests: true
+
+sync:
+  incremental: true
+  scheduled: true
+  retry_with_backoff: true
+  stale_catalog_retention: true
+  failed_source_must_not_delete_existing_catalog: true
+
+security:
+  credentials_server_side_only: true
+  tenant_isolation: true
+  audit_events: true
+  external_telemetry_export: false
+
+clients:
+  web: true
+  android: true
+  desktop: true
+  smart_tv: true
