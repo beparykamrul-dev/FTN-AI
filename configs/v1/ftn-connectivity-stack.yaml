@@ -1,0 +1,58 @@
+apiVersion: ftn.ai/v1
+kind: ConnectivityStack
+metadata:
+  name: ftn-connectivity
+spec:
+  dns:
+    primaryDomain: familytimenet.com
+    providerNeutral: true
+  transports:
+    wireguard:
+      enabled: true
+      role: primary
+    amneziawg:
+      enabled: true
+      role: compatibility
+    openvpn3:
+      enabled: true
+      role: compatibility
+    gre:
+      enabled: true
+      role: routed-tunnel
+    sslh:
+      enabled: true
+      role: edge-multiplexer
+    shadowsocks:
+      enabled: true
+      role: proxy-compatibility
+    hysteria2:
+      enabled: true
+      role: quic-transport
+    pptp:
+      enabled: false
+      role: legacy-compatibility
+    websocket:
+      enabled: true
+      role: application-transport
+  mesh:
+    batmanAdv:
+      enabled: true
+    yggdrasil:
+      enabled: true
+    cjdns:
+      enabled: true
+    topology: full-mesh
+  telemetry:
+    netSA:
+      enabled: true
+      components: [silk, yaf, super_mediator]
+    storage:
+      analytical: clickhouse
+  security:
+    pki: required
+    secretsServerSide: true
+    approvalRequiredForPrivilegedChanges: true
+    arbitraryShellCommands: false
+  lifecycle:
+    verifyAfterChange: true
+    auditEveryOperation: true
