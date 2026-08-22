@@ -1,0 +1,34 @@
+apiVersion: ftn.ai/v1
+kind: KernelToolRegistry
+metadata:
+  name: ftn-network-kernel
+spec:
+  kernel:
+    protocol: jupyter
+    executionBoundary: structured-tool-call
+    arbitraryCodeExecution: false
+    arbitraryShellExecution: false
+  tools:
+    cert-netsa:
+      provider: netsa.cert.org
+      operations: [query, inspect]
+      enabled: true
+    netmiko:
+      operations: [connect, collect]
+      enabled: true
+    paramiko:
+      operations: [connect, collect]
+      enabled: true
+    napalm:
+      operations: [get, collect]
+      enabled: true
+    ipykernel:
+      operations: [kernel-info, execute-tool]
+      enabled: true
+  security:
+    credentials: server-side-secret-store
+    approvalForChanges: true
+    readOnlyCollectionDefault: true
+    auditOperations: true
+  lifecycle:
+    verifyAfterChange: true
