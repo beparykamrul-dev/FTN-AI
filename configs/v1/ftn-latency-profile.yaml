@@ -1,0 +1,42 @@
+apiVersion: ftn.ai/v1
+kind: LatencyProfile
+metadata:
+  name: ftn-low-latency
+spec:
+  routing:
+    strategy: health-rtt-loss
+    preferHealthy: true
+    failover: fastest-healthy
+    staleAfterSeconds: 15
+  transport:
+    connectionReuse: true
+    keepAlive: true
+    http2WhenSupported: true
+    quicWhenSupported: true
+    avoidUnnecessaryHandshake: true
+  dns:
+    localCache: true
+    prewarm: true
+    familyDomain: familytimenet.com
+  backend:
+    connectionPooling: true
+    boundedConcurrency: true
+    queueOnlyWhenNeeded: true
+    idempotentRetry: true
+    exponentialBackoff: true
+  kernel:
+    warmToolRegistry: true
+    reuseWorkerSessions: true
+    structuredPayloads: true
+  mesh:
+    preferLocalPop: true
+    latencyAwarePeerSelection: true
+    healthProbing: parallel
+  telemetry:
+    asynchronous: true
+    batchWrites: true
+    analyticalStore: clickhouse
+  safety:
+    noSecurityDowngradeForLatency: true
+    noPptpFallback: true
+    approvalBoundaryUnchanged: true
