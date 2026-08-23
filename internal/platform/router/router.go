@@ -59,9 +59,10 @@ func New(reg Registry, cacheTTL time.Duration) *Router {
 }
 
 func (r *Router) Resolve(ctx context.Context, service, preferredRegion string) (Route, error) {
+	cacheKey := service + "\x00" + preferredRegion
 	now := time.Now()
 	r.mu.RLock()
-	cached, ok := r.cache[service]
+	cached, ok := r.cache[cacheKey]
 	r.mu.RUnlock()
 	if ok && now.Sub(cached.at) < r.cacheTTL {
 		return cached.route, nil
@@ -96,7 +97,7 @@ func (r *Router) Resolve(ctx context.Context, service, preferredRegion string) (
 	best := candidates[0]
 	out := Route{ServiceID: best.ID, Endpoint: best.Endpoint, GatewayID: best.GatewayID, Region: best.Region, RTT: best.RTT}
 	r.mu.Lock()
-	r.cache[service] = cachedRoute{route: out, at: now}
+	r.cache[cacheKey] = cachedRoute{route: out, at: now}
 	r.mu.Unlock()
 	return out, nil
 }
