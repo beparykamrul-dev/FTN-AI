@@ -4,12 +4,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-printf '%s\n' '[1/4] validating shell scripts'
+printf '%s\n' '[1/5] validating shell scripts'
 while IFS= read -r -d '' file; do
   bash -n "$file"
 done < <(git ls-files -z -- '*.sh')
 
-printf '%s\n' '[2/4] validating YAML files'
+printf '%s\n' '[2/5] validating YAML files'
 ruby -ryaml -e '
 files = `git ls-files "*.yml" "*.yaml"`.lines.map(&:strip).reject(&:empty?)
 errors = []
@@ -24,8 +24,22 @@ abort(errors.join("\n")) unless errors.empty?
 puts "validated #{files.length} YAML files"
 '
 
-printf '%s\n' '[3/4] checking Go formatting'
-files=( $(git ls-files '*.go') )
+printf '%s\n' '[3/5] validating JSON files'
+if command -v python3 >/dev/null 2>&1; then
+  python3 - <<'PY'
+import json
+import subprocess
+
+files = subprocess.check_output(["git", "ls-files", "*.json"], text=True).splitlines()
+for path in files:
+    with open(path, encoding="utf-8") as fh:
+        json.load(fh)
+print(f"validated {len(files)} JSON files")
+PY
+fi
+
+printf '%s\n' '[4/5] checking Go formatting'
+mapfile -t files < <(git ls-files '*.go')
 if ((${#files[@]})); then
   unformatted="$(gofmt -l "${files[@]}")"
   if [[ -n "$unformatted" ]]; then
@@ -34,9 +48,12 @@ if ((${#files[@]})); then
   fi
 fi
 
-printf '%s\n' '[4/4] testing declared Go module'
-if [[ -f modules/account/go.mod ]]; then
-  (cd modules/account && go test ./...)
-fi
+printf '%s\n' '[5/5] testing every declared Go module'
+mapfile -t modules < <(git ls-files 'go.mod' | sort -u)
+for mod in "${modules[@]}"; do
+  dir="$(dirname "$mod")"
+  printf 'testing %s\n' "$dir"
+  (cd "$dir" && go test ./...)
+done
 
 printf '%s\n' 'FTN-AI repository validation passed.'
