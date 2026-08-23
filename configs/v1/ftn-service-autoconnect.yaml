@@ -34,6 +34,54 @@ spec:
       autoConnectAfterMesh: true
       healthGate: true
       pathSelection: [health, rtt, loss, jitter, utilization, locality]
+  certificates:
+    enabled: true
+    acme:
+      enabled: true
+      challengePreference: [tls-alpn-01, http-01, dns-01]
+      dnsProviderFromRegistry: true
+      autoIssue: true
+      autoRenew: true
+      renewalWindowDays: 30
+    pki:
+      enabled: true
+      issuerFromRegistry: ftn-pki
+      autoGenerateIdentityCertificate: true
+      autoProvisionTrustChain: true
+      autoRotate: true
+      revocationEnabled: true
+      deviceBinding: stable-node-id
+      serviceBinding: stable-service-id
+    deployment:
+      autoInstallOnEligibleDevice: true
+      installAfterIdentityAndHealth: true
+      reloadServicesAfterInstall: true
+      verifyAfterInstall: true
+      rollbackOnFailedVerification: true
+      privateKeysServerSideOnly: true
+  gateway:
+    enabled: true
+    roles: [gateway, access, traffic-edge]
+    certificateRequired: true
+    pkiIdentityRequired: true
+    meshRequired: true
+    healthRequired: true
+    routeEligibility: health-gated
+  traffic:
+    telemetry:
+      enabled: true
+      silk: true
+      netflow: true
+      flowIdentity: stable-service-id
+      exportTo: clickhouse
+      retainRawSecrets: false
+    metrics:
+      enabled: true
+      latency: true
+      loss: true
+      jitter: true
+      utilization: true
+      connections: true
   provisioning:
     serviceRequest:
       enabled: true
@@ -51,15 +99,17 @@ spec:
       issueOnlyAfterReady: true
       customerNotification: true
       notificationEvent: service-access-ready
-      include: [service-id, status, endpoint, next-step]
+      include: [service-id, status, endpoint, certificate-status, next-step]
       neverInclude: [private-key, secret, credential]
   lifecycle:
     detect: register
     authenticate: validate
+    provisionIdentity: pki-and-certificate
     connect: local-router-tunnel
     join: mesh
     connectBackbone: backbone
     verify: health-and-readiness
+    provisionGateway: gateway
     provisionFirmware: build-if-required
     activate: authorized-push
     publish: service-ready
@@ -69,7 +119,7 @@ spec:
     allocation: monotonic-registry-id
     noReuseUntilRetired: true
     keyBinding: service-id
-    completionState: [registered, authenticated, tunnel-connected, meshed, backbone-connected, healthy, firmware-ready, activated, ready]
+    completionState: [registered, authenticated, certificate-issued, pki-bound, tunnel-connected, meshed, backbone-connected, gateway-ready, healthy, firmware-ready, activated, ready]
   safety:
     noPlaintextPrivateKeys: true
     serverSideSecretsOnly: true
