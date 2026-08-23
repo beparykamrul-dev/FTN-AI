@@ -1,0 +1,69 @@
+apiVersion: ftn.ai/v1
+kind: GlobalLatencyPolicy
+metadata:
+  name: ftn-global-low-latency
+spec:
+  objective:
+    scope: entire-network
+    optimize:
+      - end-to-end-rtt
+      - jitter
+      - packet-loss
+      - congestion
+      - path-health
+    notDnsOnly: true
+  measurement:
+    activeProbes: parallel
+    passiveTelemetry: enabled
+    staleAfterSeconds: 15
+    percentiles: [p50, p95, p99]
+  routing:
+    strategy: score-based-path-selection
+    score:
+      rttWeight: 1.0
+      jitterWeight: 0.35
+      lossPenalty: 1000
+      utilizationPenalty: 200
+    failover: fastest-healthy
+    hysteresis: enabled
+    avoidFlapping: true
+  backbone:
+    aetherCore:
+      enabled: true
+      role: latency-aware-fabric
+      providerNeutral: true
+      dynamicPathSelection: true
+      healthAwareForwarding: true
+    pop:
+      nearestHealthy: true
+      regionalFailover: true
+    mesh:
+      batmanAdv: true
+      yggdrasil: true
+      cjdns: true
+      latencyAwarePeerSelection: true
+  transport:
+    wireguard: true
+    amneziawg: true
+    openvpn3: true
+    hysteria2: true
+    websocket: true
+    connectionReuse: true
+    keepAlive: true
+    quicWhenSupported: true
+  backend:
+    connectionPooling: true
+    warmWorkers: true
+    boundedConcurrency: true
+    queueOnlyWhenNecessary: true
+    asyncTelemetry: true
+  dns:
+    optimizeAsPartOfGlobalPath: true
+    familyDomain: familytimenet.com
+  telemetry:
+    netSA: [silk, yaf, super_mediator]
+    analyticalStore: clickhouse
+  guardrails:
+    noSecurityDowngrade: true
+    noPptpFallback: true
+    approvalBoundaryUnchanged: true
