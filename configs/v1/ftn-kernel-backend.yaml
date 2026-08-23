@@ -1,0 +1,59 @@
+apiVersion: ftn.ai/v1
+kind: KernelBackend
+metadata:
+  name: ftn-kernel-backend
+spec:
+  kernel:
+    protocol: ftn-tool-v1
+    execution: structured-only
+    arbitraryShell: false
+    arbitraryPython: false
+  backend:
+    authentication: mtls
+    enrollmentRequired: true
+    revocationCheck: true
+    approvalForMutations: true
+    idempotency: required
+    leases: required
+    audit: required
+    verificationAfterMutation: true
+  workers:
+    python:
+      enabled: true
+      integrations:
+        - ipykernel
+        - netmiko
+        - paramiko
+        - napalm
+        - pysilk
+    go:
+      enabled: true
+      role: control-plane
+  backbone:
+    dns:
+      domain: familytimenet.com
+    transports:
+      - wireguard
+      - amneziawg
+      - openvpn3
+      - gre
+      - sslh
+      - shadowsocks
+      - hysteria2
+      - websocket
+      - pptp-legacy
+    mesh:
+      - batman-adv
+      - yggdrasil
+      - cjdns
+  telemetry:
+    netSA:
+      - silk
+      - yaf
+      - super_mediator
+    analyticalStore: clickhouse
+  resilience:
+    boundedConcurrency: true
+    retryOnlyIdempotent: true
+    tenantIsolation: true
+    healthChecks: true
