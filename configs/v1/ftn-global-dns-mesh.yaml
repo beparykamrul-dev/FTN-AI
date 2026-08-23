@@ -20,43 +20,60 @@ spec:
     immutableContract: ftn-dns-v1
     configurationContract: ftn-dns-v1
     providerAdapterContract: ftn-dns-provider-v1
+    sharedZoneContract: ftn-dns-shared-zone-v1
+    sharedZone: familytimenet.com
+    sharedZoneMode: logical-zone
+    zoneSourceOfTruth: familytimenet-dns-registry
+    zoneDistribution: registry-driven
     nodeLifecycle: register-validate-authenticate-health-sync-route
     addProviderWithoutRebuild: true
     addNodeWithoutReplacingExistingNodes: true
     removeNodeWithoutRebuildingZone: true
+    familyTimeNetZoneSharedAcrossAllProviders: true
     familyTimeNetZoneSharedAcrossNodes: true
     perNodeConfiguration: true
+    perProviderAdapterConfiguration: true
     consistencyChecks: true
-    registrySourceOfTruth: familytimenet-dns-registry
+    driftDetection: true
+    serialCoordination: true
+    healthGatedPublication: true
+    roleAwareProviderOperation: true
   providers:
     - id: ftn-primary
       kind: ftn
+      role: authoritative
       scope: global
-      zone: familytimenet.com
+      sharedZone: familytimenet.com
     - id: powerdns
       kind: powerdns
+      role: authoritative
       scope: local
-      zone: familytimenet.com
+      sharedZone: familytimenet.com
     - id: technitium
       kind: technitium
+      role: authoritative
       scope: local
-      zone: familytimenet.com
+      sharedZone: familytimenet.com
     - id: coredns
       kind: coredns
+      role: authoritative
       scope: local
-      zone: familytimenet.com
+      sharedZone: familytimenet.com
     - id: hickory-dns
       kind: hickory
+      role: authoritative
       scope: local
-      zone: familytimenet.com
+      sharedZone: familytimenet.com
     - id: unbound
       kind: unbound
+      role: recursive
       scope: local
-      zone: familytimenet.com
+      sharedZone: familytimenet.com
     - id: dnsdist
       kind: dnsdist
+      role: edge-dispatch
       scope: global
-      zone: familytimenet.com
+      sharedZone: familytimenet.com
   backbone:
     gobgp: enabled
     aetherCore: enabled
