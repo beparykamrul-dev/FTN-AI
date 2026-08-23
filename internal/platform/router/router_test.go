@@ -63,6 +63,29 @@ func TestResolveUsesCache(t *testing.T) {
 	}
 }
 
+func TestResolveCacheIsScopedByPreferredRegion(t *testing.T) {
+	reg := &countingRegistry{services: []Service{
+		{ID: "local", Endpoint: "https://local", Region: "local", Healthy: true, RTT: 30 * time.Millisecond},
+		{ID: "remote", Endpoint: "https://remote", Region: "remote", Healthy: true, RTT: 5 * time.Millisecond},
+	}}
+	r := New(reg, time.Minute)
+
+	local, err := r.Resolve(context.Background(), "dns", "local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	remote, err := r.Resolve(context.Background(), "dns", "remote")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if local.ServiceID != "local" || remote.ServiceID != "remote" {
+		t.Fatalf("cache crossed region boundary: local=%q remote=%q", local.ServiceID, remote.ServiceID)
+	}
+	if reg.calls != 2 {
+		t.Fatalf("expected separate registry lookups per region, got %d", reg.calls)
+	}
+}
+
 type countingRegistry struct {
 	services []Service
 	calls    int
