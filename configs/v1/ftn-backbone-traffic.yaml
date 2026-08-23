@@ -1,0 +1,95 @@
+apiVersion: ftn.ai/v1
+kind: BackboneTrafficFabric
+metadata:
+  name: ftn-backbone-traffic
+spec:
+  identity:
+    sourceOfTruth: ftn-service-registry
+    stableNodeID: true
+    stableServiceID: true
+    pkiIdentityRequired: true
+  transport:
+    ipv4: enabled
+    ipv6: enabled
+    mtuDiscovery: enabled
+    pathMtuValidation: true
+    connectionReuse: true
+    keepalive: adaptive
+    multipath: health-aware
+  dns:
+    authoritativeZone: familytimenet.com
+    sharedZone: true
+    registryDriven: true
+    nameservers:
+      anycast: true
+      healthAware: true
+      geoAware: true
+      latencyAware: true
+      addressesFromRegistry: true
+    providers: [powerdns, technitium, coredns, hickory-dns]
+    recursive: [unbound]
+    edgeDispatcher: dnsdist
+    dnssec: enabled
+    dnsOverTLS: enabled
+    dnsOverHTTPS: enabled
+    negativeCaching: enabled
+    serveStaleOnFailure: enabled
+    providerFailover: health-gated
+  routing:
+    controlPlane: gobgp
+    anycast: enabled
+    multipath: enabled
+    routeHealthGate: true
+    routeSelection: [health, rtt, loss, jitter, utilization, locality, capacity]
+    bdix:
+      enabled: true
+      preferredWhenHealthy: true
+      requiredForAvailability: false
+    independentTransit:
+      enabled: true
+      requiredForAvailability: true
+  mesh:
+    local: full-mesh
+    global: full-mesh
+    aetherCore: enabled
+    autoDiscovery: true
+    healthGatedJoin: true
+  traffic:
+    ingress: enabled
+    egress: enabled
+    flowTracking: true
+    netflow: true
+    silk: true
+    sampling: adaptive
+    qos: enabled
+    queueAwareness: true
+    congestionSignals: true
+    connectionTracking: true
+    export:
+      clickhouse: true
+      prometheus: true
+    retention:
+      rawFlowSecrets: false
+  caching:
+    dnsCache: enabled
+    edgeCache: enabled
+    serviceCache: enabled
+    cacheHealthGate: true
+  resilience:
+    independentPaths: required
+    automaticFailover: true
+    gracefulDegradation: true
+    circuitBreaker: true
+    routeFlapProtection: true
+    dnsProviderDriftDetection: true
+    meshPartitionDetection: true
+  observability:
+    metrics: [rtt, loss, jitter, throughput, utilization, connections, dns_latency, dns_errors, route_changes]
+    activeProbes: true
+    passiveFlow: true
+    auditEvents: true
+  security:
+    mtls: required
+    pki: ftn-pki
+    secretsServerSideOnly: true
+    privilegedChangesRequireApproval: true
