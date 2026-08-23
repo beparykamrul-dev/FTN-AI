@@ -1,0 +1,48 @@
+apiVersion: ftn.ai/v1
+kind: DataPlaneLatencyPolicy
+metadata:
+  name: global-low-latency
+spec:
+  scope: global
+  pathSelection:
+    signals: [rtt, jitter, packet-loss, utilization, health, stability]
+    hysteresis: true
+    fastestHealthyFailover: true
+    avoidRouteFlapping: true
+  aetherCore:
+    enabled: true
+    topologyAware: true
+    latencyAware: true
+    capacityAware: true
+  host:
+    ramFirstQueues: true
+    hotRouteState: true
+    connectionSessionReuse: true
+    sharedMemoryOnlyWhenProfiled: true
+  network:
+    persistentConnections: true
+    avoidUnnecessaryProxyHops: true
+    boundedQueues: true
+    pacingWhenSupported: true
+    quicWhenSupported: true
+  telemetry:
+    activeProbes: true
+    passiveMeasurements: true
+    asyncCollection: true
+    batchAnalytics: true
+    store: clickhouse
+  openSource:
+    adapterOnly: true
+    dependencyPinning: true
+    licenseReview: true
+    securityReview: true
+    authorizedInfrastructureOnly: true
+  verification:
+    metrics: [p50, p95, p99, jitter, packet-loss, retransmissions, throughput, cpu, queue-depth]
+    requireBeforeAfterComparison: true
+  security:
+    preserveEncryption: true
+    preserveAuthorization: true
+    preservePKI: true
+    preserveAudit: true
+    pptpFallback: false
