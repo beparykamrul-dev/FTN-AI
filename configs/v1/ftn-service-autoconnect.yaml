@@ -15,29 +15,65 @@ spec:
     keyReference: secret-manager
     keyRotation: required
   connectivity:
+    localRouter:
+      enabled: true
+      discoverAvailableVpnTunnels: true
+      autoConnectEligibleTunnels: true
+      preferHealthyExistingTunnel: true
+      tunnelHealthGate: true
+      supportedProfiles: [wireguard, amneziawg, openvpn3, hysteria2, shadowsocks, gre, sslh]
     mesh:
       enabled: true
       mode: full-mesh
+      autoJoinAfterTunnelReady: true
       healthGate: true
       latencyAware: true
     backbone:
       enabled: true
       endpointDiscovery: registry
+      autoConnectAfterMesh: true
       healthGate: true
       pathSelection: [health, rtt, loss, jitter, utilization, locality]
+  provisioning:
+    serviceRequest:
+      enabled: true
+      validateBeforeBuild: true
+      approvalRequiredForPrivilegedChanges: true
+    firmware:
+      buildOnDemand: true
+      buildWhenNoReadyTunnel: true
+      signedArtifactRequired: true
+      reproducibleBuildMetadata: true
+      stagedActivation: true
+      rollbackOnFailedHealth: true
+      pushRequiresAuthorizedDevice: true
+    access:
+      issueOnlyAfterReady: true
+      customerNotification: true
+      notificationEvent: service-access-ready
+      include: [service-id, status, endpoint, next-step]
+      neverInclude: [private-key, secret, credential]
   lifecycle:
     detect: register
     authenticate: validate
-    connect: mesh-and-backbone
+    connect: local-router-tunnel
+    join: mesh
+    connectBackbone: backbone
     verify: health-and-readiness
+    provisionFirmware: build-if-required
+    activate: authorized-push
     publish: service-ready
+    notify: customer-access-message
     disconnect: deregister
   numbering:
     allocation: monotonic-registry-id
     noReuseUntilRetired: true
     keyBinding: service-id
-    completionState: [registered, authenticated, meshed, backbone-connected, healthy, ready]
+    completionState: [registered, authenticated, tunnel-connected, meshed, backbone-connected, healthy, firmware-ready, activated, ready]
   safety:
     noPlaintextPrivateKeys: true
     serverSideSecretsOnly: true
     privilegedChangesRequireApproval: true
+    customerAccessOnlyAfterHealthGate: true
+    signedFirmwareOnly: true
+    rollbackOnFailedActivation: true
