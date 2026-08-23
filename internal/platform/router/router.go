@@ -10,8 +10,6 @@ import (
 
 var ErrNoRoute = errors.New("ftn router: no healthy route")
 
-// Service describes an FTN service endpoint. The router never assumes a
-// particular service implementation; discovery is registry driven.
 type Service struct {
 	ID         string
 	Name       string
@@ -38,13 +36,18 @@ type Registry interface {
 	Services(context.Context, string) ([]Service, error)
 }
 
-// Router selects a healthy endpoint using locality first, then measured path
-// quality. RTT is deliberately only one input so a congested low-RTT path does
-// not automatically win.
+type cachedRoute struct {
+	route Route
+	at    time.Time
+}
+
+// Router provides a provider-neutral service-to-gateway resolution layer.
+// DNS, VPN, proxy, telemetry and FTN application services can all use the
+// same contract without coupling routing to a particular implementation.
 type Router struct {
 	registry Registry
 	mu       sync.RWMutex
-	cache    map[string]Route
+	cache    map[string]cachedRoute
 	cacheTTL time.Duration
 }
 
@@ -52,7 +55,7 @@ func New(reg Registry, cacheTTL time.Duration) *Router {
 	if cacheTTL <= 0 {
 		cacheTTL = 5 * time.Second
 	}
-	return &Router{registry: reg, cache: make(map[string]Route), cacheTTL: cacheTTL}
+	return &Router{registry: reg, cache: make(map[string]cachedRoute), cacheTTL: cacheTTL}
 }
 
 func (r *Router) Resolve(ctx context.Context, service, preferredRegion string) (Route, error) {
@@ -60,8 +63,8 @@ func (r *Router) Resolve(ctx context.Context, service, preferredRegion string) (
 	r.mu.RLock()
 	cached, ok := r.cache[service]
 	r.mu.RUnlock()
-	if ok && now.Sub(cached.RTTTime()) < r.cacheTTL {
-		return cached, nil
+	if ok && now.Sub(cached.at) < r.cacheTTL {
+		return cached.route, nil
 	}
 
 	items, err := r.registry.Services(ctx, service)
@@ -77,23 +80,23 @@ func (r *Router) Resolve(ctx context.Context, service, preferredRegion string) (
 	if len(candidates) == 0 {
 		return Route{}, ErrNoRoute
 	}
+
 	sort.SliceStable(candidates, func(i, j int) bool {
 		a, b := candidates[i], candidates[j]
 		ai := a.Region == preferredRegion
 		bi := b.Region == preferredRegion
-		if ai != bi { return ai }
+		if ai != bi {
+			return ai
+		}
 		sa := float64(a.RTT.Milliseconds()) + a.Loss*1000 + float64(a.Priority)
 		sb := float64(b.RTT.Milliseconds()) + b.Loss*1000 + float64(b.Priority)
 		return sa < sb
 	})
+
 	best := candidates[0]
 	out := Route{ServiceID: best.ID, Endpoint: best.Endpoint, GatewayID: best.GatewayID, Region: best.Region, RTT: best.RTT}
 	r.mu.Lock()
-	r.cache[service] = out
+	r.cache[service] = cachedRoute{route: out, at: now}
 	r.mu.Unlock()
 	return out, nil
 }
-
-// RTTTime supplies a conservative cache timestamp without expanding the
-// public Route model with mutable internal state.
-func (r Route) RTTTime() time.Time { return time.Now() }
