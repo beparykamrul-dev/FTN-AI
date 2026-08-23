@@ -1,0 +1,61 @@
+apiVersion: ftn.ai/v1
+kind: GatewayFabric
+metadata:
+  name: ftn-global-gateway-fabric
+spec:
+  backbone:
+    ownedFiber: false
+    ownedWireless: false
+    mode: internet-wan-provider-mesh
+  topology:
+    local: full-mesh
+    global: full-mesh
+  controlPlane:
+    bgp:
+      implementation: gobgp
+    geo:
+      implementation: geoip2
+    orchestration:
+      implementation: ansible
+      idempotent: true
+  gateways:
+    routingTable: true
+    policyRouting: true
+    anycast: true
+    pki: true
+    edgeProxy: true
+    proxy: true
+    hedshow: true
+    socks5: true
+    vpn:
+      wireguard: true
+      amneziawg: true
+      openvpn3: true
+      hysteria2: true
+  pathSelection:
+    engine: aether-core
+    metrics:
+      - rtt
+      - jitter
+      - packet_loss
+      - utilization
+      - queue_depth
+      - stability
+    hysteresis: true
+  dns:
+    canonicalDomain: familytimenet.com
+    registryDriven: true
+    additiveNodes: true
+  security:
+    pkiRequired: true
+    mtls: true
+    authenticatedSocks5: true
+    openRelay: false
+  lifecycle:
+    register: true
+    validate: true
+    healthCheck: true
+    sync: true
+    drainBeforeRemoval: true
+    verifyAfterChange: true
+    audit: true
