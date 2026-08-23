@@ -1,0 +1,118 @@
+apiVersion: ftn.ai/v1
+kind: ProviderWorkflowRegistry
+metadata:
+  name: ftn-provider-workflows
+  purpose: unify reusable provider workflows from FTN ecosystem under FTN contracts
+spec:
+  source:
+    repository: beparykamrul-dev/redy
+    workflowDirectory: .github/workflows
+    importMode: adapter-not-copy
+    preserveLicenseAndAttribution: true
+  controlPlane:
+    backend: go
+    api: aspnet-core
+    database: postgresql
+    pooler: pgbouncer
+    telemetryDatabase: clickhouse
+    events: websocket
+  lifecycle:
+    discover: provider-and-capability-registry
+    validate: contract-and-credential-schema
+    plan: ai-advisory
+    approve: explicit-for-privileged-or-paid-change
+    provision: workflow-runner
+    verify: health-latency-consistency
+    activate: health-gated
+    rollback: automatic-when-safe
+    audit: immutable-event-record
+  providerClasses:
+    dns:
+      - powerdns
+      - technitium
+      - coredns
+      - unbound
+      - dnsdist
+      - hickory
+      - godns
+      - dnspod
+      - cloudflare-dns
+      - akamai-dns
+      - anycast-dns
+    edge-cdn:
+      - cloudflare
+      - fastly
+      - akamai
+      - ftn-edge
+      - cache-edge
+    cloud-hosting:
+      - aws
+      - azure
+      - alibaba-cloud
+      - generic-hosting
+    compute-platform:
+      - kubernetes
+      - docker
+      - vm
+      - bare-metal
+  contracts:
+    provider: ftn-provider-v1
+    workflow: ftn-workflow-v1
+    dns: ftn-dns-v1
+    edge: ftn-edge-v1
+    service: ftn-service-v1
+    traffic: ftn-traffic-v1
+  dns:
+    sharedZone: familytimenet.com
+    registrySourceOfTruth: familytimenet-dns-registry
+    additiveProviderRegistration: true
+    additiveNodeRegistration: true
+    noZoneRebuildForProviderAddition: true
+    healthGatedPublication: true
+    dnssecVerification: true
+  traffic:
+    ingress: enabled
+    egress: enabled
+    flowIdentity: stable-service-id
+    telemetry:
+      silk: true
+      netflow: true
+      clickhouse: true
+    pathSignals: [rtt, jitter, loss, throughput, utilization, availability, locality]
+  edge:
+    globalMesh: true
+    localMesh: true
+    anycast: true
+    gobgp: true
+    aetherCore: true
+    bdix:
+      enabled: true
+      dependency: false
+      preference: health-and-path-quality
+    independentTransit: true
+  workflowRules:
+    reusableOnly: true
+    secretsServerSide: true
+    noPlaintextCredentialsInLogs: true
+    noAutomaticPurchase: true
+    noAutomaticPrivilegedChange: true
+    approvalRequiredForPaidCapability: true
+    approvalRequiredForPrivilegedChange: true
+    leastPrivilegeRunner: true
+    artifactSigning: true
+    provenanceMetadata: true
+    idempotentExecution: true
+    concurrencyControl: true
+  ai:
+    role: advisor
+    providerSelection: compare-cost-latency-coverage-sla-lockin
+    recommendationOnly: true
+    approvalRequiredBeforePurchase: true
+  acceptance:
+    providerRegistered: true
+    workflowValidated: true
+    credentialsValidated: true
+    dnsConsistency: true
+    edgeHealth: true
+    trafficObserved: true
+    rollbackReady: true
