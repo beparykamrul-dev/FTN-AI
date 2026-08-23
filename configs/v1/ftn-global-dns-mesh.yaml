@@ -18,11 +18,16 @@ spec:
     architecture: provider-neutral
     nodeRegistry: required
     immutableContract: ftn-dns-v1
+    configurationContract: ftn-dns-v1
+    providerAdapterContract: ftn-dns-provider-v1
+    nodeLifecycle: register-validate-authenticate-health-sync-route
     addProviderWithoutRebuild: true
     addNodeWithoutReplacingExistingNodes: true
+    removeNodeWithoutRebuildingZone: true
     familyTimeNetZoneSharedAcrossNodes: true
     perNodeConfiguration: true
     consistencyChecks: true
+    registrySourceOfTruth: familytimenet-dns-registry
   providers:
     - id: ftn-primary
       kind: ftn
@@ -38,6 +43,10 @@ spec:
       zone: familytimenet.com
     - id: coredns
       kind: coredns
+      scope: local
+      zone: familytimenet.com
+    - id: hickory-dns
+      kind: hickory
       scope: local
       zone: familytimenet.com
     - id: unbound
