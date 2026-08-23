@@ -1,0 +1,43 @@
+apiVersion: ftn.ai/v1
+kind: ServiceAutoConnect
+metadata:
+  name: ftn-service-autoconnect
+spec:
+  registry:
+    sourceOfTruth: ftn-service-registry
+    discovery: runtime
+    autoRegisterRunningServices: true
+    idempotentRegistration: true
+  identity:
+    allocation: registry-sequential
+    stableServiceID: true
+    stableNodeID: true
+    keyReference: secret-manager
+    keyRotation: required
+  connectivity:
+    mesh:
+      enabled: true
+      mode: full-mesh
+      healthGate: true
+      latencyAware: true
+    backbone:
+      enabled: true
+      endpointDiscovery: registry
+      healthGate: true
+      pathSelection: [health, rtt, loss, jitter, utilization, locality]
+  lifecycle:
+    detect: register
+    authenticate: validate
+    connect: mesh-and-backbone
+    verify: health-and-readiness
+    publish: service-ready
+    disconnect: deregister
+  numbering:
+    allocation: monotonic-registry-id
+    noReuseUntilRetired: true
+    keyBinding: service-id
+    completionState: [registered, authenticated, meshed, backbone-connected, healthy, ready]
+  safety:
+    noPlaintextPrivateKeys: true
+    serverSideSecretsOnly: true
+    privilegedChangesRequireApproval: true
