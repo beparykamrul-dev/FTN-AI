@@ -1,0 +1,63 @@
+apiVersion: ftn.ai/v1
+kind: GlobalDNSMesh
+metadata:
+  name: familytimenet-dns-mesh
+spec:
+  zone: familytimenet.com
+  topology:
+    local: full-mesh
+    global: full-mesh
+    latencyAware: true
+    healthAware: true
+    avoidFlapping: true
+  routing:
+    controlProtocol: gobgp
+    addressIntelligence: geoip2
+    routeSelection: [health, rtt, loss, jitter, utilization, locality]
+  dns:
+    architecture: provider-neutral
+    nodeRegistry: required
+    immutableContract: ftn-dns-v1
+    addProviderWithoutRebuild: true
+    addNodeWithoutReplacingExistingNodes: true
+    familyTimeNetZoneSharedAcrossNodes: true
+    perNodeConfiguration: true
+    consistencyChecks: true
+  providers:
+    - id: ftn-primary
+      kind: ftn
+      scope: global
+      zone: familytimenet.com
+    - id: powerdns
+      kind: powerdns
+      scope: local
+      zone: familytimenet.com
+    - id: technitium
+      kind: technitium
+      scope: local
+      zone: familytimenet.com
+    - id: coredns
+      kind: coredns
+      scope: local
+      zone: familytimenet.com
+    - id: unbound
+      kind: unbound
+      scope: local
+      zone: familytimenet.com
+    - id: dnsdist
+      kind: dnsdist
+      scope: global
+      zone: familytimenet.com
+  backbone:
+    gobgp: enabled
+    aetherCore: enabled
+    globalPathOptimization: enabled
+    localPathOptimization: enabled
+  telemetry:
+    activeProbes: true
+    passiveFlow: true
+    clickhouse: true
+    netSA: true
+  safety:
+    providerCredentialsServerSide: true
+    privilegedChangesRequireApproval: true
