@@ -1,0 +1,17 @@
+version: "1"
+device_service:
+  request:
+    required: [service_id, device_brand, model]
+    optional: [mac, serial, firmware_version, device_power_state]
+  analysis:
+    stages:
+      - identify
+      - compatibility
+      - health
+      - driver
+      - firmware
+      - security
+  deployment:
+    default: approval_required
+    rollback: required
+    audit: required
