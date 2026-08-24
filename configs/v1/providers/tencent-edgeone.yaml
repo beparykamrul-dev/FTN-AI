@@ -1,0 +1,30 @@
+provider:
+  id: tencent-edgeone
+  organization: Tencent
+  class: edge-provider
+  source: https://github.com/Tencent
+  capabilities:
+    - dns
+    - cdn
+    - edge
+    - traffic-steering
+    - http-acceleration
+    - http3
+    - tcp-udp-acceleration
+    - cache
+    - edge-functions
+    - waf
+    - bot-protection
+    - ddos-protection
+    - observability
+    - api
+  integration:
+    mode: adapter
+    database: accepted
+    telemetry: accepted
+    provider_credentials: external-reference-only
+    ftna_core_dependency: false
+  notes:
+    - Use Tencent/EdgeOne open-source material as architecture and integration reference.
+    - Keep provider-specific implementation isolated from FTN core.
+    - Prefer published APIs, SDKs, examples and plugins for provider integrations.
