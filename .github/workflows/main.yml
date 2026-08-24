@@ -26,3 +26,14 @@ jobs:
 
       - name: Validate FTN architecture contracts
         run: bash scripts/validate-contracts.sh
+
+      - name: Test control plane
+        working-directory: services/control-plane
+        run: go test ./...
+
+      - name: Build control plane
+        working-directory: services/control-plane
+        run: go build -trimpath ./...
+
+      - name: Validate control-plane Dockerfile
+        run: docker build -f services/control-plane/Dockerfile .
