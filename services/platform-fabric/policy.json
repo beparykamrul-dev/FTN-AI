@@ -1,0 +1,8 @@
+{
+  "default": "deny",
+  "identity": {"require_subject": true, "require_issuer": true},
+  "privileged_actions": {"approval_required": true, "audit_required": true},
+  "device_changes": {"authorization_required": true, "firmware_push_default": false},
+  "transport": {"tls_required": true, "mtls_for_service_to_service": true},
+  "secrets": {"git_storage": false, "runtime_injection": true}
+}
