@@ -1,0 +1,21 @@
+version: "1"
+client_services:
+  shell: ftn-connect
+  services:
+    - ai-assistant
+    - tv-player
+    - media
+    - app-store
+    - drive
+    - cctv-cloud
+    - internet
+    - fibermap
+    - billing
+    - ftn-mail
+    - hosting
+    - ecommerce
+  behavior:
+    entitlement_driven: true
+    deny_by_default: true
+    hidden_unentitled_management: true
+    backend_authorization_source: true
