@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: FTN Control Plane API
+  version: 1.0.0
+paths:
+  /healthz:
+    get:
+      responses:
+        '200': {description: healthy}
+  /readyz:
+    get:
+      responses:
+        '200': {description: ready}
+        '503': {description: dependency unavailable}
+  /api/v1/services:
+    get:
+      responses:
+        '200': {description: service catalog}
+  /api/v1/entitlements:
+    get:
+      parameters:
+        - in: header
+          name: X-FTN-Services
+          schema: {type: string}
+      responses:
+        '200': {description: entitlement state}
+  /api/v1/service-requests:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceRequest'
+      responses:
+        '202': {description: accepted}
+        '400': {description: invalid request}
+        '404': {description: service not found}
+components:
+  schemas:
+    ServiceRequest:
+      type: object
+      required: [service_id]
+      properties:
+        service_id: {type: string}
+        device_brand: {type: string}
+        model: {type: string}
+        mac: {type: string}
+        serial: {type: string}
+        scope: {type: string}
