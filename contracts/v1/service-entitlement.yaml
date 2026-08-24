@@ -1,0 +1,20 @@
+version: "1"
+service_entitlement:
+  identity:
+    subject_id: string
+    service_id: string
+    status: [active, suspended, expired, pending]
+    platforms: [web, android, windows, tv, api]
+  policy:
+    deny_by_default: true
+    service_scoped: true
+    privileged_actions_backend_only: true
+    approval_required_for_device_changes: true
+    secrets_never_returned: true
+  lifecycle:
+    - requested
+    - eligible
+    - provisioned
+    - active
+    - suspended
+    - revoked
