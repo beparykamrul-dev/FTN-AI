@@ -1,0 +1,35 @@
+version: 1
+provider: tencent
+purpose: provider-neutral reference integration
+source_families:
+  - TencentCloud
+  - TencentCloudADP
+  - terraform-tencentcloud-modules
+  - TencentCloudAgentRuntime
+  - Tencent-Cloud-Plugins
+  - tencentcloudstack
+  - TencentCloudES
+  - CFETeam
+  - weopenprojects
+capability_groups:
+  cloud: [compute, network, storage, database, security]
+  edge: [cdn, dns, traffic, cache, edge-functions]
+  automation: [terraform, cli, sdk, plugins]
+  ai: [agent-runtime, sandbox, tools, memory, gateway, observability]
+  data: [search, analytics, logging, metrics]
+adapter_rules:
+  isolated_credentials: true
+  normalized_events: true
+  normalized_resources: true
+  provider_specific_metadata: true
+  database_backed_registry: true
+  runtime_dependency_on_provider: false
+integration_targets:
+  - FTN Control Plane
+  - FTN Traffic Engine
+  - FTN Edge/CDN
+  - FTN DNS Mesh
+  - FTNFTP
+  - FTN Media
+  - FTN AI Agent
+  - FTN Metrics
