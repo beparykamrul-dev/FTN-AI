@@ -1,0 +1,49 @@
+version: v1
+provider: hashicorp
+purpose: provider-neutral infrastructure orchestration, service discovery, secrets, and workload scheduling reference
+sources:
+  - https://github.com/hashicorp/terraform
+  - https://github.com/hashicorp/consul
+  - https://github.com/hashicorp/vault
+  - https://github.com/hashicorp/nomad
+capabilities:
+  infrastructure_as_code:
+    enabled: true
+    mapping: FTN-IaC
+  service_discovery:
+    enabled: true
+    mapping: FTN-Service-Registry
+  service_mesh:
+    enabled: true
+    mapping: FTN-Mesh
+  workload_orchestration:
+    enabled: true
+    mapping: FTN-Workload-Scheduler
+  secrets_management:
+    enabled: true
+    mapping: FTN-Secrets
+  dynamic_credentials:
+    enabled: true
+    mapping: FTN-Credential-Broker
+  encryption:
+    enabled: true
+    mapping: FTN-Crypto-Service
+  multi_region:
+    enabled: true
+    mapping: FTN-Global-Fabric
+  health_and_failover:
+    enabled: true
+    mapping: FTN-Health-Controller
+  observability:
+    enabled: true
+    mapping: FTN-Metrics
+integration:
+  mode: adapter
+  database: centralized
+  credentials: provider-isolated
+  traffic_control: FTN-Control-Plane
+  ai_operations: FTN-AI-Agent
+policy:
+  use_upstream_open_source_when_license_compatible: true
+  copy_source_without_license_review: false
+  provider_dependency_required: false
