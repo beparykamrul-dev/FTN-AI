@@ -1,13 +1,14 @@
-create table if not exists service_requests (
-  id bigserial primary key,
-  service_id text not null,
-  device_brand text,
-  model text,
-  mac text,
-  serial text,
-  scope text,
-  status text not null default 'accepted',
-  created_at timestamptz not null default now()
+CREATE TABLE IF NOT EXISTS service_requests (
+  id BIGSERIAL PRIMARY KEY,
+  service_id TEXT NOT NULL,
+  device_brand TEXT,
+  model TEXT,
+  mac TEXT,
+  serial TEXT,
+  scope TEXT,
+  status TEXT NOT NULL DEFAULT 'accepted',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-create index if not exists service_requests_service_id_idx on service_requests(service_id);
-create index if not exists service_requests_mac_idx on service_requests(mac);
+CREATE INDEX IF NOT EXISTS service_requests_service_id_idx ON service_requests(service_id);
+CREATE INDEX IF NOT EXISTS service_requests_mac_idx ON service_requests(mac);
+CREATE INDEX IF NOT EXISTS service_requests_created_at_idx ON service_requests(created_at DESC);
