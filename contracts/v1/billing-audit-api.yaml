@@ -1,0 +1,52 @@
+version: "1"
+name: ftn-billing-audit-api
+mode: production
+
+endpoints:
+  - GET /v1/audit/billing/customers
+  - GET /v1/audit/billing/customers/{customer_id}
+  - GET /v1/audit/billing/gaps
+  - GET /v1/audit/billing/unmatched-payments
+  - GET /v1/audit/collections/employees
+  - GET /v1/audit/collections/employees/{employee_id}
+  - GET /v1/audit/reconciliation/daily
+  - GET /v1/audit/reconciliation/employee-entry-gaps
+  - GET /v1/audit/kyc/status
+  - GET /v1/audit/cases/{case_id}
+  - GET /v1/audit/cases/{case_id}/evidence
+  - POST /v1/audit/cases/{case_id}/decision
+  - POST /v1/audit/exports/legal-review
+
+rules:
+  source_of_truth: central_database
+  read_only_audit_queries: true
+  ledger_mutation: false
+  manual_decision_requires_actor: true
+  manual_decision_requires_reason: true
+  evidence_required_for_flag: true
+  unknown_when_insufficient_evidence: true
+  ai_advisory_only: true
+  legal_conclusion_by_ai: false
+  criminal_affiliation_inference: false
+
+filters:
+  customer_id: true
+  employee_id: true
+  date_range: true
+  billing_period: true
+  service_id: true
+  collection_method: true
+  status: true
+  cause: true
+  confidence: true
+
+response_fields:
+  evidence_refs: true
+  source_event_ids: true
+  timestamps: true
+  actor_ids: true
+  amounts: true
+  currency: true
+  confidence: true
+  deterministic_reason: true
+  ai_summary: true
