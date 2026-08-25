@@ -8,12 +8,16 @@ customer:
   payment_matching: true
   outstanding_balance: true
   aging: true
+  account_kyc_status: true
 
 kyc:
   service_specific: true
   evidence_required: true
   ai_advisory: true
   automated_transition_only_by_policy: true
+  source_of_truth: database
+  document_provenance: true
+  duplicate_identity_detection: true
 
 collection:
   require_collector_identity: true
@@ -26,6 +30,7 @@ collection:
   require_reference: true
   require_session_or_device: true
   immutable_audit: true
+  reconciliation_required: true
 
 missing_entry:
   evidence_sources:
@@ -44,12 +49,45 @@ missing_entry:
     - duplicate_or_invalid
     - unknown_requires_review
   never_guess: true
+  evidence_chain_required: true
 
 employee_access:
   evaluate_status_at_transaction_time: true
   former_employee_new_collection: false
   historical_visibility_by_policy: true
   reauthorization_required_for_new_collection: true
+  work_phone_allowed: true
+  work_email_allowed: true
+  assigned_device_identity_allowed: true
+  private_social_account_discovery: false
+  private_contact_enrichment: false
+
+financial_accountability:
+  customer_balance_report: true
+  employee_collection_report: true
+  employee_entry_gap_report: true
+  collector_to_payment_reconciliation: true
+  daily_cash_collection_reconciliation: true
+  outstanding_collection_report: true
+  anomaly_score: true
+  evidence_drilldown: true
+  export_for_authorized_legal_review: true
+
+relationship_analysis:
+  database_first: true
+  entity_resolution: true
+  employee_customer_relationships: true
+  collector_payment_relationships: true
+  device_session_relationships: true
+  account_role_history: true
+  organization_relationships: true
+  public_business_records_only: true
+  public_source_provenance: true
+  private_social_account_discovery: false
+  unauthorized_tracking: false
+  automatic_syndicate_accusation: false
+  require_human_legal_review: true
+  preserve_original_evidence: true
 
 ai:
   explain_balance: true
@@ -57,10 +95,13 @@ ai:
   detect_anomalies: true
   compare_collection_patterns: true
   prioritize_review: true
+  explain_confidence_and_evidence: true
   accuse_without_evidence: false
+  infer_criminal_affiliation: false
   modify_ledger: false
   approve_refund: false
   execute_financial_commitment: false
+  create_legal_conclusion: false
 
 ledger:
   append_oriented: true
@@ -77,3 +118,5 @@ security:
   sensitive_data_minimization: true
   secrets_in_telemetry: false
   immutable_audit: true
+  audit_retention_policy_required: true
+  legal_hold_supported: true
