@@ -1,0 +1,76 @@
+version: "1"
+name: ftn-production-fabric
+mode: production
+
+servers:
+  - id: familytimenet
+    role: primary
+  - id: se2
+    role: node
+  - id: se4
+    role: node
+  - id: se5
+    role: node
+
+# A control-panel change only creates a desired state. A service becomes
+# production-live only after an explicit deploy/push operation succeeds.
+deployment:
+  desired_state: true
+  explicit_push_required: true
+  auto_deploy_default: false
+  approval_required_for_production: true
+  preserve_working_version: true
+  health_check_before_activation: true
+  rollback_on_failed_health_check: true
+  record_target_server: true
+
+service_placement:
+  strategy:
+    - capacity
+    - health
+    - latency
+    - dependency
+    - failure_domain
+  allow_manual_target: true
+  allow_automatic_target: true
+
+provisioning:
+  targets:
+    vm: true
+    lxc: true
+    docker: true
+    iso: true
+  register_after_deploy: true
+  service_manifest_after_deploy: true
+
+billing_audit:
+  database_source_of_truth: true
+  auto_kyc_verification: true
+  reconcile_invoices_payments_collections: true
+  detect_missing_bill_entries: true
+  distinguish_customer_nonpayment_from_employee_missing_entry: true
+  employee_collection_ledger: true
+  customer_payment_ledger: true
+  immutable_audit_log: true
+  evidence_preservation: true
+  anomaly_analysis: true
+  ai_advisory_only: true
+  privileged_action_requires_approval: true
+
+# AI may identify inconsistencies and produce an evidence-backed report.
+# It must not label a person as criminal or establish a conspiracy by itself.
+ai_investigation:
+  use_database_records_first: true
+  correlate_audit_logs: true
+  correlate_payment_records: true
+  correlate_service_events: true
+  correlate_employee_actions: true
+  produce_evidence_timeline: true
+  confidence_scores: true
+  human_review_required: true
+
+security:
+  secrets_in_logs: false
+  external_telemetry_export: false
+  redact_before_ai: true
+  immutable_audit: true
