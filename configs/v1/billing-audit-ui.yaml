@@ -1,0 +1,39 @@
+version: "1"
+name: ftn-billing-audit-ui
+mode: production
+
+views:
+  management:
+    - billing-overview
+    - customer-balance-aging
+    - missing-entry-queue
+    - employee-collection-accountability
+    - reconciliation
+    - unmatched-payments
+    - kyc-status
+    - audit-cases
+    - evidence-drilldown
+  employee:
+    - assigned-collections
+    - pending-entry
+    - reconciled-collections
+    - corrections
+  customer:
+    - current-balance
+    - invoice-history
+    - payment-history
+    - verification-status
+
+widgets:
+  billing_overview: [expected, invoiced, collected, outstanding]
+  missing_entries: [customer_not_paid, employee_not_entered, system_failure, duplicate_or_invalid, unknown_requires_review]
+  employee_accountability: [assigned_amount, observed_amount, reconciled_amount, gap_amount, exception_count]
+  evidence: [event_id, actor_id, timestamp, source, reference, device_or_session, evidence_hash]
+  ai_review: [finding, confidence, evidence_refs, recommended_action]
+
+security:
+  enforce_rbac: true
+  mask_sensitive_identity_data: true
+  export_requires_authorized_role: true
+  immutable_audit: true
+  no_accusation_without_evidence: true
