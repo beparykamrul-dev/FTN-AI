@@ -1,0 +1,103 @@
+version: "1"
+name: ftn-os-profiles
+
+runtime:
+  service_registry: true
+  entitlement_source: ftn-control-plane
+  health_source: ftn-metrics
+  diagnostics: ftn-diagnostic-engine
+  audit: ftn-audit
+  update_channel: signed
+
+base:
+  supported_targets: [proxmox-vm, proxmox-lxc, iso, cloud-image]
+  architectures: [x86_64, arm64]
+  first_boot: ftn-bootstrap
+  identity:
+    mac: true
+    system_uuid: true
+    serial_number: true
+    hardware_inventory: true
+  security:
+    secure_boot_optional: true
+    tpm2_optional: true
+    mtls: true
+    signed_modules: true
+    short_lived_credentials: true
+  policy:
+    no_secrets_in_image: true
+    privileged_actions_require_approval: true
+    ai_direct_privileged_execution: false
+    external_telemetry_export: false
+
+profiles:
+  - id: ftn-main-node-os
+    type: main
+    services: [ftn-os, ftn-api, ftn-control-plane, ftn-database, ftn-metrics, ftn-monitoring, ftn-audit, ftn-deployment, ftn-server-fabric]
+    desktop_groups: [Control, Network, Data, Monitoring, Deployment]
+
+  - id: ftn-pop-node-os
+    type: pop
+    services: [ftn-os, ftn-api, ftn-dns, ftn-dns-resolver, ftn-proxy, ftn-mesh, ftn-anycast, ftn-metrics, ftn-monitoring, ftn-server-fabric]
+    desktop_groups: [DNS, Mesh, Edge, KPI, Monitoring]
+
+  - id: ftn-reseller-os
+    type: reseller
+    services: [ftn-os, ftn-api, ftn-control-plane, ftn-billing-gateway, ftn-app-store, ftn-ai-agent, ftn-messenger, ftn-metrics]
+    desktop_groups: [Customers, Billing, Services, AI, Support, KPI]
+
+  - id: ftn-user-os
+    type: user
+    services: [ftn-os, ftn-api, ftn-app-store, ftn-ai-agent, ftn-billing-gateway, ftn-metrics]
+    desktop_groups: [Home, Services, AI, Billing, Support]
+
+  - id: ftn-client-node-os
+    type: client
+    services: [ftn-os, ftn-api, ftn-mesh, ftn-proxy, ftn-dns-resolver, ftn-metrics, ftn-diagnostic-engine]
+    desktop_groups: [Network, Device, KPI, Diagnostics]
+
+  - id: ftn-cache-node-os
+    type: cache
+    services: [ftn-os, ftn-api, ftn-metrics, ftn-monitoring, ftn-server-fabric]
+    desktop_groups: [Cache, KPI, Monitoring]
+
+  - id: ftn-dns-node-os
+    type: dns
+    services: [ftn-os, ftn-dns, ftn-dns-resolver, ftn-ptr, ftn-metrics, ftn-monitoring]
+    desktop_groups: [Authoritative DNS, Resolver, DDNS, KPI]
+
+  - id: ftn-hosting-node-os
+    type: hosting
+    services: [ftn-os, ftn-api, ftn-dns, ftn-acme, ftn-certificate-monitor, ftn-metrics, ftn-monitoring, ftn-server-fabric]
+    desktop_groups: [Hosting, Domains, SSL, KPI, Monitoring]
+
+  - id: ftn-backup-node-os
+    type: backup
+    services: [ftn-os, ftn-api, ftn-database, ftn-metrics, ftn-monitoring, ftn-server-fabric]
+    desktop_groups: [Backup, Storage, KPI, Monitoring]
+
+service_manifest:
+  generated_from: entitlement
+  ui_sources: [web, desktop, android]
+  enforce_backend_authorization: true
+  revoke_removes_ui_access: true
+  service_upgrade_isolated: true
+
+hardware_diagnostics:
+  enabled: true
+  identifiers: [mac, system_uuid, serial_number]
+  inventory: [cpu, ram, motherboard, bios, storage, nic, gpu, tpm, temperature]
+  ai_mode: advisory
+  evidence_required: true
+  remediation_requires_approval: true
+  firmware_push_requires_explicit_approval: true
+
+lifecycle:
+  install: true
+  bootstrap: true
+  register: true
+  provision: true
+  health_check: true
+  snapshot_before_update: true
+  rollback_on_failed_health_check: true
+  quarantine_on_security_failure: true
