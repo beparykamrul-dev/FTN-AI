@@ -1,0 +1,114 @@
+version: "1"
+name: ftn-billing-audit-pipeline
+mode: production
+
+source_of_truth:
+  database: centralized_postgresql
+  read_only_analysis: true
+  transactional_changes: ftn-api
+  audit_log: immutable
+
+pipeline:
+  - validate
+  - build
+  - analyze
+  - policy
+  - approval
+  - deploy
+  - verify
+  - register
+
+validate:
+  schema: true
+  referential_integrity: true
+  duplicate_payment_detection: true
+  duplicate_invoice_detection: true
+  missing_customer_reference_detection: true
+  missing_employee_reference_detection: true
+  timestamp_consistency: true
+  amount_currency_consistency: true
+  kyc_status_consistency: true
+
+build:
+  artifacts:
+    - billing-audit-report
+    - payment-reconciliation
+    - collection-ledger
+    - employee-entry-audit
+    - customer-balance-audit
+    - kyc-review-queue
+    - evidence-bundle
+  reproducible: true
+
+analyze:
+  billing:
+    unpaid_invoices: true
+    paid_invoices: true
+    missing_entries: true
+    overdue_age: true
+    customer_payment_history: true
+    employee_entry_history: true
+    collected_vs_recorded: true
+  attribution:
+    distinguish_customer_nonpayment: true
+    distinguish_employee_missing_entry: true
+    distinguish_data_sync_failure: true
+    distinguish_unknown: true
+    confidence_required: true
+  kyc:
+    auto_verify: true
+    anomaly_detection: true
+    manual_review_queue: true
+  employee_accounting:
+    amount_collected_by_employee: true
+    amount_entered_by_employee: true
+    amount_reconciled: true
+    unresolved_delta: true
+
+policy:
+  privacy:
+    minimum_data: true
+    role_based_access: true
+    encrypt_sensitive_fields: true
+  evidence:
+    preserve_source_event_ids: true
+    preserve_timestamps: true
+    preserve_actor_ids: true
+    preserve_invoice_payment_ids: true
+    immutable_audit: true
+  legal_review:
+    allegations_from_ai: false
+    syndicate_involvement_inferred: false
+    evidence_based_relationships_only: true
+    human_review_required: true
+
+approval:
+  production_changes: required
+  financial_adjustments: required
+  account_writeoff: required
+  employee_attribution: required
+  kyc_override: required
+
+ deploy:
+  targets:
+    - ftn-api
+    - ftn-control-plane
+    - ftn-ai-agent
+    - ftn-audit
+  preserve_working_deployment: true
+  rollback_on_failure: true
+
+verify:
+  database_readback: true
+  reconciliation_totals: true
+  report_generation: true
+  audit_event_generation: true
+  permission_checks: true
+  no_unapproved_financial_mutation: true
+
+register:
+  service_registry: true
+  module_registry: true
+  deployment_registry: true
+  audit_registry: true
+  version_registry: true
