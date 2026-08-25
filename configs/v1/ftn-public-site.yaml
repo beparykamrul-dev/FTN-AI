@@ -1,0 +1,75 @@
+version: "1"
+kind: FTNPublicSitePolicy
+name: ftn-public-site
+
+site:
+  hostname: familytimenet.com
+  control_plane_hostname: control.familytimenet.com
+  control_plane_is_public_site: false
+
+public_access:
+  open_services:
+    - id: ftn-ftp
+      mode: direct
+      route: /ftp
+    - id: ftn-tv
+      mode: direct
+      route: /tv
+    - id: ftn-app-store
+      mode: direct
+      route: /app-store
+  demo_services:
+    - ftn-dns
+    - ftn-hosting
+    - ftn-cloud
+    - ftn-drive
+    - ftn-cctv-cloud
+    - ftn-fibermap
+    - ftn-media
+    - ftn-ai-agent
+    - ftn-billing
+    - ftn-mesh
+    - ftn-router
+    - ftn-wan-sdn
+    - ftn-cdn-edge
+    - ftn-developer-platform
+    - ftn-ecommerce
+  demo_policy:
+    production_data: false
+    production_credentials: false
+    privileged_api_access: false
+    request_button: true
+    request_form: true
+
+request_flow:
+  - select_category
+  - select_service
+  - show_requirements
+  - collect_request_data
+  - create_service_request
+  - attach_requested_service
+  - run_basic_validation
+  - route_to_control_plane
+  - create_control_panel_queue_item
+  - notify_customer
+
+control_panel:
+  request_source: public_site
+  source_of_truth: ftn-control-plane
+  queue_by_service_category: true
+  preserve_request_payload: true
+  preserve_request_history: true
+  show_customer_identity: true
+  show_kyc_state: true
+  show_entitlement_state: true
+  show_request_status: true
+  allowed_states: [submitted, validating, awaiting_kyc, awaiting_approval, approved, provisioning, ready, rejected, cancelled]
+
+security:
+  anonymous_request_rate_limit: true
+  abuse_protection: true
+  csrf_protection: true
+  server_side_authorization: true
+  never_expose_control_plane_tokens: true
+  never_expose_internal_service_credentials: true
+  audit_request_events: true
