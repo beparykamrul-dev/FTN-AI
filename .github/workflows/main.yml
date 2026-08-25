@@ -27,6 +27,10 @@ jobs:
       - name: Validate FTN architecture contracts
         run: bash scripts/validate-contracts.sh
 
+      - name: Validate Go formatting
+        working-directory: services/control-plane
+        run: test -z "$(gofmt -l .)"
+
       - name: Test control plane
         working-directory: services/control-plane
         run: go test ./...
