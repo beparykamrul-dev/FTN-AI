@@ -1,0 +1,57 @@
+version: "1"
+kind: FTNPublicServiceRequest
+name: ftn-public-service-request
+
+request:
+  required:
+    - service_category
+    - service_id
+    - contact
+  optional:
+    - account_id
+    - device_id
+    - company_name
+    - requested_plan
+    - location
+    - notes
+    - attachment_refs
+
+routing:
+  service_category_to_control_panel: true
+  create_queue_item: true
+  preserve_public_request_id: true
+  deduplicate: true
+
+states:
+  - submitted
+  - validating
+  - awaiting_kyc
+  - awaiting_approval
+  - approved
+  - provisioning
+  - ready
+  - rejected
+  - cancelled
+
+control_plane_record:
+  fields:
+    - request_id
+    - customer_id
+    - service_id
+    - service_category
+    - submitted_at
+    - status
+    - assigned_team
+    - assigned_employee
+    - kyc_status
+    - entitlement_status
+    - provisioning_status
+    - audit_event_refs
+
+security:
+  anonymous_requests_allowed: true
+  authentication_required_for_sensitive_data: true
+  kyc_required_by_service_policy: true
+  authorization_server_side: true
+  public_site_cannot_execute_privileged_actions: true
+  control_plane_credentials_never_returned: true
