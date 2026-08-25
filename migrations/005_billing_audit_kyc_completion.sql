@@ -19,23 +19,31 @@ CREATE OR REPLACE VIEW billing_customer_accountability AS
 SELECT
   b.customer_id,
   b.currency,
-  COALESCE(b.invoiced_minor, 0) AS invoiced_minor,
-  COALESCE(b.verified_paid_minor, 0) AS verified_paid_minor,
-  COALESCE(b.outstanding_minor, 0) AS outstanding_minor,
-  CASE
-    WHEN COALESCE(b.outstanding_minor, 0) > 0 THEN 'outstanding'
-    ELSE 'clear'
-  END AS balance_status,
+  b.billed_minor AS invoiced_minor,
+  b.verified_paid_minor,
+  GREATEST(b.outstanding_minor, 0) AS outstanding_minor,
+  b.audit_status AS balance_status,
   k.verification_status AS latest_kyc_status,
-  k.score AS latest_kyc_score
-FROM billing_customer_balance b
+  k.score AS latest_kyc_score,
+  a.verification_status AS latest_ai_kyc_status,
+  a.confidence AS latest_ai_kyc_confidence,
+  a.reasons AS latest_ai_kyc_reasons,
+  a.evidence_refs AS latest_ai_kyc_evidence_refs
+FROM billing_customer_balance_audit b
 LEFT JOIN LATERAL (
   SELECT verification_status, score
   FROM customer_kyc_verifications k
   WHERE k.customer_id = b.customer_id
   ORDER BY k.created_at DESC
   LIMIT 1
-) k ON true;
+) k ON true
+LEFT JOIN LATERAL (
+  SELECT verification_status, confidence, reasons, evidence_refs
+  FROM billing_kyc_ai_reviews a
+  WHERE a.customer_id = b.customer_id
+  ORDER BY a.created_at DESC
+  LIMIT 1
+) a ON true;
 
 CREATE OR REPLACE VIEW billing_payment_entry_accountability AS
 SELECT
@@ -46,10 +54,14 @@ SELECT
   p.entered_by AS entry_employee_id,
   p.amount_minor,
   p.currency,
+  p.payment_method,
+  p.external_ref,
   p.received_at,
   p.entered_at,
   p.verification_status,
   CASE
+    WHEN p.entered_at IS NOT NULL AND p.entered_by IS DISTINCT FROM p.collected_by_employee_id
+      THEN 'collector_entry_mismatch'
     WHEN p.entered_at IS NOT NULL THEN 'entered'
     WHEN p.evidence ? 'customer_payment' THEN 'customer_payment_not_entered'
     WHEN p.evidence ? 'employee_collection_task' THEN 'employee_collection_not_entered'
@@ -73,6 +85,7 @@ SELECT
       AND p.entered_by IS DISTINCT FROM p.collected_by_employee_id
   ) AS collector_entry_mismatch_count
 FROM billing_payments p
+WHERE p.collected_by_employee_id IS NOT NULL
 GROUP BY p.collected_by_employee_id, p.currency;
 
 CREATE OR REPLACE VIEW billing_customer_payment_history AS
@@ -89,7 +102,6 @@ SELECT
 FROM billing_payments p
 GROUP BY p.customer_id, p.currency;
 
--- Evidence-backed relationship signals for review. These are not criminal-affiliation claims.
 CREATE OR REPLACE VIEW billing_relationship_review_signals AS
 SELECT
   e.actor_id AS employee_id,
@@ -99,7 +111,8 @@ SELECT
   MAX(e.created_at) AS last_seen_at,
   MAX(e.risk_score) AS max_risk_score,
   jsonb_agg(DISTINCT e.action) AS actions,
-  jsonb_agg(DISTINCT e.object_type) AS object_types
+  jsonb_agg(DISTINCT e.object_type) AS object_types,
+  jsonb_agg(DISTINCT e.evidence_refs) AS evidence_refs
 FROM security_audit_events e
 WHERE e.actor_type IN ('employee','admin','system','ai')
   AND e.evidence_refs <> '[]'::jsonb
@@ -125,4 +138,5 @@ SELECT
   f.evidence_chain
 FROM billing_authorized_case_export f;
 
--- AI may read these views and write review records; it must not mutate the ledger.
+-- AI may read these views and write review records; it must not mutate invoices,
+-- payments, KYC records, or the authoritative billing ledger.
