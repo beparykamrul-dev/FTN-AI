@@ -30,6 +30,11 @@ control_plane:
     - ftn-consistency
     - ftn-ai-call-center
     - ftn-ai-billing-gateway
+    - ftn-billing-audit
+    - ftn-kyc-verification
+    - ftn-payment-reconciliation
+    - ftn-employee-reconciliation
+    - ftn-evidence-audit
     - ftn-messenger
     - ftn-mail
     - ftn-notification
@@ -76,6 +81,56 @@ control_plane:
     consistency_aware: true
     failure_domain_aware: true
 
+  database_audit:
+    source_of_truth: database
+    immutable_event_log: true
+    payment_ledger_required: true
+    invoice_ledger_required: true
+    customer_account_ledger_required: true
+    employee_action_ledger_required: true
+    reconciliation_required: true
+    preserve_original_records: true
+    append_only_audit_events: true
+    evidence_snapshotting: true
+
+    kyc:
+      automatic_document_validation: true
+      identity_match: true
+      duplicate_account_detection: true
+      manual_review_on_low_confidence: true
+      never_auto_reject_on_ai_only: true
+
+    billing:
+      detect_overdue_accounts: true
+      detect_missing_payment_entries: true
+      compare_invoice_payment_ledger: true
+      compare_gateway_transactions: true
+      compare_receipt_records: true
+      compare_employee_entry_events: true
+      distinguish_customer_nonpayment_from_entry_gap: true
+      flag_unresolved_reconciliation: true
+
+    employee_accountability:
+      track_collection_events: true
+      track_entry_events: true
+      track_edit_events: true
+      track_void_events: true
+      track_refund_events: true
+      track_adjustment_events: true
+      reconcile_collected_vs_entered: true
+      require_evidence_for_manual_adjustments: true
+      role_based_visibility: true
+
+    analysis:
+      ai_assist: true
+      deterministic_rules_first: true
+      evidence_required_for_findings: true
+      confidence_scoring: true
+      anomaly_detection: true
+      relationship_graph: true
+      human_review_required_for_adverse_action: true
+      legal_action_decision_outside_ai: true
+
   dashboard:
     summary_view: true
     module_detail_view: true
@@ -85,6 +140,12 @@ control_plane:
     incident_drilldown: true
     mac_ip_diagnosis: true
     global_to_ftn_path_view: true
+    billing_audit_view: true
+    kyc_review_view: true
+    customer_payment_reconciliation: true
+    employee_collection_reconciliation: true
+    evidence_timeline: true
+    anomaly_review_queue: true
 
   app_platform:
     registry_required: true
@@ -102,6 +163,9 @@ control_plane:
     advisory_only: true
     privileged_execution: false
     credentials_access: false
+    financial_decision_finalization: false
+    legal_conclusion_finalization: false
+    source_evidence_required: true
 
   security:
     external_telemetry_export: false
@@ -109,3 +173,4 @@ control_plane:
     redact_before_ai: true
     immutable_audit: true
     approval_for_privileged_actions: true
+    financial_audit_records_immutable: true
