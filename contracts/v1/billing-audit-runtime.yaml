@@ -1,0 +1,66 @@
+version: "1"
+name: ftn-billing-audit-runtime
+mode: production
+source_of_truth: central_database
+
+pipeline:
+  - load_customer_accounts
+  - load_billing_periods
+  - calculate_expected_bill
+  - match_invoices
+  - match_payments
+  - reconcile_collections
+  - detect_missing_entries
+  - classify_with_evidence
+  - calculate_employee_accountability
+  - run_ai_review
+  - publish_authorized_report
+
+identity:
+  customer: database.customer_id
+  employee: database.employee_id
+  transaction: immutable_transaction_id
+  device: session_or_device_id
+
+missing_entry_classification:
+  customer_not_paid:
+    requires: [no_verified_payment]
+  employee_not_entered:
+    requires: [collection_evidence, no_matching_ledger_entry]
+  system_failure:
+    requires: [api_or_job_failure]
+  duplicate_or_invalid:
+    requires: [duplicate_or_validation_evidence]
+  unknown_requires_review:
+    requires: [insufficient_evidence]
+
+reports:
+  customer_balance: true
+  customer_aging: true
+  missing_invoice_entries: true
+  missing_collection_entries: true
+  employee_collections: true
+  employee_entry_gaps: true
+  collector_payment_reconciliation: true
+  daily_cash_reconciliation: true
+  unmatched_payments: true
+  reversals: true
+  manual_adjustments: true
+  ai_priority_queue: true
+  evidence_drilldown: true
+
+ai:
+  mode: advisory
+  database_evidence_only: true
+  explain_every_flag: true
+  confidence_required: true
+  never_modify_ledger: true
+  never_make_criminal_or_legal_conclusion: true
+
+legal_evidence:
+  preserve_original_records: true
+  immutable_audit: true
+  evidence_hash: true
+  actor_and_timestamp: true
+  export_requires_authorized_role: true
+  legal_hold: true
