@@ -14,6 +14,8 @@ required=(
   "configs/v1/ftn-global-dns-mesh.yaml"
   "internal/platform/router/router.go"
   "internal/platform/dns/familytimenet_node_registry.go"
+  "frontend/control-center/index.html"
+  "frontend/control-center/components/component-contracts.yaml"
 )
 
 for path in "${required[@]}"; do
@@ -30,5 +32,9 @@ fi
 grep -q 'familytimenet.com' configs/v1/ftn-global-dns-mesh.yaml
 grep -q 'registryDriven: true' configs/v1/ftn-global-dns-mesh.yaml
 grep -q 'additiveNodes: true' configs/v1/ftn-global-dns-mesh.yaml
+
+# The control-center must remain service-catalog driven rather than hard-coded.
+grep -q '/api/v1/services' frontend/control-center/index.html
+grep -q 'FTN Control Center' frontend/control-center/index.html
 
 echo 'FTN-AI contract validation passed.'
