@@ -1,0 +1,72 @@
+version: "1"
+name: ftn-owner-device-access
+mode: production
+
+purpose:
+  - secure owner access to FTN management from authorized personal mobile and PC devices
+  - provide read-only audit access by default with explicit approval for privileged actions
+  - keep device identity and session history auditable
+
+owner_access:
+  role: super_admin
+  device_registration_required: true
+  device_approval_required: true
+  device_revoke_supported: true
+  session_audit: true
+  step_up_authentication_for_privileged_actions: true
+  approval_for_financial_or_destructive_actions: true
+
+supported_clients:
+  - android
+  - web
+  - pc
+
+identity:
+  device_id: true
+  device_uuid: true
+  mac_address: true
+  serial_number: true
+  identifiers_encrypted_at_rest: true
+  identifiers_hidden_from_non_authorized_roles: true
+
+access:
+  default_mode: read_only
+  scopes:
+    - billing_audit
+    - kyc_status
+    - customer_balance
+    - employee_accountability
+    - reconciliation
+    - audit_cases
+    - evidence_drilldown
+    - device_diagnostics
+    - service_health
+    - server_fabric
+  privileged_scopes_require_step_up: true
+
+security:
+  mfa_required: true
+  short_lived_sessions: true
+  refresh_token_rotation: true
+  device_reauthentication: true
+  certificate_binding_optional: true
+  external_telemetry_export: false
+  secrets_in_telemetry: false
+  immutable_audit: true
+
+ai:
+  billing_analysis: true
+  kyc_review: true
+  missing_entry_analysis: true
+  employee_collection_analysis: true
+  device_diagnostics: true
+  evidence_summary: true
+  criminal_or_syndicate_conclusion: false
+  advisory_only: true
+  evidence_required: true
+
+privacy:
+  minimize_identity_data: true
+  redact_before_ai: true
+  no_unauthorized_tracking: true
+  no_third_party_export: true
