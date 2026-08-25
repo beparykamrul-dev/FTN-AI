@@ -1,0 +1,79 @@
+version: "1"
+name: ftn-billing-audit
+mode: production
+
+customer:
+  expected_bill: true
+  invoice_completeness: true
+  payment_matching: true
+  outstanding_balance: true
+  aging: true
+
+kyc:
+  service_specific: true
+  evidence_required: true
+  ai_advisory: true
+  automated_transition_only_by_policy: true
+
+collection:
+  require_collector_identity: true
+  require_role_at_transaction_time: true
+  require_customer_id: true
+  require_invoice_or_payment_intent: true
+  require_amount: true
+  require_timestamp: true
+  require_method: true
+  require_reference: true
+  require_session_or_device: true
+  immutable_audit: true
+
+missing_entry:
+  evidence_sources:
+    - customer_payment
+    - employee_collection_task
+    - employee_session
+    - invoice_job
+    - api_event
+    - validation_error
+    - queue_failure
+    - duplicate_detection
+  allowed_causes:
+    - customer_not_paid
+    - employee_not_entered
+    - system_failure
+    - duplicate_or_invalid
+    - unknown_requires_review
+  never_guess: true
+
+employee_access:
+  evaluate_status_at_transaction_time: true
+  former_employee_new_collection: false
+  historical_visibility_by_policy: true
+  reauthorization_required_for_new_collection: true
+
+ai:
+  explain_balance: true
+  detect_missing_entries: true
+  detect_anomalies: true
+  compare_collection_patterns: true
+  prioritize_review: true
+  accuse_without_evidence: false
+  modify_ledger: false
+  approve_refund: false
+  execute_financial_commitment: false
+
+ledger:
+  append_oriented: true
+  idempotent_provider_callbacks: true
+  reconciliation_required: true
+  manual_adjustment_reason_required: true
+  manual_adjustment_actor_required: true
+  manual_adjustment_authorization_required: true
+
+security:
+  rbac: true
+  encryption_at_rest: true
+  encryption_in_transit: true
+  sensitive_data_minimization: true
+  secrets_in_telemetry: false
+  immutable_audit: true
