@@ -1,0 +1,48 @@
+version: v1
+name: ftn-core-capability-index
+purpose: single discovery index for FTN core service placement and control-panel capability resolution
+registries:
+  - ftn-os-module-registry.yaml
+  - ftn-provider-registry.yaml
+  - ftn-network-core-registry.yaml
+  - ftn-sdn-repository-registry.yaml
+
+planes:
+  control:
+    services: [control-plane, policy, approval, audit, rollback, ai]
+  compute:
+    services: [server-inventory, resource-balancer, service-placement, deployment]
+  network:
+    services: [router, ip-pool, vlan, firewall, routing, bgp, gre, vxlan, ipsec, wireguard, amneziawg]
+  dns_domain:
+    services: [dns, authoritative-dns, recursive-dns, domain, acme, certificate]
+  transport:
+    services: [openvpn3, sslh, shadowsocks, hysteria2, xray, cloak, websocket, batman-adv, yggdrasil, cjdns, aether-core, xry]
+  dataplane:
+    services: [openvswitch, ovn, kube-ovn, dpdk, xdp, ebpf, raw-socket, can]
+  telemetry:
+    services: [prometheus, netflow-v5, netflow-v9, ipfix, yaf, silk, rwflowpack]
+  virtualization:
+    services: [proxmox, kubernetes, container-networking]
+  testing:
+    services: [mininet, containernet, ns-3]
+
+resolution:
+  server_selection: capability-health-capacity-policy
+  provider_selection: provider-isolated
+  resource_balance: cpu-ram-ssd-hdd-network
+  failover: health-aware
+  migration: approval-required
+  deployment: versioned-audited-rollbackable
+
+control_panel:
+  service_first: true
+  server_override: authorized
+  provider_override: authorized
+  target_preview: required
+  approval_for_privileged_actions: true
+
+ai:
+  role: advisory-orchestrator
+  direct_execution: false
+  approval_required_for_production_writes: true
