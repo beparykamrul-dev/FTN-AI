@@ -1,0 +1,191 @@
+version: v1
+name: ftn-sdn-repository-registry
+purpose: provider-neutral registry for FTN core SDN, virtual networking, routing, dataplane, telemetry and orchestration capabilities
+source_reference:
+  repository: sdnds-tw/awesome-sdn
+  local_reference: chack/Awesome SDN Repository Overview.txt
+  mode: reference-and-adapter-catalog
+  third_party_source_copy: false
+
+core:
+  control_plane:
+    enabled: true
+    capabilities: [inventory, policy, placement, deployment, health, audit, rollback]
+    direct_privileged_execution: false
+  server_fabric:
+    enabled: true
+    resources: [cpu, ram, ssd, hdd, disk_io, network, latency, health]
+    placement: weighted-capability-health
+    failover: health-aware
+    migration: approval-required
+  provider_fabric:
+    enabled: true
+    isolation: per-provider
+    credentials: secret-store-only
+    ct_boundary: per-provider-when-required
+  service_fabric:
+    enabled: true
+    placement: capability-and-policy-aware
+    scaling: health-and-capacity-aware
+
+network_operating_systems:
+  soniс:
+    enabled: true
+    role: whitebox-switch-nos
+  cumulus-linux:
+    enabled: true
+    role: switch-nos
+  open-network-linux:
+    enabled: true
+    role: switch-nos
+  stratum:
+    enabled: true
+    role: programmable-switch-nos
+
+software_switches_dataplane:
+  openvswitch: {enabled: true}
+  ovn: {enabled: true}
+  bess: {enabled: true}
+  fdio: {enabled: true}
+  bmv2: {enabled: true, mode: lab-or-approved-programmable-dataplane}
+  pisces: {enabled: true, mode: reference}
+  dpdk: {enabled: true}
+  xdp: {enabled: true}
+  ebpf: {enabled: true}
+
+controllers_and_orchestration:
+  onos: {enabled: true}
+  opendaylight: {enabled: true}
+  ryu: {enabled: true}
+  floodlight: {enabled: true, mode: reference-or-adapter}
+  pox: {enabled: true, mode: reference-or-adapter}
+  openvirtex: {enabled: true, mode: reference-or-adapter}
+  flowvisor: {enabled: true, mode: reference-or-adapter}
+  kube-ovn: {enabled: true}
+  proxmox-sdn: {enabled: true}
+
+protocols_and_interfaces:
+  openflow: {enabled: true}
+  p4: {enabled: true}
+  p4runtime: {enabled: true}
+  gnmi: {enabled: true}
+  gnoi: {enabled: true}
+  netconf: {enabled: true}
+  restconf: {enabled: true}
+  vxlan: {enabled: true}
+  geneve: {enabled: true}
+  evpn: {enabled: true}
+  vlan: {enabled: true}
+  gre: {enabled: true}
+  ipsec: {enabled: true}
+
+routing:
+  frr: {enabled: true}
+  gobgp: {enabled: true}
+  bird: {enabled: true}
+  linux-routing: {enabled: true}
+  bgp: {enabled: true, changes: approval-required}
+  ospf: {enabled: true, changes: approval-required}
+  isis: {enabled: true, changes: approval-required}
+
+high_performance_networking:
+  dpdk: {enabled: true}
+  xdp: {enabled: true}
+  ebpf: {enabled: true}
+  mtcp: {enabled: true, mode: adapter-or-reference}
+  f-stack: {enabled: true, mode: adapter-or-reference}
+  raw_socket:
+    enabled: true
+    privileged: true
+    production_policy: explicit-authorization
+  can:
+    enabled: true
+    interfaces: [can-raw, can-filter]
+    production_policy: explicit-authorization
+
+network_emulation_and_testing:
+  mininet: {enabled: true}
+  containernet: {enabled: true}
+  maxinet: {enabled: true, mode: test}
+  ns-3: {enabled: true, mode: test}
+  production_traffic: forbidden
+
+nfv_and_cloud_native:
+  opnfv: {enabled: true, mode: reference-or-adapter}
+  onap: {enabled: true, mode: reference-or-adapter}
+  kubernetes: {enabled: true}
+  container_networking: {enabled: true}
+  proxmox: {enabled: true}
+
+transport_and_overlay:
+  wireguard: {enabled: true}
+  amneziawg: {enabled: true}
+  openvpn3: {enabled: true}
+  sslh: {enabled: true}
+  shadowsocks: {enabled: true}
+  hysteria2: {enabled: true}
+  xray: {enabled: true}
+  cloak: {enabled: true}
+  websocket: {enabled: true}
+  socket: {enabled: true}
+  batman-adv: {enabled: true}
+  yggdrasil: {enabled: true}
+  cjdns: {enabled: true}
+  aether-core: {enabled: true, mode: adapter-boundary}
+  xry: {enabled: true, mode: adapter-boundary}
+
+flow_telemetry:
+  silk: {enabled: true}
+  yaf: {enabled: true}
+  rwflowpack: {enabled: true}
+  ipfix: {enabled: true}
+  netflow_v5: {enabled: true}
+  netflow_v9: {enabled: true}
+  dpacketplugin: {enabled: true, mode: adapter-or-reference}
+  netsa: {enabled: true, mode: reference-or-adapter}
+
+security:
+  waf_parsing_discrepancy:
+    enabled: true
+    purpose: defensive-validation-and-hardening
+    exploit_generation: disabled
+  strict_protocol_parsing: true
+  zero_trust: true
+  least_privilege: true
+  secrets_in_repository: false
+  secrets_in_api_responses: false
+  destructive_operations: approval-required
+  route_changes: approval-required
+  firewall_changes: approval-required
+  tunnel_changes: approval-required
+  raw_socket_operations: approval-required
+  ai_direct_execution: false
+
+placement:
+  inputs: [capabilities, cpu, ram, ssd, hdd, disk_io, network_capacity, latency, health, policy, provider]
+  service_to_server: required
+  provider_to_ct: optional
+  multi_server_load_balance: enabled
+  automatic_failover: enabled
+  drain_before_removal: true
+  rollback_metadata: required
+
+control_panel:
+  server_registry: enabled
+  provider_registry: enabled
+  service_catalog: enabled
+  deployment_targets: enabled
+  resource_dashboard: enabled
+  network_topology: enabled
+  health_and_telemetry: enabled
+  approval_queue: enabled
+  audit_log: enabled
+  rollback: enabled
+  ai_advisor: enabled
+  ai_execution: approval-gated
+
+integration_rule:
+  strategy: adapter-first
+  implementation: use-capability-contracts
+  vendor_lock_in: false
+  source_repositories: cataloged-not-vendored
