@@ -1,0 +1,102 @@
+version: v1
+registry: ftn-edge-capabilities
+
+# Provider-neutral capability catalog. Implementations are adapters; the
+# control plane decides whether a capability may run on a particular node.
+capabilities:
+  - id: linux.pf_can
+    category: edge-hardware
+    interface: CAN_RAW
+    packages: [can-utils]
+    privileged: true
+    production: gated
+
+  - id: linux.raw-ip
+    category: packet-diagnostics
+    interface: SOCK_RAW
+    privileged: true
+    production: gated
+    policy: explicit-authorization
+
+  - id: linux.ebpf-xdp
+    category: kernel-fast-path
+    interfaces: [eBPF, XDP]
+    production: gated
+
+  - id: sdn.kube-ovn
+    category: overlay
+    interfaces: [Kube-OVN, OVS]
+    production: gated
+
+  - id: overlay.vxlan
+    category: overlay
+    interfaces: [VXLAN]
+    production: gated
+
+  - id: overlay.ipsec
+    category: overlay-security
+    interfaces: [IPsec]
+    production: gated
+
+  - id: telemetry.netflow
+    category: flow-telemetry
+    interfaces: [NetFlow-v5, NetFlow-v9, IPFIX]
+    production: gated
+
+  - id: telemetry.yaf
+    category: flow-telemetry
+    interfaces: [YAF]
+    production: gated
+
+  - id: telemetry.silk
+    category: flow-telemetry
+    interfaces: [SiLK, rwflowpack]
+    production: gated
+
+  - id: security.parser-differential
+    category: protocol-validation
+    interfaces: [parser-differential-testing, normalization-checks]
+    production: gated
+    mode: defensive-only
+
+  - id: transport.wireguard
+    category: transport
+    status: planned-after-core
+  - id: transport.amneziawg
+    category: transport
+    status: planned-after-core
+  - id: transport.openvpn3
+    category: transport
+    status: planned-after-core
+  - id: transport.gre
+    category: transport
+    status: planned-after-core
+  - id: transport.sslh
+    category: transport
+    status: planned-after-core
+  - id: transport.shadowsocks
+    category: transport
+    status: planned-after-core
+  - id: transport.hysteria2
+    category: transport
+    status: planned-after-core
+  - id: transport.websocket
+    category: transport
+    status: planned-after-core
+  - id: transport.batman-adv
+    category: transport
+    status: planned-after-core
+  - id: transport.yggdrasil
+    category: transport
+    status: planned-after-core
+  - id: transport.cjdns
+    category: transport
+    status: planned-after-core
+
+security_defaults:
+  raw_packet_production: approval-required
+  kernel_privilege_changes: approval-required
+  network_route_changes: approval-required
+  parser_differential_mode: defensive-only
+  audit_required: true
+  rollback_required: true
