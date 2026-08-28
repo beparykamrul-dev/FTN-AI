@@ -1,0 +1,48 @@
+version: "1"
+name: ftn-provider-registry
+
+# Provider adapters are capability boundaries. Credentials belong in the
+# deployment secret store and must never be committed here.
+providers:
+  - id: letsencrypt
+    category: acme
+    capabilities: [certificate_issuance, certificate_renewal, dns01]
+    secret_ref: provider/letsencrypt
+
+  - id: dnspod
+    category: dns
+    capabilities: [dns_records, dns01]
+    secret_ref: provider/dnspod
+
+  - id: duckdns
+    category: dns
+    capabilities: [dynamic_dns, dns_records]
+    secret_ref: provider/duckdns
+
+  - id: porkbun
+    category: domain_dns
+    capabilities: [domain, dns_records, dns01]
+    secret_ref: provider/porkbun
+
+  - id: cloudflare
+    category: dns_cdn
+    capabilities: [dns_records, dns01, edge]
+    secret_ref: provider/cloudflare
+
+  - id: akamai
+    category: edge_dns
+    capabilities: [dns, edge]
+    secret_ref: provider/akamai
+
+  - id: netflix-open-connect
+    category: authorized_edge
+    capabilities: [edge_cache]
+    authorization_required: true
+    secret_ref: provider/netflix-open-connect
+
+policy:
+  provider_selection: capability_and_health
+  credentials_from_git: false
+  credentials_in_telemetry: false
+  privileged_changes_require_approval: true
+  audit_provider_mutations: true
