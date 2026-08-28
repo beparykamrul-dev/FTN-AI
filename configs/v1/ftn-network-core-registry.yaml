@@ -1,0 +1,71 @@
+version: v1
+name: ftn-network-core-registry
+
+purpose: provider-neutral network capability and placement contract
+
+components:
+  router:
+    enabled: true
+    adapters: [mikrotik, linux, vendor-neutral]
+  ip_pool:
+    enabled: true
+    allocation: [ipv4, ipv6, subnet, vlan]
+    policy: capacity-aware
+  firewall:
+    enabled: true
+    policy: deny-by-default
+    changes: approval-required
+  routing:
+    enabled: true
+    adapters: [gobgp, linux-routing]
+    changes: approval-required
+  tunnels:
+    gre:
+      enabled: true
+    vxlan:
+      enabled: true
+    ipsec:
+      enabled: true
+  vpn:
+    wireguard:
+      enabled: true
+    amneziawg:
+      enabled: true
+  dns:
+    enabled: true
+    placement: service-aware
+  domain:
+    enabled: true
+    provider-neutral: true
+
+placement:
+  inputs:
+    - cpu
+    - ram
+    - ssd
+    - hdd
+    - disk_io
+    - network_capacity
+    - latency
+    - health
+    - capabilities
+    - provider_policy
+  strategy: weighted-capability-health
+  failover: health-aware
+  migration: approval-required
+
+control_plane:
+  server_selection: required
+  service_placement: required
+  provider_isolation: required
+  credential_isolation: required
+  audit: required
+  rollback: required
+
+safety:
+  privileged_network_changes: approval-required
+  route_changes: approval-required
+  firewall_changes: approval-required
+  tunnel_changes: approval-required
+  secrets_in_api_responses: false
+  ai_direct_execution: false
