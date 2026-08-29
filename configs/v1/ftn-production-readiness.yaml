@@ -1,0 +1,15 @@
+version: v1
+kind: FTNProductionReadiness
+metadata:
+  name: ftn-production-readiness
+spec:
+  gates: [config_validation, dependency_check, health_check, security_check, migration_check, rollback_check]
+  required: true
+  deployment: staged
+  canary: true
+  health_gate: true
+  rollback: automatic
+  approval: required
+  audit: required
+  secrets: never_embedded
+  provider_neutral: true
