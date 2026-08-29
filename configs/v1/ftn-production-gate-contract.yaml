@@ -1,0 +1,19 @@
+version: v1
+kind: FTNProductionGateContract
+spec:
+  preflight:
+    - config_validation
+    - api_health
+    - database_health
+    - service_registry_consistency
+    - tenant_isolation_check
+    - telemetry_check
+  release:
+    backend: required
+    frontend: required
+    integration: required
+  observability:
+    metrics: required
+    logs: required
+    alerts: required
+  rollback: required
