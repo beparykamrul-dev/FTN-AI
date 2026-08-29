@@ -1,0 +1,28 @@
+version: v1
+kind: FTNDeviceClientFabric
+metadata:
+  name: ftn-device-client-fabric
+spec:
+  clients: [android, tv, desktop, embedded]
+  contract: ftn-service-contract
+  discovery: ftn-service-discovery
+  transport: ftn-transport-negotiation
+  api: ftn-api-mesh
+  cache: ftn-cache-fabric
+  telemetry: ftn-observability-contract
+  security:
+    e2e: true
+    mtls: true
+    zero_trust: true
+  resource:
+    battery_aware: true
+    thermal_aware: true
+    storage_bounded: true
+    background_work_minimized: true
+  media:
+    adaptive_codec: true
+    hardware_acceleration: capability-aware
+  offline:
+    bounded_cache: true
+    stale_state_rejection: true
+  provider_neutral: true
