@@ -1,0 +1,23 @@
+version: v1
+kind: FTNDNSServiceFabric
+metadata:
+  name: ftn-dns-service-fabric
+spec:
+  roles: [authoritative, recursive, cache, discovery]
+  protocols: [dns, doh, dot]
+  dnssec: true
+  health_aware: true
+  latency_aware: true
+  service_discovery: true
+  anycast_ready: true
+  split_horizon: true
+  failover:
+    automatic: true
+    hysteresis: true
+  telemetry:
+    query_metrics: true
+    latency: true
+    errors: true
+  security:
+    anti_spoofing: true
+    mtls_control_plane: true
