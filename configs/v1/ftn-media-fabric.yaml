@@ -1,0 +1,33 @@
+version: v1
+kind: FTNMediaFabric
+metadata:
+  name: ftn-media-fabric
+spec:
+  services: [streaming, vod, live, recording, transcoding, delivery]
+  codec: ftn-media-codec-policy
+  delivery:
+    path_engine: exrouter
+    latency_aware: true
+    loss_aware: true
+    jitter_aware: true
+  cache:
+    policy: ftn-cache-fabric
+    bounded: true
+    segment_cache: true
+  acceleration:
+    qsv: capability-aware
+    vaapi: capability-aware
+    zero_copy: preferred
+    memory_to_memory: preferred
+  clients: [android, tv, desktop, web]
+  security:
+    transport_encryption: true
+    end_to_end: true
+    tokenized_access: true
+  telemetry:
+    quality: true
+    flow_id: true
+    trace_id: true
+  resource:
+    adaptive_bitrate: true
+    storage_bounded: true
