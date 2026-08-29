@@ -1,0 +1,30 @@
+version: v1
+kind: FTNMobileEfficiency
+metadata:
+  name: ftn-mobile-efficiency
+spec:
+  clients: [android, tv, web]
+  transport:
+    adaptive: true
+    compression: true
+    connection_reuse: true
+  cache:
+    bounded: true
+    event_driven: true
+    eviction: lru-aware
+  media:
+    adaptive_bitrate: true
+    low_bandwidth_profile: true
+    hardware_decode: capability-aware
+  realtime:
+    websocket: true
+    coalescing: true
+    adaptive_refresh: true
+  battery:
+    background_work_minimized: true
+    polling_minimized: true
+  storage:
+    local_cache_bounded: true
+    automatic_cleanup: true
+  ai:
+    on_demand_context: true
