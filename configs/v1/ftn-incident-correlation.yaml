@@ -4,14 +4,21 @@ metadata:
   name: ftn-incident-correlation
 spec:
   inputs: [device, driver, service, metric, telemetry, certificate, dns, database, path, mesh]
-  correlation_keys: [service_id, node_id, flow_id, trace_id, path_id]
+  correlation_keys: [service_id, node_id, device_id, flow_id, trace_id, path_id]
+  evidence: [metrics, telemetry, logs, certificates, dns, routing, transport, database]
   stages: [detect, correlate, rank, group, notify, recover]
+  graph: true
   root_cause_first: true
+  root_cause_ranking: true
+  blast_radius: true
+  dependency_aware: true
+  temporal_window: adaptive
   duplicate_suppression: true
   cooldown: true
   maintenance_suppression: true
   emergency_detection: true
-  notification_policy: ftn-alerting-fabric
+  notification_policy: ftn-dms-alert-engine
   ai_assist: ftn-ai-network-bridge
   dashboard: ftn-control-center
   security: [least_data, no_secrets, audit]
+  privileged_remediation: approval-required
