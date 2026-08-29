@@ -1,0 +1,27 @@
+version: v1
+kind: FTNServiceLifecycle
+metadata:
+  name: ftn-service-lifecycle
+spec:
+  states: [discovered, validated, ready, active, degraded, draining, stopped, failed]
+  transitions:
+    health_aware: true
+    dependency_aware: true
+    graceful_drain: true
+  startup:
+    discovery: true
+    certificate_validation: true
+    dependency_check: true
+    health_gate: true
+  shutdown:
+    drain: true
+    connection_quiesce: true
+    state_flush: true
+  recovery:
+    retry: bounded
+    failover: health-aware
+    rollback: true
+  observability:
+    lifecycle_events: true
+    audit: true
+  privileged_changes: approval-required
