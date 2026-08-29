@@ -1,0 +1,34 @@
+version: v1
+kind: FTNAppPlatform
+metadata:
+  name: ftn-app-platform
+spec:
+  clients: [android, tv, desktop, web, embedded]
+  architecture:
+    shared_contract: ftn-service-contract
+    api: ftn-control-api
+    discovery: ftn-service-discovery
+    transport: ftn-transport-negotiation
+    cache: ftn-cache-fabric
+    telemetry: ftn-driver-telemetry
+  performance:
+    lazy_loading: true
+    adaptive_refresh: true
+    bounded_cache: true
+    compressed_payloads: true
+    battery_aware: true
+    thermal_aware: true
+  localization:
+    supported: [bn, en, ar]
+    lazy_loaded: true
+    fallback: en
+  media:
+    codec_policy: ftn-media-codec-policy
+    hardware_acceleration: capability-aware
+  security:
+    zero_trust: true
+    e2e: true
+    mtls: true
+  offline:
+    bounded_state: true
+    stale_state_rejection: true
