@@ -1,0 +1,50 @@
+version: 1
+panels:
+  super-admin:
+    host: admin.familytimenet.com
+    roles: [super-admin]
+    permissions: [platform:manage, users:manage, billing:manage, network:manage, ai:manage, recovery:approve, recovery:execute, audit:read]
+  isp-admin:
+    host: admin.familytimenet.com
+    roles: [admin]
+    permissions: [users:manage, services:manage, billing:manage, network:read, ai:read, audit:read]
+  billing:
+    host: billing.familytimenet.com
+    roles: [billing-agent, admin, super-admin]
+    permissions: [users:read, services:read, billing:manage, payments:manage, audit:read]
+  noc:
+    host: noc.familytimenet.com
+    roles: [noc-operator, admin, super-admin]
+    permissions: [network:read, discovery:run, monitoring:read, incidents:manage, recovery:propose, recovery:approve]
+  engineer:
+    host: engineer.familytimenet.com
+    roles: [engineer, noc-operator]
+    permissions: [network:read, discovery:run, monitoring:read, incidents:manage, recovery:propose]
+  support:
+    host: support.familytimenet.com
+    roles: [support-agent, admin]
+    permissions: [users:read, services:read, billing:read, tickets:manage, ai:use]
+  reseller:
+    host: reseller.familytimenet.com
+    roles: [reseller]
+    permissions: [customers:manage:self, services:read:self, billing:read:self, tickets:create:self]
+  partner:
+    host: partner.familytimenet.com
+    roles: [partner]
+    permissions: [customers:read:assigned, services:read:assigned, tickets:create:assigned]
+  audit:
+    host: audit.familytimenet.com
+    roles: [auditor]
+    permissions: [audit:read]
+  aiops:
+    host: aiops.familytimenet.com
+    roles: [ai-operator, admin, super-admin]
+    permissions: [ai:manage, incidents:read, recovery:propose, recovery:approve]
+
+rules:
+  - deny_by_default
+  - enforce_server_side_rbac
+  - enforce_resource_ownership
+  - require_approval_for_privileged_recovery
+  - audit_privileged_actions
+  - never_expose_infrastructure_credentials_to_clients
