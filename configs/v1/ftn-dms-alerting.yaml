@@ -1,0 +1,76 @@
+version: v1
+kind: FTNDMSAlerting
+metadata:
+  name: ftn-dms-alerting
+  purpose: two-mode intelligent alert and SMS orchestration
+spec:
+  modes:
+    vertical:
+      description: explicit service/device policy matrix
+      sources: [device-driver, metrics, telemetry-api, ai, certificate, service-health]
+      targets: [device, service, node, user-defined-scope]
+      configurable: true
+      thresholds: true
+      schedules: true
+      channels: [dashboard, sms, email, in-app]
+    emergency:
+      description: automatic anomaly and incident escalation
+      enabled: true
+      sources: [device-driver, metrics, telemetry-api, ai, certificate, service-health]
+      correlation: true
+      severity_scoring: true
+      deduplication: true
+      suppression: true
+      escalation: true
+      channels: [dashboard, sms, email, in-app]
+
+  discovery:
+    auto_discovery: true
+    device_driver_inventory: true
+    service_inventory: true
+    metric_inventory: true
+    telemetry_inventory: true
+    certificate_inventory: true
+    ai_context: true
+
+  alert_policy:
+    default: intelligent-emergency-only
+    service_specific_override: true
+    device_specific_override: true
+    notification_cooldown: true
+    alert_grouping: true
+    root_cause_preference: true
+    duplicate_suppression: true
+    maintenance_suppression: true
+    recovery_notification: true
+
+  sms:
+    send_only_on_policy_match: true
+    emergency_escalation: true
+    informational_sms: false
+    repeated_sms_suppression: true
+    cooldown: true
+    correlation_required: true
+
+  dashboard:
+    real_time: true
+    alert_timeline: true
+    device_drilldown: true
+    service_drilldown: true
+    root_cause_chain: true
+    acknowledgement: true
+    silence_with_expiry: true
+
+  ai:
+    role: correlation-and-prioritization
+    false_positive_reduction: true
+    root_cause_ranking: true
+    notification_recommendation: true
+    autonomous_privileged_action: false
+
+  security:
+    identity_required: true
+    mtls: true
+    audit: true
+    secrets_in_alerts: false
+    privileged_changes: approval-required
