@@ -1,0 +1,39 @@
+version: v1
+kind: FTNIdentityRouteMonitor
+metadata:
+  name: ftn-identity-route-monitor
+spec:
+  identity:
+    primary: uuid
+    hardware: [mac, serial_number]
+    network: [ipv4, ipv6]
+    service: [node_id, device_id, interface_id]
+    optional: [hostname, asset_id]
+  route_view:
+    identity_to_interface: true
+    interface_to_ip: true
+    ip_to_route: true
+    route_to_path: true
+    path_to_service: true
+    dependencies: true
+  discovery:
+    methods: [dhcp, arp_ndp, snmp, agent, api, bootstrap]
+    deduplicate: true
+    identity_conflict_detection: true
+  telemetry:
+    metrics: true
+    flows: true
+    traces: true
+    events: true
+    health: true
+  monitoring:
+    latency: true
+    jitter: true
+    packet_loss: true
+    errors: true
+    capacity: true
+    availability: true
+  security:
+    identity_verification: true
+    anti_spoofing: true
+    unknown_device_alert: true
