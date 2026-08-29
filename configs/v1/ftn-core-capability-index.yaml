@@ -35,6 +35,28 @@ planes:
   testing:
     services: [mininet, containernet, ns-3]
 
+mesh:
+  mode: full-mesh
+  topology: dynamic
+  node_discovery: capability-and-health
+  peer_selection: latency-health-capacity-policy
+  links:
+    encrypted: true
+    preferred: [wireguard, ipsec, vxlan, gre]
+    overlay: [batman-adv, yggdrasil, cjdns, weron]
+  resilience:
+    multipath: true
+    automatic_failover: true
+    drain_before_removal: true
+  routing:
+    service_aware: true
+    bgp_adapter: gobgp
+    route_changes: approval-gated
+  placement:
+    cross_node: true
+    resource_balance: cpu-ram-ssd-hdd-network
+    provider_isolated: true
+
 resolution:
   server_selection: capability-health-capacity-policy
   provider_selection: provider-isolated
@@ -48,9 +70,13 @@ control_panel:
   server_override: authorized
   provider_override: authorized
   target_preview: required
+  mesh_topology_view: true
+  mesh_node_placement: true
   approval_for_privileged_actions: true
 
 ai:
   role: advisory-orchestrator
   direct_execution: false
-  approval_required_for_production_writes: true
+  production_writes: approval-required
+  mesh_placement: recommendation-only
+  audit: required
