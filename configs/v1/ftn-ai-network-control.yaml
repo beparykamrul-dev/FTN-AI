@@ -1,0 +1,23 @@
+version: v1
+kind: FTNAINetworkControl
+metadata:
+  name: ftn-ai-network-control
+spec:
+  role: network-intelligence
+  inputs: [dns, discovery, device, driver, metrics, telemetry, certificate, database, mesh, exrouter]
+  context:
+    bounded: true
+    incremental: true
+    secrets: excluded
+    raw_payload: excluded
+  capabilities:
+    anomaly_detection: true
+    root_cause_analysis: true
+    capacity_prediction: true
+    latency_analysis: true
+    path_analysis: true
+    service_health: true
+    alert_prioritization: true
+  action_flow: [observe, correlate, recommend, preview, approve, execute, verify, rollback]
+  privileged_execution: approval-required
+  provider_neutral: true
