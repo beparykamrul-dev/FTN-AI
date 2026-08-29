@@ -1,0 +1,20 @@
+version: v1
+kind: FTNApprovalGate
+metadata:
+  name: ftn-approval-gate
+spec:
+  protected_actions: [routing-change, firewall-change, tunnel-change, certificate-policy-change, device-write, database-migration, service-deploy, service-stop]
+  flow:
+    propose: true
+    validate: true
+    preview: true
+    approve: required
+    execute: true
+    verify: true
+    rollback_on_failure: true
+  evidence: [actor, action, target, before_state, proposed_state, validation, approval, result]
+  ai:
+    can_propose: true
+    can_approve: false
+    can_execute_without_approval: false
+  audit: immutable-event
