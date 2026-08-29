@@ -15,7 +15,11 @@ files = `git ls-files "*.yml" "*.yaml"`.lines.map(&:strip).reject(&:empty?)
 errors = []
 files.each do |file|
   begin
-    YAML.load_stream(File.read(file), aliases: true)
+    if YAML.respond_to?(:unsafe_load_stream)
+      YAML.unsafe_load_stream(File.read(file))
+    else
+      YAML.load_stream(File.read(file))
+    end
   rescue StandardError => e
     errors << "#{file}: #{e.message}"
   end
