@@ -1,0 +1,24 @@
+version: v1
+kind: FTNOfficialServicePublishing
+metadata:
+  name: ftn-official-service-publishing
+spec:
+  registry: ftn-service-discovery
+  lifecycle: [register, validate, health_gate, publish, monitor, retire]
+  endpoints:
+    public: policy-controlled
+    private: zero-trust
+  dns: ftn-dns-service-fabric
+  certificates: ftn-pki-certificate-fabric
+  routing: ftn-router-fabric
+  path_engine: exrouter
+  observability: ftn-observability-fabric
+  dashboard: ftn-control-center
+  clients: ftn-app-platform
+  security: ftn-zero-trust-gateway
+  readiness:
+    health_required: true
+    certificate_required: true
+    telemetry_required: true
+    rollback_ready: true
+  provider_neutral: true
