@@ -1,0 +1,23 @@
+version: v1
+kind: FTNContentServiceContract
+spec:
+  services:
+    media: true
+    tv: true
+    iptv: true
+    cctv: true
+    storage: true
+    drive: true
+  shared_fabric:
+    dns: true
+    edge: true
+    storage: true
+    telemetry: true
+  access:
+    personal_service: true
+    business_service: true
+    restreaming_requires_authorization: true
+  monitoring:
+    playback_health: true
+    origin_health: true
+    edge_latency: true
