@@ -22,6 +22,7 @@ services:
     restart: unless-stopped
     environment:
       FTN_CONTROL_ADDR: ":8080"
+      FTN_HEALTH_URL: "http://127.0.0.1:8080/healthz"
       DATABASE_URL: postgres://ftn:${FTN_DB_PASSWORD}@postgres:5432/ftn?sslmode=disable
     ports:
       - "8080:8080"
@@ -29,10 +30,11 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "/ftn-control-plane"]
-      interval: 30s
+      test: ["CMD", "/ftn-control-plane", "--healthcheck"]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
 
 volumes:
   ftn-postgres:
