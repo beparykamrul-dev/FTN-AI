@@ -1,0 +1,21 @@
+version: v1
+kind: FTNRemoteAccessFabric
+metadata:
+  name: ftn-remote-access-fabric
+spec:
+  gateways: [web_remote, ssh, desktop, service_access]
+  identity: required
+  authorization: least-privilege
+  transport:
+    secure_preferred: true
+    mtls_control: true
+    end_to_end: true
+  session:
+    idle_timeout: adaptive
+    keepalive: adaptive
+    reconnect: bounded
+  observability:
+    audit: true
+    session_metrics: true
+    incident_correlation: true
+  privileged: approval-required
