@@ -1,0 +1,22 @@
+version: v1
+kind: FTNDashboardRealtime
+metadata:
+  name: ftn-dashboard-realtime
+spec:
+  transport: websocket
+  views: [overview, topology, devices, services, dns, routing, exrouter, mesh, telemetry, incidents, certificates, media, databases, ai]
+  events:
+    push: [health_change, path_change, incident, recovery, certificate_event, service_event]
+    coalesce: true
+    bounded_queue: true
+  topology:
+    live: true
+    dependencies: true
+    path_health: true
+  ai:
+    recommendations: true
+    confidence: true
+    approval_state: true
+  resource:
+    mobile_payload_minimized: true
+    adaptive_refresh: true
