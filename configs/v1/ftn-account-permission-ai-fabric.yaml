@@ -1,0 +1,37 @@
+version: v1
+kind: FTNAccountPermissionAIFabric
+metadata:
+  name: ftn-account-permission-ai-fabric
+spec:
+  account:
+    types: [personal, family, business, organization]
+    unified_user_id: true
+    mobile_association: true
+  authorization:
+    model: rbac_abac
+    default_deny: true
+    scopes: [account, user, device, service, billing, support, network]
+    approval_required_for_sensitive_actions: true
+  ai:
+    assistant: true
+    call_center: true
+    account_context: authorized_only
+    action_execution: permission_checked
+    destructive_actions: approval_required
+  control_panel:
+    web: true
+    android: true
+    api: true
+    websocket: true
+  payment:
+    personal_account: true
+    payment_collection: true
+    merchant_permissions: true
+    provider_verification_required: true
+  audit:
+    immutable_events: true
+    actor_id: true
+    permission_snapshot: true
+  security:
+    tenant_isolation: true
+    secrets_out_of_source: true
