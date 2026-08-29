@@ -1,88 +1,72 @@
 version: v1
 name: ftn-core-capability-index
-purpose: single discovery index for FTN core service placement, network health and control-panel capability resolution
+purpose: single provider-neutral discovery index for FTN service placement, protocol composition, network health and control-panel capability resolution
 registries:
   - ftn-os-module-registry.yaml
   - ftn-provider-registry.yaml
   - ftn-network-core-registry.yaml
   - ftn-sdn-repository-registry.yaml
+  - ftn-unified-protocol-fabric.yaml
+  - ftn-transport-security-registry.yaml
+  - ftn-telemetry-analysis-registry.yaml
 
 planes:
-  control:
-    services: [control-plane, policy, approval, audit, rollback, ai]
-  compute:
-    services: [server-inventory, resource-balancer, service-placement, deployment]
-  network:
-    services: [router, ip-pool, vlan, firewall, routing, bgp, gre, vxlan, ipsec, wireguard, amneziawg, network-health, exrouter]
-  dns_domain:
-    services: [dns, authoritative-dns, recursive-dns, domain, acme, certificate]
-  transport:
-    services: [openvpn3, sslh, shadowsocks, hysteria2, xray, xray-core, cloak, mihomo, sing-box, websocket, batman-adv, yggdrasil, cjdns, aether-core, xry]
-  dataplane:
-    services: [openvswitch, ovn, kube-ovn, dpdk, xdp, ebpf, raw-socket, can]
-  storage:
-    services: [synology, truenas-scale, storage-pool, backup, snapshot]
-  remote_access:
-    services: [globalprotect, quickconnect, stun, turn, nat-traversal]
-  telemetry:
-    services: [prometheus, goflow2, netflow-v5, netflow-v9, ipfix, yaf, silk, rwflowpack]
-  media_acceleration:
-    services: [vaapi, intel-qsv]
-  developer_ai:
-    services: [jupyter-notebook, ai-runtime]
-  virtualization:
-    services: [proxmox, kubernetes, container-networking]
-  testing:
-    services: [mininet, containernet, ns-3]
+  control: {services: [control-plane, policy, approval, audit, rollback, ai]}
+  compute: {services: [server-inventory, resource-balancer, service-placement, deployment]}
+  network: {services: [router, ip-pool, vlan, firewall, routing, bgp, isis, network-health, exrouter]}
+  dns_domain: {services: [dns, authoritative-dns, recursive-dns, domain, acme, certificate]}
+  transport: {services: [wireguard, amneziawg, aether-core, hysteria2, shadowsocks, openvpn, ssl-vpn, gre, vxlan, ipsec, sslh, pptp]}
+  mesh: {services: [full-mesh, overlay-fabric, netbird, zero-trust-gateway]}
+  dataplane: {services: [ebpf, xdp, dpdk, vpp, fdio, openvswitch, ovn, kube-ovn, raw-socket, can]}
+  storage: {services: [multi-database, storage-pool, backup, snapshot, synology, truenas-scale]}
+  telemetry: {services: [prometheus, goflow2, netflow-v5, netflow-v9, ipfix, yaf, silk, rwflowpack, pmacct, opentelemetry, jaeger, wazuh]}
+  media_acceleration: {services: [vaapi, intel-qsv, codec-runtime]}
+  developer_ai: {services: [jupyter-notebook, ai-runtime]}
+  virtualization: {services: [proxmox, kubernetes, container-networking]}
+  testing: {services: [mininet, containernet, ns-3]}
+
+fabric:
+  model: unified-protocol-fabric
+  provider_neutral_core: true
+  vendor_neutral_core: true
+  common_contract: [identity, discovery, policy, health, path-selection, transport, dataplane, telemetry, audit]
+  protocol_composition: true
+  language_selection_by_workload: true
+  zero_copy_when_beneficial: true
+  memory_to_memory: true
 
 mesh:
   mode: full-mesh
   topology: dynamic
   node_discovery: capability-and-health
   peer_selection: latency-health-capacity-policy
-  links:
-    encrypted: true
-    preferred: [wireguard, ipsec, vxlan, gre]
-    overlay: [batman-adv, yggdrasil, cjdns, weron]
-  resilience:
-    multipath: true
-    automatic_failover: true
-    drain_before_removal: true
-  routing:
-    service_aware: true
-    bgp_adapter: gobgp
-    path_selection: exrouter
-    route_changes: approval-gated
-  placement:
-    cross_node: true
-    resource_balance: cpu-ram-ssd-hdd-network
-    provider_isolated: true
+  links: {encrypted: true, preferred: [wireguard, ipsec, vxlan, gre]}
+  resilience: {multipath: true, automatic_failover: true, drain_before_removal: true}
+  routing: {service_aware: true, bgp: true, isis: true, path_selection: exrouter, route_changes: approval-gated}
+  placement: {cross_node: true, resource_balance: cpu-ram-ssd-hdd-network, provider_isolated: true}
 
 network_intelligence:
   health_module: true
   exrouter: true
-  service_replacement: false
-  service_migration: false
-  node_replacement: false
   metrics: [latency, rtt, packet-loss, jitter, throughput, retransmissions, health]
   hysteresis: true
   fastest_healthy_path: true
+  service_replacement: false
+  service_migration: false
+  node_replacement: false
 
 resolution:
   server_selection: capability-health-capacity-policy
-  provider_selection: provider-isolated
   resource_balance: cpu-ram-ssd-hdd-network
   failover: health-aware-path-selection
-  migration: approval-required
   deployment: versioned-audited-rollbackable
 
 control_panel:
   service_first: true
-  server_override: authorized
-  provider_override: authorized
+  provider_names_in_core: false
+  provider_adapters_external_only: true
   target_preview: required
   mesh_topology_view: true
-  mesh_node_placement: true
   network_health_view: true
   exrouter_path_view: true
   approval_for_privileged_actions: true
@@ -91,5 +75,4 @@ ai:
   role: advisory-orchestrator
   direct_execution: false
   production_writes: approval-required
-  mesh_placement: recommendation-only
   audit: required
