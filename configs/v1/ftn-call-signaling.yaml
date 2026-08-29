@@ -1,0 +1,28 @@
+version: v1
+kind: FTNCallSignaling
+metadata:
+  name: ftn-call-signaling
+spec:
+  signaling: service-aware
+  discovery: ftn-service-discovery
+  routing: exrouter
+  media: ftn-media-fabric
+  qos: ftn-game-voice-qos
+  identity: [user_id, device_id, service_id]
+  resilience:
+    reconnect: bounded
+    failover: health-aware
+    session_recovery: true
+  security:
+    identity_required: true
+    mtls_control: true
+    end_to_end_media: true
+    anti_spoofing: true
+  telemetry:
+    call_id: true
+    flow_id: true
+    trace_id: true
+    quality_metrics: true
+  client:
+    lightweight: true
+    battery_aware: true
