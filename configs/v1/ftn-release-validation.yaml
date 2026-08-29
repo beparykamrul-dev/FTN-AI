@@ -1,0 +1,29 @@
+version: v1
+kind: FTNReleaseValidation
+metadata:
+  name: ftn-release-validation
+spec:
+  gates:
+    config_schema: required
+    security_policy: required
+    dependency_graph: required
+    health_checks: required
+    api_contract: required
+    database_migrations: required
+    rollback_plan: required
+  integration:
+    dns: true
+    router: true
+    exrouter: true
+    mesh: true
+    telemetry: true
+    dms: true
+    ai: true
+    media: true
+    clients: true
+  rollout:
+    canary: true
+    health_gate: true
+    automatic_rollback: true
+  privileged_changes: approval-required
+  audit: true
