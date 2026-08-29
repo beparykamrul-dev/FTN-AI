@@ -1,0 +1,33 @@
+apiVersion: ftn.ai/v1
+kind: ExRouterPolicy
+metadata:
+  name: ftn-exrouter
+spec:
+  purpose: non-migrating traffic-path selection
+  serviceReplacement: false
+  serviceMigration: false
+  nodeReplacement: false
+  healthSignals:
+    - latency
+    - rtt
+    - packet-loss
+    - jitter
+    - throughput
+    - health
+    - last-seen
+  scoring:
+    latencyWeight: 1.0
+    packetLossWeight: 4.0
+    regionalAffinity: 15
+    providerAffinity: 8
+  safeguards:
+    hysteresis: true
+    healthyOnly: true
+    noSecurityDowngrade: true
+    routeChangesApprovalRequired: true
+  operation:
+    mode: path-selection
+    serviceStateUnchanged: true
+    providerAware: true
+    regionAware: true
+    failover: fastest-healthy-path
