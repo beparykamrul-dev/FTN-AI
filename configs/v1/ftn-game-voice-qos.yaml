@@ -1,0 +1,26 @@
+version: v1
+kind: FTNGameVoiceQoS
+metadata:
+  name: ftn-game-voice-qos
+spec:
+  classes:
+    gaming: [latency, jitter, packet_loss]
+    voice: [latency, jitter, packet_loss]
+  routing:
+    path_engine: exrouter
+    multipath: true
+    health_aware: true
+  qos:
+    dscp: true
+    queue_aware: true
+    congestion_aware: true
+  telemetry:
+    flow_id: true
+    path_id: true
+    realtime_quality: true
+  failover:
+    fast: true
+    hysteresis: true
+  security:
+    encrypted_transport: true
+    anti_spoofing: true
