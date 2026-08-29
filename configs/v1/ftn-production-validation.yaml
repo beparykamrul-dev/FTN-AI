@@ -1,0 +1,39 @@
+version: v1
+kind: FTNProductionValidation
+metadata:
+  name: ftn-production-validation
+spec:
+  gates:
+    config_schema: true
+    service_discovery: true
+    dns_resolution: true
+    certificate_chain: true
+    device_driver: true
+    telemetry_ingest: true
+    route_health: true
+    exrouter_path: true
+    database_connectivity: true
+    cache_integrity: true
+    media_delivery: true
+    alert_delivery: true
+    dashboard_realtime: true
+  resilience:
+    failover: true
+    rollback: true
+    graceful_drain: true
+  security:
+    identity: true
+    mtls: true
+    anti_spoofing: true
+    secret_scan: true
+  performance:
+    latency: true
+    packet_loss: true
+    jitter: true
+    cpu: true
+    memory: true
+    storage: true
+  release:
+    canary: true
+    health_gate: true
+    approval_required: true
