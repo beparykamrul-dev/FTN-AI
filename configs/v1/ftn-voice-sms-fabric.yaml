@@ -1,0 +1,30 @@
+version: v1
+kind: FTNVoiceSMSFabric
+metadata:
+  name: ftn-voice-sms-fabric
+spec:
+  services: [voice, sms, notification]
+  routing: service-aware
+  identity: [service_id, user_id, device_id]
+  realtime:
+    priority: true
+    jitter_aware: true
+    packet_loss_aware: true
+  notifications:
+    policy: ftn-dms-alert-engine
+    channels: [in_app, email, sms]
+    deduplication: true
+    cooldown: true
+    emergency_only_sms: true
+  security:
+    e2e: true
+    mtls_control_plane: true
+    anti_spoofing: true
+  telemetry:
+    flow_id: true
+    trace_id: true
+    quality_metrics: true
+  resource:
+    lightweight_client: true
+    bounded_cache: true
+    battery_aware: true
