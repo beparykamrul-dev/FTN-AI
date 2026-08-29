@@ -1,0 +1,148 @@
+version: v1
+kind: FTNUnifiedProtocolFabric
+metadata:
+  name: ftn-unified-protocol-fabric
+  purpose: provider-neutral composition contract for all FTN network capabilities
+
+architecture:
+  model: unified-fabric-not-monolith
+  provider_dependency_in_core: false
+  vendor_dependency_in_core: false
+  protocol_replacement: false
+  service_replacement: false
+
+common_contract:
+  stages:
+    - identity
+    - discovery
+    - policy
+    - health
+    - path-selection
+    - transport
+    - dataplane
+    - telemetry
+    - audit
+  schema: versioned
+  compatibility: capability-negotiation
+
+language_runtime:
+  go:
+    role: control-plane-api-dns-discovery-routing
+    default: true
+  rust:
+    role: memory-safe-hot-path-crypto-dataplane
+  c_cpp:
+    role: kernel-native-hardware-codec-integration
+  python:
+    role: ai-automation-analysis
+  kotlin:
+    role: android-client
+  typescript:
+    role: web-control-ui
+  rule: choose-by-workload-not-by-provider
+
+protocol_domains:
+  naming:
+    dns: true
+    doh: true
+    dot: true
+    service-discovery: true
+  routing:
+    bgp: true
+    isis: true
+    exrouter: true
+  secure-transport:
+    wireguard: true
+    amneziawg: true
+    aether-core: true
+    hysteria2: true
+    shadowsocks: true
+    openvpn: true
+    ssl-vpn: true
+    gre: true
+    ipsec: true
+    vxlan: true
+    sslh: true
+    pptp: true
+  mesh:
+    full-mesh: true
+    overlay-fabric: true
+    netbird: true
+    zero-trust-gateway: true
+  dataplane:
+    ebpf: true
+    xdp: true
+    dpdk: true
+    vpp: true
+    fdio: true
+    zero-copy: true
+    memory-to-memory: true
+  telemetry:
+    ipfix: true
+    netflow-v5: true
+    netflow-v9: true
+    goflow2: true
+    pmacct: true
+    yaf: true
+    silk: true
+    rwflowpack: true
+    opentelemetry: true
+    jaeger: true
+    wazuh: true
+
+composition:
+  dns_to_discovery: true
+  discovery_to_path: true
+  path_to_transport: true
+  transport_to_dataplane: true
+  dataplane_to_telemetry: true
+  telemetry_to_health: true
+  health_to_exrouter: true
+  identity_to_policy: true
+  policy_to_all_domains: true
+
+path_selection:
+  engine: exrouter
+  signals: [latency, packet-loss, jitter, health, mtu, capacity, security-policy]
+  healthy_only: true
+  security_downgrade: prohibited
+  hysteresis: true
+  service_migration: false
+  node_replacement: false
+
+resource_policy:
+  memory: bounded-adaptive
+  cpu: workload-aware
+  storage-cache: bounded
+  mobile-battery: device-aware
+  hot-path: zero-copy-when-beneficial
+
+security:
+  zero-trust: true
+  end-to-end-encryption: true
+  pki: true
+  mtls: true
+  acme: true
+  key-rotation: true
+  ca-validation-bypass: prohibited
+  privileged-network-changes: approval-required
+
+observability:
+  packet-capture: metadata-first
+  payload-capture: disabled-by-default
+  flow-correlation: true
+  trace-correlation: true
+  audit: true
+
+provider_adapters:
+  enabled: true
+  scope: external-boundary-only
+  core_contract_dependency: none
+  core_names: provider-neutral
+
+failure_policy:
+  graceful-degradation: true
+  health-aware-failover: true
+  circuit-breaker: true
+  rollback: true
+  no-automatic-security-downgrade: true
