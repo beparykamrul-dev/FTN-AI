@@ -1,14 +1,34 @@
 version: v1
 name: ftn-core-capability-index
-purpose: single provider-neutral discovery index for FTN service placement, protocol composition, network health and control-panel capability resolution
+purpose: single provider-neutral discovery index for FTN service placement, protocol composition, network health, AI network intelligence and control-panel resolution
 registries:
   - ftn-os-module-registry.yaml
   - ftn-provider-registry.yaml
   - ftn-network-core-registry.yaml
   - ftn-sdn-repository-registry.yaml
   - ftn-unified-protocol-fabric.yaml
+  - ftn-service-contract.yaml
+  - ftn-service-discovery.yaml
   - ftn-transport-security-registry.yaml
+  - ftn-transport-negotiation.yaml
   - ftn-telemetry-analysis-registry.yaml
+  - ftn-observability-contract.yaml
+  - ftn-resource-policy.yaml
+  - ftn-path-qos-policy.yaml
+  - ftn-database-fabric.yaml
+  - ftn-cache-fabric.yaml
+  - ftn-dns-fabric.yaml
+  - ftn-mesh-fabric.yaml
+  - ftn-dataplane-acceleration.yaml
+  - ftn-media-runtime.yaml
+  - ftn-alerting-fabric.yaml
+  - ftn-dms-alerting.yaml
+  - ftn-control-center.yaml
+  - ftn-dashboard-contract.yaml
+  - ftn-ai-network-bridge.yaml
+  - ftn-approval-gate.yaml
+  - ftn-security-baseline.yaml
+  - ftn-deployment-contract.yaml
 
 planes:
   control: {services: [control-plane, policy, approval, audit, rollback, ai]}
@@ -35,25 +55,24 @@ fabric:
   zero_copy_when_beneficial: true
   memory_to_memory: true
 
-mesh:
-  mode: full-mesh
-  topology: dynamic
-  node_discovery: capability-and-health
-  peer_selection: latency-health-capacity-policy
-  links: {encrypted: true, preferred: [wireguard, ipsec, vxlan, gre]}
-  resilience: {multipath: true, automatic_failover: true, drain_before_removal: true}
-  routing: {service_aware: true, bgp: true, isis: true, path_selection: exrouter, route_changes: approval-gated}
-  placement: {cross_node: true, resource_balance: cpu-ram-ssd-hdd-network, provider_isolated: true}
-
 network_intelligence:
   health_module: true
   exrouter: true
+  ai_bridge: ftn-ai-network-bridge
   metrics: [latency, rtt, packet-loss, jitter, throughput, retransmissions, health]
   hysteresis: true
   fastest_healthy_path: true
-  service_replacement: false
-  service_migration: false
-  node_replacement: false
+  privileged_actions: approval-gated
+
+control_panel:
+  contract: ftn-dashboard-contract
+  shell: ftn-control-center
+  realtime: true
+  preview: true
+  dry_run: true
+  approval_gate: ftn-approval-gate
+  rollback: true
+  audit: true
 
 resolution:
   server_selection: capability-health-capacity-policy
@@ -61,18 +80,8 @@ resolution:
   failover: health-aware-path-selection
   deployment: versioned-audited-rollbackable
 
-control_panel:
-  service_first: true
-  provider_names_in_core: false
-  provider_adapters_external_only: true
-  target_preview: required
-  mesh_topology_view: true
-  network_health_view: true
-  exrouter_path_view: true
-  approval_for_privileged_actions: true
-
 ai:
-  role: advisory-orchestrator
+  role: network-intelligence-and-advisory-orchestrator
   direct_execution: false
   production_writes: approval-required
   audit: required
