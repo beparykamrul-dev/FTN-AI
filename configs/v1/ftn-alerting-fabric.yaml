@@ -1,0 +1,20 @@
+version: v1
+kind: FTNAlertingFabric
+metadata:
+  name: ftn-alerting-fabric
+spec:
+  sources: [network-health, dns-health, api-health, database-health, mesh-health, media-health, security-events]
+  channels: [sms, email, in-app, dashboard]
+  severity: [info, warning, critical]
+  deduplication: true
+  correlation: [service_id, node_id, flow_id, trace_id, path_id]
+  escalation:
+    enabled: true
+    policy-aware: true
+    cooldown: true
+  automation:
+    recommendation: true
+    privileged_action: approval-required
+    rollback: true
+  security:
+    secrets_in_notifications: false
