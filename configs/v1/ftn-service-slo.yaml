@@ -1,0 +1,22 @@
+version: v1
+kind: FTNServiceSLO
+metadata:
+  name: ftn-service-slo
+spec:
+  objectives:
+    availability: target-defined
+    latency: target-defined
+    error_rate: target-defined
+    packet_loss: target-defined
+  measurement:
+    telemetry: unified-ftn-observability
+    dependencies: included
+    path: exrouter
+  alerting:
+    warning: policy-driven
+    critical: emergency-correlation
+    sms: critical-only-by-policy
+  burn_rate: true
+  maintenance_suppression: true
+  recovery_confirmation: true
+  dashboard: realtime
