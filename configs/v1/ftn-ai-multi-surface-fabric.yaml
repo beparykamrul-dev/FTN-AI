@@ -1,0 +1,49 @@
+version: v1
+kind: FTNAIMultiSurfaceFabric
+metadata:
+  name: ftn-ai-multi-surface-fabric
+spec:
+  shared_fabric: ftn-unified-service-fabric
+  surfaces:
+    builder:
+      purpose: build-and-compose-ftn-services
+      inputs: [service_contract, capability, ui_schema, api_schema, policy]
+      outputs: [web_app, android_app, tv_app, dashboard, service_module]
+      discovery: true
+      preview: true
+      validation: true
+      deployment: approval-required
+    personal:
+      purpose: private-ftn-collaborator
+      context: [network, services, devices, projects, operations]
+      memory: service-scoped
+      actions: approval-required
+      external_access: disabled-by-default
+      audit: true
+    public:
+      purpose: customer-facing-ftn-ai
+      context: [published_services, account, support, service_health]
+      tenant_isolation: true
+      private_context: never
+      privileged_actions: approval-required
+      human_handoff: true
+  shared_capabilities:
+    service_discovery: true
+    identity: true
+    mesh_context: true
+    route_context: true
+    telemetry_context: true
+    storage_context: true
+    billing_context: true
+    dms_context: true
+    pki_context: true
+  model_policy:
+    provider_neutral: true
+    model_routing: capability-aware
+    lightweight_first: true
+    local_processing_preferred: true
+  security:
+    zero_trust: true
+    least_privilege: true
+    secrets_in_context: false
+    audit: true
