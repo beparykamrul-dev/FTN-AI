@@ -1,0 +1,85 @@
+version: v1
+kind: FTNEcommerceFinal
+metadata:
+  name: ftn-ecommerce
+spec:
+  status: production-ready-architecture
+  preserve_existing_modules: true
+  business_model:
+    multi_tenant: true
+    marketplace: true
+    seller: true
+    reseller: true
+    customer: true
+  commerce:
+    catalog: true
+    inventory: true
+    cart: true
+    checkout: true
+    orders: true
+    invoices: true
+    payments: true
+    delivery: true
+    returns: true
+    settlement: true
+  network:
+    normal_internet_protocols: true
+    ftN_network_path: true
+    exrouter: true
+    dns: true
+    http_https: true
+    http3_quic: true
+    websocket: true
+    service_discovery: true
+  security:
+    tls13: true
+    mtls_service_to_service: true
+    pki: true
+    dnssec: true
+    zero_trust: true
+    anti_spoofing: true
+    rate_limit: true
+    signed_sessions: true
+    audit: true
+  languages:
+    go: core_backend
+    rust: security_performance_components
+    typescript: web_ui
+    kotlin: android
+    python: ai_automation
+    c_cpp: native_system_components
+  data:
+    centralized_database: true
+    storage_fabric: true
+    backups: true
+    integrity_checks: true
+    cache_bounded: true
+  ai:
+    assistant: true
+    agent: true
+    builder: true
+    fraud_signals: advisory
+  billing:
+    ai_billing_gateway: true
+    usage_metering: true
+    reconciliation: true
+    immutable_ledger: true
+  observability:
+    flow_telemetry: true
+    latency: true
+    packet_loss: true
+    bytes: true
+    sessions: true
+    service_identity: true
+  integrations:
+    domain: true
+    hosting: true
+    website: true
+    mail: true
+    storage: true
+    media: true
+    tv: true
+  policy:
+    artificial_traffic_generation: false
+    unauthorized_resource_use: false
+    privileged_actions: approval_required
