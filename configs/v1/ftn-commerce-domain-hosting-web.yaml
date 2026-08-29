@@ -1,0 +1,45 @@
+version: v1
+kind: FTNCommerceDomainHostingWeb
+metadata:
+  name: ftn-commerce-domain-hosting-web
+spec:
+  shared_fabric: ftn-unified-service-fabric
+  commerce:
+    services: [catalog, cart, checkout, order, inventory, invoice, payment, customer]
+    identity_aware: true
+    storage: ftn-storage-fabric
+    mail: ftn-mail-service
+    telemetry: ftn-observability-fabric
+    alerts: ftn-dms-alert-engine
+  domain:
+    services: [search, registration, dns, dnssec, renewal, transfer, certificate]
+    dns: ftn-dns-service-fabric
+    pki: ftn-pki-certificate-fabric
+    identity_aware: true
+    provider_neutral: true
+  hosting:
+    services: [site, app, database, object, backup, deployment]
+    provisioning: ftn-mac-bootstrap-provisioning
+    storage: ftn-storage-fabric
+    routing: ftn-router-fabric
+    path_engine: exrouter
+    certificates: ftn-pki-certificate-fabric
+    telemetry: ftn-observability-fabric
+  website:
+    services: [static, dynamic, api, cdn, edge_cache]
+    deployment: automated
+    cache: bounded
+    payload: ftn-payload-efficiency-fabric
+    security: ftn-zero-trust-gateway
+    dns: ftn-dns-service-fabric
+    routing: ftn-router-fabric
+  lifecycle: [discover, provision, secure, publish, monitor, scale, backup, recover, retire]
+  common:
+    service_discovery: true
+    shared_identity: true
+    shared_route_context: true
+    shared_health: true
+    shared_telemetry: true
+    shared_storage_policy: true
+    ai_context: true
+    approval_for_privileged_actions: true
