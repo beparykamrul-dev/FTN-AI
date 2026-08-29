@@ -1,0 +1,27 @@
+version: v1
+kind: FTNBackendCompletionContract
+spec:
+  api_prefix: /api/v1
+  control_plane: services/control-plane/main.go
+  required_domains:
+    - services
+    - entitlements
+    - service-requests
+    - nodes
+    - placement
+    - network-health
+    - exrouter
+  shared_context:
+    tenant: true
+    service: true
+    node: true
+    ip: true
+    mac: true
+    uuid: true
+    serial: true
+  persistence:
+    database_url: DATABASE_URL
+    request_table: service_requests
+  safety:
+    privileged_device_changes_require_authorization: true
+    credentials_in_git: false
