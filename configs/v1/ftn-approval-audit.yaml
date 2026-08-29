@@ -1,0 +1,23 @@
+version: v1
+kind: FTNApprovalAudit
+metadata:
+  name: ftn-approval-audit
+spec:
+  approval:
+    required_for: [routing, firewall, tunnel, certificate, device, database, deployment]
+    preview_required: true
+    identity_required: true
+    expiry: true
+  audit:
+    immutable_events: true
+    actor: true
+    action: true
+    target: true
+    before_after_state: true
+    result: true
+    rollback_reference: true
+  ai:
+    recommendations_audited: true
+    autonomous_privileged_execution: false
+  security:
+    secrets_in_audit: false
