@@ -1,0 +1,28 @@
+version: v1
+kind: FTNMeshFabric
+metadata:
+  name: ftn-mesh-fabric
+spec:
+  topology: dynamic-full-mesh
+  node_discovery: capability-health
+  peer_selection: latency-capacity-health
+  overlays: [vxlan, ipsec, gre]
+  secure_transport: [wireguard, amneziawg, aether-core]
+  routing:
+    service_aware: true
+    path_engine: exrouter
+    protocols: [bgp, isis]
+  multipath: true
+  health_aware_failover: true
+  hysteresis: true
+  drain_before_removal: true
+  placement:
+    cpu: true
+    memory: true
+    storage: true
+    bandwidth: true
+  security:
+    zero_trust: true
+    mtls: true
+    end_to_end_encryption: true
+  provider_neutral: true
