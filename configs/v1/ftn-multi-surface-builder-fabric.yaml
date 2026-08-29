@@ -1,0 +1,34 @@
+version: v1
+kind: FTNMultiSurfaceBuilderFabric
+metadata:
+  name: ftn-multi-surface-builder-fabric
+spec:
+  source_of_truth: ftn-service-registry
+  targets:
+    android: true
+    web: true
+    exe: true
+    iso: true
+    tv: true
+  shared:
+    design_system: true
+    service_identity: true
+    api_contracts: true
+    authentication: true
+    authorization: true
+    localization: true
+    telemetry: true
+    branding: ftn
+  build:
+    reproducible: true
+    artifact_manifest: true
+    provenance: true
+    signing_required: true
+    secrets_from_git: false
+  deployment:
+    preview: true
+    staged_release: true
+    rollback: true
+  policy:
+    privileged_actions_require_approval: true
+    tenant_isolation: true
