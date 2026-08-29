@@ -9,5 +9,6 @@ import (
 func Router() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", Health)
+	mux.HandleFunc("GET /ready", Readiness)
 	return httpx.RequestID(mux)
 }
