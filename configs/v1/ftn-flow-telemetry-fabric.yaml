@@ -1,0 +1,15 @@
+version: v1
+kind: FTNFlowTelemetryFabric
+metadata:
+  name: ftn-flow-telemetry-fabric
+spec:
+  collectors: [ipfix, netflow_v5, netflow_v9, yaf, goflow2, pmacct]
+  analysis: [silk, rwflowpack, packet_correlation]
+  normalization: unified-ftn-flow
+  identifiers: [flow_id, path_id, service_id, device_id, node_id]
+  sampling:
+    adaptive: true
+    overload_protection: true
+  privacy:
+    payload_capture: disabled-by-default
+  outputs: [metrics, incidents, exrouter, ai, dashboard]
