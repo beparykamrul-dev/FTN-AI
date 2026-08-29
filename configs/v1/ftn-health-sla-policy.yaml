@@ -1,0 +1,22 @@
+version: v1
+kind: FTNHealthSLAPolicy
+metadata:
+  name: ftn-health-sla-policy
+spec:
+  dimensions: [availability, latency, jitter, packet_loss, error_rate, capacity]
+  states: [healthy, degraded, critical, recovering, unknown]
+  evaluation:
+    rolling_window: true
+    hysteresis: true
+    dependency_aware: true
+  routing:
+    exrouter_feed: true
+    healthy_only: true
+  alerts:
+    dms: true
+    emergency_correlation: true
+    sms_only_when_policy_or_emergency: true
+  recovery:
+    confirmation_window: true
+    recovery_alert: true
+  audit: true
