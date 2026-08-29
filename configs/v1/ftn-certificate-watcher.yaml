@@ -1,0 +1,17 @@
+version: v1
+kind: FTNCertificateWatcher
+metadata:
+  name: ftn-certificate-watcher
+spec:
+  discovery: [pki, acme, service_endpoints, device_endpoints]
+  checks: [expiry, trust_chain, hostname, algorithm, key_usage, revocation]
+  lifecycle: [discover, validate, warn, renew, rotate, verify]
+  renewal:
+    automatic: true
+    privileged_execution: approval-required
+  alerts:
+    thresholds: [30d, 14d, 7d, 1d]
+    failure: emergency
+  telemetry: true
+  audit: true
+  secrets_in_logs: false
