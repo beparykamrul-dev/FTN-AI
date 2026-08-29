@@ -1,0 +1,17 @@
+version: v1
+kind: FTNCommerceCommunicationContract
+spec:
+  commerce:
+    ecommerce: true
+    domain: true
+    hosting: true
+    billing: true
+  communication:
+    mail: true
+    ai_call_center: true
+    ai_assistant: true
+  request_driven: true
+  tenant_aware: true
+  billing_aware: true
+  audit: true
+  approval_required_for_privileged_actions: true
