@@ -1,0 +1,38 @@
+version: v1
+kind: FTNMacBootstrapProvisioning
+metadata:
+  name: ftn-mac-bootstrap
+spec:
+  enrollment:
+    trigger: hardware_identity
+    identifiers: [mac, serial_number, uuid]
+    duplicate_guard: true
+    approval_for_unknown: true
+  workflow:
+    - discover
+    - verify_identity
+    - assign_node
+    - assign_profile
+    - provision
+    - health_check
+    - register_telemetry
+    - register_route
+  provisioning:
+    idempotent: true
+    desired_state: database_fabric
+    config_generation: true
+    rollback: true
+  network:
+    dns: auto
+    address: policy-aware
+    routing: exrouter
+    telemetry: auto
+  security:
+    certificate: automated
+    mtls: true
+    zero_trust: true
+  dashboard:
+    auto_register: true
+    inventory: true
+    route_view: true
+    alerts: true
