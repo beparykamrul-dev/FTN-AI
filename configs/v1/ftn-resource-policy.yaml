@@ -1,0 +1,27 @@
+version: v1
+kind: FTNResourcePolicy
+metadata:
+  name: ftn-adaptive-resource-policy
+spec:
+  placement:
+    signals: [cpu, ram, disk_io, network_capacity, latency, packet_loss, health]
+    strategy: capability-health-cost
+  memory:
+    bounded: true
+    cache_adaptive: true
+    zero_copy_preferred: true
+    memory_to_memory_preferred: true
+  cpu:
+    workload_aware: true
+    throttle_before_oom: true
+  storage:
+    cache_limit_enforced: true
+    spillover_allowed: true
+  mobile:
+    battery_aware: true
+    thermal_aware: true
+    background_work_reduction: true
+  failure:
+    backpressure: true
+    graceful_degradation: true
+    circuit_breaker: true
