@@ -1,0 +1,21 @@
+# FTN ISP Production Readiness
+
+- [ ] DNS records created for ISP subdomains
+- [ ] TLS certificates issued and renewed automatically
+- [ ] API authentication configured
+- [ ] RBAC and service entitlements enabled
+- [ ] MFA policy enabled for privileged accounts
+- [ ] Database backups verified
+- [ ] Payment webhook authentication and idempotency verified
+- [ ] Customer data access scoped by account
+- [ ] Android release signing configured outside repository
+- [ ] AI call-center provider credentials stored outside repository
+- [ ] Device discovery credentials stored in a secret manager/environment
+- [ ] Network mutation operations protected by approval workflow
+- [ ] Audit logs enabled
+- [ ] Monitoring and alerting enabled
+- [ ] Rollback procedure tested
+- [ ] Disaster recovery restore tested
+- [ ] Rate limits and request-size limits enabled
+- [ ] CORS and trusted-proxy policy reviewed
+- [ ] Production smoke tests passed
