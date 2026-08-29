@@ -1,0 +1,30 @@
+version: v1
+kind: FTNClientRuntime
+metadata:
+  name: ftn-client-runtime
+spec:
+  targets: [android, tv, desktop, web, embedded]
+  runtime:
+    lazy_modules: true
+    bounded_cache: true
+    adaptive_polling: true
+    offline_state: bounded
+  network:
+    discovery: true
+    exrouter: true
+    transport_negotiation: true
+    reconnect: bounded
+  localization:
+    languages: [bn, en, ar]
+    lazy_loaded: true
+    fallback: en
+  media:
+    codec_negotiation: true
+    hardware_acceleration: capability-aware
+  power:
+    battery_aware: true
+    thermal_aware: true
+  security:
+    zero_trust: true
+    e2e: true
+    certificate_validation: true
