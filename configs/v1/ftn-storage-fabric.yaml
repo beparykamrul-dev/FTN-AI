@@ -1,0 +1,31 @@
+version: v1
+kind: FTNStorageFabric
+metadata:
+  name: ftn-storage-fabric
+spec:
+  backends: [postgresql, timeseries, key_value, object, embedded]
+  roles:
+    control_state: authoritative
+    service_state: distributed
+    cache: bounded
+    media: object_or_segment
+  performance:
+    pooling: true
+    batching: adaptive
+    compression: adaptive
+    zero_copy: preferred
+    memory_to_memory: preferred
+  resilience:
+    replication: health-aware
+    backup: true
+    restore_validation: true
+    failover: true
+  security:
+    encryption_in_transit: true
+    encryption_at_rest: true
+    key_rotation: true
+  observability:
+    audit: true
+    latency: true
+    error_rate: true
+    capacity: true
