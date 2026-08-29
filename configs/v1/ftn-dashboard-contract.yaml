@@ -1,0 +1,33 @@
+version: v1
+kind: FTNDashboardContract
+metadata:
+  name: ftn-dashboard-contract
+spec:
+  shell: ftn-control-center
+  sections:
+    overview: [uptime, service-health, incidents, capacity, path-health]
+    network: [topology, routing, exrouter, mesh, tunnels, qos]
+    services: [catalog, instances, dependencies, lifecycle, resources]
+    dns: [zones, records, health, discovery, certificates]
+    data: [databases, pools, replication, backup, cache]
+    observability: [metrics, flows, traces, logs, alerts]
+    security: [identity, certificates, crypto, zero-trust, audit]
+    ai: [network-context, anomalies, root-cause, forecasts, recommendations]
+    devices: [discovery, drivers, inventory, health, diagnostics]
+    media: [streams, codecs, acceleration, cache, delivery]
+  interaction:
+    drilldown: true
+    realtime: true
+    filters: true
+    dependency_graph: true
+    path_visualization: true
+    incident_timeline: true
+  actions:
+    preview: true
+    dry_run: true
+    approval_gate: ftn-approval-gate
+    rollback: true
+  performance:
+    lazy_load: true
+    event_updates: true
+    bounded_client_cache: true
