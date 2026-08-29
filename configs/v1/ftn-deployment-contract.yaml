@@ -1,0 +1,22 @@
+version: v1
+kind: FTNDeploymentContract
+metadata:
+  name: ftn-deployment-contract
+spec:
+  lifecycle: [discover, validate, plan, preview, approve, deploy, verify, drain, rollback]
+  placement:
+    engine: exrouter
+    inputs: [capability, health, latency, packet_loss, jitter, cpu, memory, storage, bandwidth]
+  service_contract: ftn-service-contract
+  resource_policy: ftn-resource-policy
+  security_baseline: ftn-security-baseline
+  approval_gate: ftn-approval-gate
+  observability: ftn-observability-contract
+  deployment:
+    immutable_release: true
+    health_gate: true
+    bounded_rollout: true
+    automatic_rollback_on_failed_health: true
+    destructive_change: approval-required
+  provider_neutral_core: true
+  credentials_from_git: false
