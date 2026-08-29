@@ -1,0 +1,86 @@
+version: v1
+kind: FTNProtocolContract
+metadata:
+  name: ftn-protocol-contract
+  purpose: stable interoperability contract shared by every FTN service and implementation
+
+identity:
+  service_id: required
+  node_id: required
+  instance_id: required
+  request_id: required
+  trace_id: required
+  protocol_version: required
+
+lifecycle:
+  states: [discover, negotiate, authorize, establish, active, drain, failover, closed]
+  idempotency: required
+  graceful_shutdown: required
+
+capability_negotiation:
+  required: [transport, encryption, address_family, mtu, telemetry]
+  optional: [codec, hardware_acceleration, compression, multipath]
+  incompatible_capability: explicit-reject
+  security_downgrade: prohibited
+
+path:
+  selector: exrouter
+  inputs: [latency, packet-loss, jitter, health, capacity, mtu, policy]
+  output: path_id
+  path_changes: observable
+  path_changes_privileged: approval-required
+
+transport:
+  abstraction: provider-neutral
+  implementations: [wireguard, amneziawg, aether-core, hysteria2, shadowsocks, openvpn, gre, vxlan, ipsec, sslh, pptp]
+  implementation_choice: negotiated-by-capability-and-policy
+
+crypto:
+  abstraction: ftN-crypto-policy
+  end_to_end: true
+  mtls: true
+  pki: true
+  key_rotation: true
+  certificate_validation: required
+
+packet:
+  metadata_first: true
+  payload_capture: disabled-by-default
+  zero_copy: preferred-when-beneficial
+  memory_to_memory: preferred-when-beneficial
+  backpressure: required
+
+telemetry:
+  flow_id: required
+  packet_loss: true
+  latency: true
+  jitter: true
+  throughput: true
+  health: true
+  traces: [opentelemetry, jaeger]
+
+storage:
+  state_model: database-backed
+  multi_database: true
+  consistency: explicit
+  encryption_at_rest: true
+  audit_events: required
+
+resource:
+  cpu: bounded
+  memory: bounded
+  storage_cache: bounded
+  battery_aware: true
+  thermal_aware: true
+
+errors:
+  machine_code: required
+  retryable: required
+  safe_fallback: required
+  security_failure: fail-closed
+
+compatibility:
+  backward_compatible_contract: true
+  version_negotiation: true
+  unknown_fields: ignore
+  unknown_required_capability: reject
