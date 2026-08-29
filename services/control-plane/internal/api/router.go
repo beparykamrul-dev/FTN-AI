@@ -14,5 +14,6 @@ func Router() http.Handler {
 	mux.HandleFunc("GET /api/v1/accounts/status", AccountsStatus)
 	mux.HandleFunc("GET /api/v1/billing/status", BillingStatus)
 	mux.HandleFunc("GET /api/v1/noc/status", NOCStatus)
+	mux.HandleFunc("GET /api/v1/service/status", ServiceStatus)
 	return httpx.RequestID(mux)
 }
