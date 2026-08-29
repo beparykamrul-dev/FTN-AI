@@ -1,6 +1,5 @@
 version: v1
 name: ftn-network-core-registry
-
 purpose: provider-neutral network capability, health and non-migrating path selection contract
 
 components:
@@ -15,30 +14,46 @@ components:
   firewall:
     enabled: true
     policy: deny-by-default
+    anti_spoofing: true
     changes: approval-required
   routing:
     enabled: true
-    adapters: [gobgp, linux-routing]
+    adapters: [gobgp, linux-routing, frr]
+    protocols: [bgp, isis]
     changes: approval-required
     path_selection: exrouter
   tunnels:
-    gre:
-      enabled: true
-    vxlan:
-      enabled: true
-    ipsec:
-      enabled: true
+    gre: {enabled: true}
+    vxlan: {enabled: true}
+    ipsec: {enabled: true}
   vpn:
-    wireguard:
-      enabled: true
-    amneziawg:
-      enabled: true
+    wireguard: {enabled: true}
+    amneziawg: {enabled: true}
+    openvpn: {enabled: true}
+    ssl-vpn: {enabled: true}
+    globalprotect: {enabled: true}
+    fortisslvpn: {enabled: true}
+    pptp: {enabled: true, security_profile: legacy-restricted}
+  proxy_transport:
+    shadowsocks: {enabled: true}
+    hysteria2: {enabled: true, keepalive: true}
+    v2ray_xray: {enabled: true}
+    sslh: {enabled: true}
+  dataplane:
+    fdio: {enabled: true}
+    vpp: {enabled: true}
+    dpdk: {enabled: true}
+    ebpf: {enabled: true}
+    xdp: {enabled: true}
   dns:
     enabled: true
     placement: service-aware
   domain:
     enabled: true
     provider-neutral: true
+  zero_trust:
+    gateway: {enabled: true}
+    netbird: {enabled: true}
 
 network_health:
   module: dedicated
@@ -53,26 +68,34 @@ exrouter:
   service_replacement: false
   service_migration: false
   node_replacement: false
-  inputs: [latency, packet-loss, jitter, health, provider, region]
+  inputs: [latency, packet-loss, jitter, health, provider, region, mtu, security-policy]
   policy: score-based
   healthy_only: true
   provider_preference: supported
   regional_preference: supported
+  transport_fallback: policy-controlled
+  security_downgrade: prohibited
   execution: policy-controlled
   route_changes: approval-required
 
+peering:
+  provider_specific: true
+  ix_integration: true
+  dscp_qos: true
+  jumbo_frames: true
+  mtu_path_validation: true
+
+encryption:
+  traffic_encryption: true
+  end_to_end: true
+  pki: true
+  acme: true
+  mtls: true
+  certificate_rotation: true
+  ca_bypass: false
+
 placement:
-  inputs:
-    - cpu
-    - ram
-    - ssd
-    - hdd
-    - disk_io
-    - network_capacity
-    - latency
-    - health
-    - capabilities
-    - provider_policy
+  inputs: [cpu, ram, ssd, hdd, disk_io, network_capacity, latency, health, capabilities, provider_policy]
   strategy: weighted-capability-health
   failover: health-aware-path-failover
   migration: approval-required
