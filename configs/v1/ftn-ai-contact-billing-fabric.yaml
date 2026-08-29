@@ -1,0 +1,45 @@
+version: v1
+kind: FTNAIContactBillingFabric
+metadata:
+  name: ftn-ai-contact-billing-fabric
+spec:
+  shared_fabric: ftn-unified-service-fabric
+  call_center:
+    channels: [voice, chat]
+    functions: [routing, faq, ticket_intake, service_status, escalation]
+    network_context: true
+    customer_identity: true
+    consent_required_for_recording: true
+    human_handoff: true
+    emergency_actions: approval-required
+  billing_gateway:
+    functions: [invoice, payment_status, reconciliation, usage_rating, fraud_signal]
+    providers: adapter-based
+    ledger: centralized
+    idempotency: true
+    webhook_verification: true
+    audit: true
+    privileged_actions: approval-required
+  assistant:
+    context: [service, device, route, billing, ticket, telemetry]
+    modes: [user, employee, engineer, admin]
+    retrieval: service-aware
+    recommendations: true
+    destructive_actions: approval-required
+  agent:
+    orchestration: event-driven
+    tools: service-contracts
+    planning: true
+    execution: policy-controlled
+    rollback: true
+    audit: true
+  integrations:
+    identity: ftn-identity-route-monitor
+    routing: ftn-router-fabric
+    telemetry: ftn-observability-fabric
+    dms: ftn-dms-alert-engine
+    pki: ftn-pki-certificate-fabric
+    storage: ftn-storage-fabric
+    mail: ftn-mail-service
+    billing: ftn-billing-service
+    control: ftn-control-center
