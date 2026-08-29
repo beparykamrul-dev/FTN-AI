@@ -1,0 +1,28 @@
+version: v1
+kind: FTNMediaCodecPolicy
+metadata:
+  name: ftn-media-codec-policy
+spec:
+  selection: capability-content-device-aware
+  objectives: [latency, cpu, memory, bandwidth, storage, battery]
+  encoders:
+    hardware_first: true
+    qsv: capability
+    vaapi: capability
+    software_fallback: true
+  codecs:
+    negotiation: true
+    adaptive_variants: true
+  processing:
+    transcode_only_when_beneficial: true
+    zero_copy: preferred
+    memory_to_memory: preferred
+    bounded_buffers: true
+  clients: [android, tv, desktop, server]
+  network:
+    exrouter: true
+    loss_aware: true
+    jitter_aware: true
+  security:
+    transport_encryption: true
+    end_to_end: true
