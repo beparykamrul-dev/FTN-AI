@@ -61,3 +61,19 @@ func TestServiceRequestValidation(t *testing.T) {
 		t.Fatalf("status=%d", w.Code)
 	}
 }
+
+func TestRoutesHealthAndSecurityHeaders(t *testing.T) {
+	a := &App{catalog: catalog}
+	r := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+	a.routes().ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("healthz status=%d", w.Code)
+	}
+	if w.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatal("security headers missing")
+	}
+	if w.Header().Get("X-Frame-Options") != "DENY" {
+		t.Fatal("frame protection missing")
+	}
+}
