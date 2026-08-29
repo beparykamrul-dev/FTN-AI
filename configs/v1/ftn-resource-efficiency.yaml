@@ -1,0 +1,27 @@
+version: v1
+kind: FTNResourceEfficiency
+metadata:
+  name: ftn-resource-efficiency
+spec:
+  cpu:
+    affinity: workload-aware
+    background_work: minimized
+  memory:
+    bounded_caches: true
+    pooling: true
+    zero_copy: preferred
+  storage:
+    cache_budget: bounded
+    compression: adaptive
+  network:
+    batching: adaptive
+    backpressure: true
+    payload_minimization: true
+  clients:
+    android: battery-aware
+    tv: resource-aware
+    desktop: adaptive
+  services:
+    lazy_start: true
+    graceful_shutdown: true
+    health_gated: true
