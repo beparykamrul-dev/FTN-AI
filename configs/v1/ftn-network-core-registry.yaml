@@ -1,12 +1,13 @@
 version: v1
 name: ftn-network-core-registry
 
-purpose: provider-neutral network capability and placement contract
+purpose: provider-neutral network capability, health and non-migrating path selection contract
 
 components:
   router:
     enabled: true
     adapters: [mikrotik, linux, vendor-neutral]
+    exrouter: true
   ip_pool:
     enabled: true
     allocation: [ipv4, ipv6, subnet, vlan]
@@ -19,6 +20,7 @@ components:
     enabled: true
     adapters: [gobgp, linux-routing]
     changes: approval-required
+    path_selection: exrouter
   tunnels:
     gre:
       enabled: true
@@ -38,6 +40,27 @@ components:
     enabled: true
     provider-neutral: true
 
+network_health:
+  module: dedicated
+  signals: [latency, rtt, packet-loss, jitter, throughput, retransmissions, health, last-seen]
+  stale_after_seconds: 90
+  observe_before_act: true
+  hysteresis: true
+
+exrouter:
+  enabled: true
+  mode: traffic-path-selection
+  service_replacement: false
+  service_migration: false
+  node_replacement: false
+  inputs: [latency, packet-loss, jitter, health, provider, region]
+  policy: score-based
+  healthy_only: true
+  provider_preference: supported
+  regional_preference: supported
+  execution: policy-controlled
+  route_changes: approval-required
+
 placement:
   inputs:
     - cpu
@@ -51,7 +74,7 @@ placement:
     - capabilities
     - provider_policy
   strategy: weighted-capability-health
-  failover: health-aware
+  failover: health-aware-path-failover
   migration: approval-required
 
 control_plane:
