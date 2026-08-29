@@ -1,0 +1,46 @@
+version: v1
+kind: FTNCCTVTVDriveMailSuite
+metadata:
+  name: ftn-cctv-tv-drive-mail-suite
+spec:
+  shared_fabric: ftn-unified-service-fabric
+  cctv:
+    contract: ftn-cctv-service
+    sources: [ip_camera, lan_camera, onvif, rtsp, nvr, dvr, xvr]
+    player: [original, enhanced, low_bandwidth]
+    ai: [event_detection, assistant, alert_correlation]
+    storage: ftn-cctv-storage-cloud
+  tv:
+    clients: [smart_tv, android_tv, web_tv]
+    playback: [live, vod, catchup]
+    adaptive_bitrate: true
+    hardware_decode: capability-aware
+    route: exrouter
+    identity_aware: true
+  drive:
+    services: [upload, download, share, sync, preview]
+    resumable_transfer: true
+    chunking: true
+    deduplication: true
+    encryption: true
+    integrity: true
+    storage: ftn-storage-fabric
+    transfer: ftn-payload-efficiency-fabric
+  mail:
+    services: [smtp_submission, smtp_relay, imap, mailbox, attachment]
+    identity_aware: true
+    pki: ftn-pki-certificate-fabric
+    security: [tls, mtls_control_plane, anti_spoofing]
+    storage: ftn-storage-fabric
+    telemetry: ftn-observability-fabric
+    dms: ftn-dms-alert-engine
+  common:
+    service_discovery: true
+    shared_identity: true
+    shared_route_context: true
+    shared_health: true
+    shared_telemetry: true
+    shared_storage_policy: true
+    ai_context: true
+    mobile_efficiency: true
+    approval_for_privileged_actions: true
