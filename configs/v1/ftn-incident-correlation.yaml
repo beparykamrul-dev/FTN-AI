@@ -1,0 +1,17 @@
+version: v1
+kind: FTNIncidentCorrelation
+metadata:
+  name: ftn-incident-correlation
+spec:
+  inputs: [device, driver, service, metric, telemetry, certificate, dns, database, path, mesh]
+  correlation_keys: [service_id, node_id, flow_id, trace_id, path_id]
+  stages: [detect, correlate, rank, group, notify, recover]
+  root_cause_first: true
+  duplicate_suppression: true
+  cooldown: true
+  maintenance_suppression: true
+  emergency_detection: true
+  notification_policy: ftn-alerting-fabric
+  ai_assist: ftn-ai-network-bridge
+  dashboard: ftn-control-center
+  security: [least_data, no_secrets, audit]
