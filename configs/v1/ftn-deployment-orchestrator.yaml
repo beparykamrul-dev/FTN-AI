@@ -1,0 +1,22 @@
+version: v1
+kind: FTNDeploymentOrchestrator
+metadata:
+  name: ftn-deployment-orchestrator
+spec:
+  workflow: [discover, validate, plan, preview, approve, deploy, verify, drain, rollback]
+  targets: [node, service, device, mesh, dns, database, media]
+  policy: [capability, health, capacity, security]
+  placement: exrouter
+  rollout:
+    staged: true
+    canary: true
+    health_gate: true
+    automatic_rollback: true
+  resources:
+    cpu: adaptive
+    memory: bounded
+    storage: bounded
+    network: health-aware
+  privileged_actions: approval-required
+  audit: true
+  provider_neutral: true
