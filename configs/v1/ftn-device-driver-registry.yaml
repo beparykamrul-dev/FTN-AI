@@ -1,0 +1,18 @@
+version: v1
+kind: FTNDeviceDriverRegistry
+metadata:
+  name: ftn-device-driver-registry
+spec:
+  discovery: automatic
+  identity: [device_id, vendor_neutral_model, serial_fingerprint]
+  capabilities: true
+  telemetry: true
+  metrics: true
+  certificates: true
+  health: true
+  supported_classes: [router, switch, olt, onu, server, storage, camera, tv, mobile, embedded]
+  adapter_boundary: true
+  provider_neutral_core: true
+  driver_isolation: true
+  failure: [quarantine, retry, fallback, alert]
+  privileged_changes: approval-required
