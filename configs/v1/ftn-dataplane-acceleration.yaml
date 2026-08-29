@@ -1,0 +1,28 @@
+version: v1
+kind: FTNDataplaneAcceleration
+metadata:
+  name: ftn-dataplane-acceleration
+spec:
+  strategy: workload-aware
+  zero_copy: preferred
+  memory_to_memory: preferred
+  ebpf: true
+  xdp: true
+  dpdk: true
+  vpp: true
+  fdio: true
+  native_hot_path: true
+  fallback: safe-userspace
+  packet_processing:
+    batching: adaptive
+    backpressure: true
+    queue_awareness: true
+  mtu:
+    path_validation: true
+    jumbo_frames: capability-negotiated
+  cpu:
+    affinity: workload-aware
+    isolation: optional
+  security:
+    policy_enforced: true
+    no_security_downgrade: true
