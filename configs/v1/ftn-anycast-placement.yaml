@@ -1,0 +1,14 @@
+version: v1
+kind: FTNAnycastPlacement
+metadata:
+  name: ftn-anycast-placement
+spec:
+  provider_neutral: true
+  placement_inputs: [health, latency, packet_loss, jitter, capacity, region, capability]
+  routing: [bgp, isis]
+  dns: [authoritative, recursive, health_aware]
+  service_placement: exrouter
+  failover: automatic-health-aware
+  hysteresis: true
+  drain_before_withdraw: true
+  security_downgrade: prohibited
