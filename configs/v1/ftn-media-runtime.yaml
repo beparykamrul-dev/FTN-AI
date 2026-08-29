@@ -1,0 +1,32 @@
+version: v1
+kind: FTNMediaRuntime
+metadata:
+  name: ftn-media-runtime
+spec:
+  runtime:
+    codec_selection: device-content-aware
+    transcode_only_when_beneficial: true
+    streaming: adaptive
+  acceleration:
+    qsv: true
+    vaapi: true
+  transfer:
+    memory_to_memory: true
+    zero_copy: preferred
+    bounded_cache: true
+  network:
+    path_engine: exrouter
+    latency_aware: true
+    packet_loss_aware: true
+    jitter_aware: true
+  clients:
+    android: battery-aware
+    tv: resource-aware
+    desktop: performance-aware
+  observability:
+    flow_id: true
+    trace_id: true
+    health: true
+  security:
+    end_to_end_encryption: true
+    policy: unified-ftn-crypto
