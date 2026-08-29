@@ -1,0 +1,36 @@
+version: v1
+kind: FTNServiceDiscovery
+metadata:
+  name: ftn-service-discovery
+spec:
+  identity: [service_id, instance_id, node_id]
+  capabilities: true
+  endpoints: true
+  health: [status, latency, packet_loss, jitter, last_seen]
+  capacity: [cpu, memory, storage, bandwidth]
+  selection:
+    engine: exrouter
+    policy: capability-health-capacity
+    provider_neutral: true
+  dns_integration:
+    authoritative: true
+    recursive: true
+    caching: true
+    doh: true
+    dot: true
+    split_dns: true
+    health_aware: true
+  mesh:
+    full_mesh: true
+    dynamic_peering: true
+    secure_links: true
+  consistency:
+    versioned_state: true
+    stale_rejection: true
+    eventual_sync: true
+    local_fast_path: true
+  security:
+    identity_required: true
+    mtls: true
+    zero_trust: true
+    privileged_changes: approval-required
