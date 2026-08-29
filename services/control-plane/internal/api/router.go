@@ -11,9 +11,9 @@ func Router() http.Handler {
 	mux.HandleFunc("GET /health", Health)
 	mux.HandleFunc("GET /ready", Readiness)
 	mux.HandleFunc("GET /version", Version)
-	mux.HandleFunc("GET /api/v1/accounts/status", AccountsStatus)
-	mux.HandleFunc("GET /api/v1/billing/status", BillingStatus)
-	mux.HandleFunc("GET /api/v1/noc/status", NOCStatus)
-	mux.HandleFunc("GET /api/v1/service/status", ServiceStatus)
+	mux.Handle("GET /api/v1/accounts/status", ProtectedAdmin(http.HandlerFunc(AccountsStatus)))
+	mux.Handle("GET /api/v1/billing/status", ProtectedBilling(http.HandlerFunc(BillingStatus)))
+	mux.Handle("GET /api/v1/noc/status", ProtectedNOC(http.HandlerFunc(NOCStatus)))
+	mux.Handle("GET /api/v1/service/status", ProtectedAdmin(http.HandlerFunc(ServiceStatus)))
 	return httpx.RequestID(mux)
 }
