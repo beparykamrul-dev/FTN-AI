@@ -1,0 +1,15 @@
+version: v1
+kind: FTNZeroDowntimePolicy
+metadata:
+  name: ftn-zero-downtime-policy
+spec:
+  target: high-availability-services
+  deployment: rolling
+  drain_before_switch: true
+  connection_preservation: true
+  health_gate: true
+  failover: automatic
+  recovery_confirmation: true
+  state_checkpoint: true
+  rollback: automatic
+  security_downgrade: prohibited
