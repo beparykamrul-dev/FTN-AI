@@ -1,0 +1,16 @@
+version: v1
+kind: FTNLoggingPolicy
+metadata:
+  name: ftn-logging-policy
+spec:
+  structured: true
+  correlation: [request_id, trace_id, flow_id, service_id, node_id, device_id, path_id]
+  levels: [debug, info, warn, error]
+  production_default: info
+  secrets: redact
+  credentials: redact
+  payload: metadata-only
+  retention: policy-driven
+  sampling: adaptive
+  audit_events: immutable
+  pii_minimization: true
