@@ -1,0 +1,23 @@
+version: v1
+kind: FTNObservabilityPipeline
+metadata:
+  name: ftn-observability-pipeline
+spec:
+  sources: [metrics, logs, traces, flow, dns, device_events, service_events]
+  standards:
+    opentelemetry: true
+    ipfix: true
+    netflow: true
+  correlation: [service_id, node_id, device_id, flow_id, trace_id, path_id]
+  processing:
+    adaptive_sampling: true
+    aggregation: true
+    deduplication: true
+    backpressure: true
+  sinks: [database-fabric, dms-alert-engine, ai-network-control, dashboard-realtime]
+  privacy:
+    payload_capture: disabled-by-default
+    secrets: excluded
+  retention:
+    tiered: true
+    bounded_hot_data: true
