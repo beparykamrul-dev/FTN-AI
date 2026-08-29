@@ -1,0 +1,20 @@
+version: v1
+kind: FTNApiMesh
+metadata:
+  name: ftn-api-mesh
+spec:
+  protocol: http2-and-http3-capable
+  discovery: ftn-service-discovery
+  identity: service-identity
+  security: mtls
+  routing: exrouter
+  load_balancing: latency-health-capacity
+  retries:
+    enabled: true
+    bounded: true
+  circuit_breaker: true
+  rate_limit: policy-aware
+  timeout: adaptive
+  tracing: opentelemetry
+  metrics: unified-ftn-observability
+  provider_neutral: true
