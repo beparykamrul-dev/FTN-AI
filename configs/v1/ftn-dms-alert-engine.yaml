@@ -1,0 +1,31 @@
+version: v1
+kind: FTNDMSAlertEngine
+metadata:
+  name: ftn-dms-alert-engine
+spec:
+  modes:
+    vertical:
+      enabled: true
+      dimensions: [device, driver, service, metric, telemetry, certificate]
+      threshold_rules: true
+      service_specific: true
+    emergency:
+      enabled: true
+      correlation: [device, service, metric, telemetry, certificate, path, dependency]
+      root_cause_first: true
+      severity_scoring: true
+  notification:
+    channels: [dashboard, in_app, email, sms]
+    deduplication: true
+    grouping: true
+    cooldown: true
+    escalation: true
+    recovery_event: true
+    unnecessary_sms_suppression: true
+  ai:
+    prioritization: true
+    anomaly_correlation: true
+    recommendation: true
+  execution:
+    privileged_action: approval-required
+    audit: true
