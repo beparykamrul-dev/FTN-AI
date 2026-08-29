@@ -1,0 +1,43 @@
+version: v1
+kind: FTNTvVirtualSatelliteFabric
+metadata:
+  name: ftn-tv-virtual-satellite-fabric
+spec:
+  purpose: satellite-style-channel-distribution-over-ftn-network
+  sources: [satellite_feed, iptv_feed, contribution_feed, local_channel, vod]
+  distribution:
+    network_native: true
+    route: exrouter
+    service_discovery: true
+    identity_aware: true
+    adaptive_bitrate: true
+    multicast_capable: true
+    unicast_fallback: true
+  channel:
+    registry: true
+    epg: true
+    entitlement: true
+    region_policy: true
+    channel_health: true
+  ingest:
+    secure: true
+    capability_aware: true
+  player:
+    clients: [android_tv, smart_tv, android, web]
+    modes: [live, catchup, vod, low_bandwidth]
+    hardware_decode: capability-aware
+  media:
+    hardware_encode: capability-aware
+    payload_efficiency: ftn-payload-efficiency-fabric
+  security:
+    identity: ftn-identity-route-monitor
+    pki: ftn-pki-certificate-fabric
+    zero_trust: ftn-zero-trust-gateway
+  observability: ftn-observability-fabric
+  ai: ftn-ai-network-control
+  alerts: ftn-dms-alert-engine
+  storage: ftn-storage-fabric
+  control: ftn-control-center
+  provider_neutral: true
+  rights:
+    authorized_sources_only: true
