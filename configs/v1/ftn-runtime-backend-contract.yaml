@@ -1,0 +1,30 @@
+version: v1
+kind: FTNRuntimeBackendContract
+metadata:
+  name: ftn-runtime-backend
+spec:
+  api: [service, device, dns, network, telemetry, incidents, certificates, ai]
+  event_bus:
+    durable: true
+    correlation: [service_id, node_id, device_id, flow_id, trace_id, path_id]
+  state:
+    source_of_truth: database-fabric
+    cache: bounded
+    local_fast_path: true
+  adapters:
+    device_drivers: true
+    telemetry_collectors: true
+    dns: true
+    routing: true
+    transport: true
+    media: true
+  runtime:
+    health_checks: true
+    graceful_shutdown: true
+    backpressure: true
+    circuit_breaker: true
+    rollback: true
+  security:
+    identity: true
+    mtls: true
+    approval_gate: true
