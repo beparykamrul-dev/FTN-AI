@@ -1,0 +1,17 @@
+version: v1
+kind: FTNServiceContract
+metadata:
+  name: ftn-service-contract
+spec:
+  identity: [service_id, instance_id, node_id]
+  discovery: [capabilities, health, address, transport]
+  policy: [security, qos, placement, access]
+  path: [exrouter_path_id, mtu, latency_budget]
+  transport: [protocol, encryption, keepalive]
+  dataplane: [zero_copy, memory_to_memory, acceleration]
+  telemetry: [flow_id, trace_id, metrics]
+  lifecycle: [start, ready, drain, stop, rollback]
+  compatibility: capability-negotiation
+  provider_neutral: true
+  vendor_neutral: true
+  privileged_changes: approval-required
