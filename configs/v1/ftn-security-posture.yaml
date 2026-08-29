@@ -1,0 +1,23 @@
+version: v1
+kind: FTNSecurityPosture
+metadata:
+  name: ftn-security-posture
+spec:
+  identity: [pki, mtls]
+  zero_trust: true
+  e2e_encryption: true
+  anti_spoofing: true
+  replay_protection: true
+  certificate_validation: true
+  secrets:
+    externalized: true
+    logs: false
+  capture:
+    metadata_first: true
+    payload: disabled-by-default
+  network:
+    policy_enforced: true
+    privileged_change: approval-required
+  recovery:
+    rollback: true
+    security_downgrade: prohibited
