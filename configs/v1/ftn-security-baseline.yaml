@@ -1,0 +1,25 @@
+version: v1
+kind: FTNSecurityBaseline
+metadata:
+  name: ftn-security-baseline
+spec:
+  identity: [service_identity, mtls, pki]
+  transport: [end_to_end_encryption, replay_protection, key_rotation]
+  network: [anti_spoofing, ingress_policy, egress_policy]
+  secrets:
+    source: external-secret-store
+    logs: prohibited
+    telemetry: prohibited
+    ai_context: prohibited
+  capture:
+    payload: disabled-by-default
+    metadata: minimized
+  control:
+    privileged_actions: approval-gated
+    audit: required
+    rollback: required
+  resilience:
+    circuit_breaker: true
+    backpressure: true
+    graceful_degradation: true
+    security_downgrade: prohibited
