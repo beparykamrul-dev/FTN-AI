@@ -1,0 +1,38 @@
+version: v1
+kind: FTNPayloadEfficiencyFabric
+metadata:
+  name: ftn-payload-efficiency-fabric
+spec:
+  purpose: reduce-transfer-size-without-breaking-service-semantics
+  stages:
+    - classify
+    - compress
+    - encode
+    - transfer
+    - verify
+    - decode
+  policy:
+    adaptive: true
+    content_aware: true
+    cpu_aware: true
+    bandwidth_aware: true
+    latency_aware: true
+  media:
+    h265_hardware_acceleration: true
+    qsv: capability-aware
+    vaapi: capability-aware
+    nvenc: capability-aware
+    preserve_original: true
+  generic_payloads:
+    compression: adaptive
+    chunking: resumable
+    deduplication: true
+    checksum: true
+  transport:
+    connection_reuse: true
+    backpressure: true
+    bounded_buffers: true
+  cache:
+    edge: true
+    bounded: true
+  integration: [ftn-router-fabric, ftn-media-fabric, ftn-storage-fabric, ftn-cctv-storage-cloud, ftn-observability-fabric]
