@@ -1,0 +1,33 @@
+version: v1
+kind: FTNCCTVServiceContract
+metadata:
+  name: ftn-cctv-service
+spec:
+  sources: [ip_camera, lan_camera, onvif, rtsp, nvr, dvr, xvr]
+  identity: [uuid, mac, serial_number, ipv4, ipv6, device_id, interface_id]
+  discovery: automatic
+  route_context: [node_id, path_id, exrouter]
+  media: ftn-media-fabric
+  storage: ftn-cctv-storage-cloud
+  ai: ftn-ai-network-control
+  alerts: ftn-dms-alert-engine
+  control: ftn-control-api
+  observability: ftn-observability-fabric
+  security: ftn-zero-trust-gateway
+  pki: ftn-pki-certificate-fabric
+  player:
+    modes: [original, enhanced, low_bandwidth]
+    super_resolution: capability-aware
+    output_profiles: [1080p, 2k, 4k, 8k]
+  audio:
+    clean_voice: true
+    noise_suppression: true
+    echo_reduction: true
+  storage_policy:
+    event_first: true
+    original_preservation: true
+    enhanced_optional: true
+    deduplication: true
+    adaptive_compression: true
+  lifecycle: [discover, enroll, validate, monitor, stream, record, archive, recover, retire]
+  provider_neutral: true
