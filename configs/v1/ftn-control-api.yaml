@@ -1,0 +1,18 @@
+version: v1
+kind: FTNControlAPI
+metadata:
+  name: ftn-control-api
+spec:
+  resources: [nodes, devices, services, dns, routes, tunnels, mesh, databases, media, telemetry, incidents, certificates, ai, approvals, audit]
+  operations: [discover, read, preview, validate, approve, execute, verify, rollback]
+  realtime: websocket
+  authorization:
+    rbac: true
+    least_privilege: true
+    mfa_ready: true
+    privileged_actions: approval-required
+  idempotency: true
+  audit: required
+  rate_limit: policy-aware
+  timeout: bounded
+  provider_neutral: true
