@@ -1,0 +1,48 @@
+version: v1
+kind: FTNEnterpriseHistorySafetyFabric
+metadata:
+  name: ftn-enterprise-history-safety-fabric
+spec:
+  accounting_periods:
+    default: 365d
+    custom_range: true
+  tracked_domains:
+    - service_requests
+    - entitlements
+    - users
+    - devices
+    - traffic
+    - billing
+    - payments
+    - infrastructure
+    - incidents
+    - alerts
+    - ai_actions
+    - approvals
+    - deployments
+  reports:
+    yearly: true
+    monthly: true
+    service_breakdown: true
+    revenue_expense_breakdown: true
+    infrastructure_cost: true
+    traffic_value: true
+    customer_growth: true
+    audit_export: true
+  database:
+    append_only_events: true
+    utc_timestamps: true
+    tenant_scoped: true
+    retention_policy_required: true
+    backup_verification: true
+  safety:
+    perimeter_inventory:
+      enabled: true
+      radius_meters: 200
+      authorization_required: true
+      purpose: asset_and_security_monitoring
+      passive_or_authorized_sources_only: true
+      no_unauthorized_device_collection: true
+      no_unauthorized_person_tracking: true
+    privileged_action_audit: true
+    approval_required_for_changes: true
