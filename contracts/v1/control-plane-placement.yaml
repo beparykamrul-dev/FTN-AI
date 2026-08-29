@@ -1,0 +1,29 @@
+version: v1
+service: control-plane-placement
+endpoints:
+  - method: GET
+    path: /api/v1/nodes
+    purpose: list registered FTN nodes and resource/health capabilities
+  - method: POST
+    path: /api/v1/nodes/register
+    purpose: register or update a node capability snapshot
+  - method: POST
+    path: /api/v1/placement/preview
+    purpose: rank eligible nodes without executing a production change
+placement_inputs:
+  - service_id
+  - region
+  - provider
+placement_signals:
+  - service_capability
+  - health
+  - cpu_percent
+  - ram_percent
+  - ssd_percent
+  - hdd_percent
+  - net_mbps
+  - latency_ms
+  - packet_loss_percent
+safety:
+  execution: approval_required
+  destructive_changes: prohibited_by_preview
