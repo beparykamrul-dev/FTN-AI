@@ -1,0 +1,16 @@
+version: v1
+kind: FTNLocalizationPolicy
+metadata:
+  name: ftn-localization-policy
+spec:
+  supported_locales: [en, bn, ar]
+  fallback: en
+  architecture:
+    ui_text_externalized: true
+    protocol_identifiers_unchanged: true
+    telemetry_keys_unchanged: true
+    database_schema_locale_neutral: true
+  clients: [web, android, tv, desktop]
+  performance:
+    locale_bundle_lazy_load: true
+    cache_bounded: true
