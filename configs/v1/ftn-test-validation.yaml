@@ -1,0 +1,25 @@
+version: v1
+kind: FTNTestValidation
+metadata:
+  name: ftn-test-validation
+spec:
+  suites:
+    contract: true
+    discovery: true
+    dns: true
+    routing: true
+    transport: true
+    crypto: true
+    telemetry: true
+    database: true
+    media: true
+    dashboard: true
+    alerts: true
+    approval: true
+    rollback: true
+  invariants:
+    no_security_downgrade: true
+    no_unbounded_cache: true
+    no_secrets_in_logs: true
+    privileged_action_requires_approval: true
+  release_gate: production-readiness
