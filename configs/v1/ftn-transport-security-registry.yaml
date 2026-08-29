@@ -1,0 +1,107 @@
+version: v1
+name: ftn-transport-security-registry
+purpose: unified provider-neutral transport, tunnel, encryption and edge-security capability registry
+
+principles:
+  - existing_services_are_preserved
+  - modules_are_composable
+  - exrouter_selects_paths_without_service_replacement
+  - encryption_is_end_to_end_where_protocol_supports_it
+  - security_policy_precedes_transport_optimization
+  - privileged_changes_require_approval
+
+transports:
+  wireguard: {enabled: true, role: secure-tunnel}
+  amneziawg: {enabled: true, role: secure-tunnel-variant}
+  aether-core: {enabled: true, role: experimental-ftn-core-transport}
+  shadowsocks: {enabled: true, role: encrypted-proxy}
+  hysteria2: {enabled: true, role: encrypted-udp-transport, keepalive: true}
+  openvpn: {enabled: true, role: secure-vpn}
+  openvpn-enterprise: {enabled: true, role: secure-vpn-enterprise}
+  gre: {enabled: true, role: overlay-tunnel}
+  sslh: {enabled: true, role: protocol-multiplexer}
+  pptp: {enabled: true, role: legacy-compatibility, security_profile: legacy-restricted}
+  ssl-vpn: {enabled: true, role: secure-remote-access}
+  globalprotect: {enabled: true, role: enterprise-remote-access}
+  fortisslvpn: {enabled: true, role: enterprise-remote-access}
+  v2ray-xray: {enabled: true, role: encrypted-proxy-framework}
+
+mesh_and_overlay:
+  vxlan: {enabled: true}
+  ipsec: {enabled: true}
+  overlay_fabric: {enabled: true}
+  zerotrust_gateway: {enabled: true}
+  netbird: {enabled: true}
+  full_mesh: {enabled: true}
+
+network_stack:
+  vpp: {enabled: true}
+  fdio: {enabled: true}
+  opnsense: {enabled: true}
+  frr: {enabled: true}
+  gobgp: {enabled: true}
+  isis: {enabled: true}
+  vbnG: {enabled: true, note: spelling-normalized: vBNG}
+  vBNG: {enabled: true, role: broadband-network-gateway}
+  jumbo_frames: {enabled: true, mtu_policy: path-capability-aware}
+  anti_spoofing: {enabled: true}
+
+security:
+  zerotrust: true
+  pki: true
+  acme: true
+  certificate_rotation: true
+  mTLS: true
+  cryptographic_policy: true
+  oom_killer_tuning: true
+  kernel_panic_prevention: true
+  wrapper_kernel: true
+  ca_bypass: false
+  ca_bypass_policy: prohibited
+  note: CA validation must not be bypassed in production; compatibility testing uses isolated trust-policy fixtures.
+
+remote_access:
+  turnkey: {enabled: true}
+  openrc: {enabled: true}
+  cygwin: {enabled: true}
+  solaris: {enabled: true}
+  openbsd: {enabled: true}
+  nordvpn: {enabled: true, role: provider-adapter}
+  palo_alto_globalprotect: {enabled: true, role: provider-adapter}
+
+sync_and_transfer:
+  resilio_sync: {enabled: true}
+  wormhole: {enabled: true}
+  magic_wormhole: {enabled: true}
+  thunderbolt: {enabled: true, role: local-high-speed-link}
+  quickconnect: {enabled: true}
+  synology: {enabled: true}
+  truenas_scale: {enabled: true}
+
+media_and_codec:
+  qsv: {enabled: true}
+  vaapi: {enabled: true}
+  svg: {enabled: true}
+  rutorrent: {enabled: true}
+  gopeed: {enabled: true}
+  qbittorrent: {enabled: true}
+  utorrent: {enabled: true}
+
+optimization:
+  memory_to_memory: true
+  zero_copy_preferred: true
+  packet_capture: true
+  packet_analysis: true
+  codec_acceleration: true
+  cache_policy: bounded-and-adaptive
+  service_sharding: true
+  service_composition: true
+  cross_layer_orchestration: true
+
+exrouter:
+  enabled: true
+  path_inputs: [latency, packet-loss, jitter, health, mtu, provider, region, security-policy]
+  transport_fallback: policy-controlled
+  security_downgrade: prohibited
+  service_replacement: false
+  service_migration: false
