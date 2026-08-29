@@ -1,0 +1,21 @@
+version: v1
+kind: FTNCertificateLifecycle
+metadata:
+  name: ftn-certificate-lifecycle
+spec:
+  inventory: true
+  discovery: true
+  validation: [chain, expiry, hostname, policy]
+  renewal: [acme, pki]
+  rotation: true
+  alerting:
+    stages: [notice, warning, critical, expired]
+    duplicate_suppression: true
+    notification_policy: ftn-alerting-fabric
+  dependencies: [dns, service, transport, mtls]
+  dashboard: ftn-control-center
+  ai_analysis: ftn-ai-network-bridge
+  security:
+    private_keys_never_exposed: true
+    secrets_in_logs: false
+    approval_for_privileged_changes: true
