@@ -1,0 +1,81 @@
+version: v1
+kind: FTNCodecRegistry
+metadata:
+  name: ftn-unified-codec-fabric
+  description: Provider-neutral codec, encoder and media-processing capability registry.
+
+policy:
+  core_dataplane_dependency: false
+  capability_driven: true
+  hardware_acceleration_preferred: true
+  lossless_transfer_default: true
+  preserve_original_by_default: true
+  payload_capture_default: false
+  explicit_authorization_for_sensitive_capture: true
+
+capabilities:
+  - id: binary-framing
+    class: transport
+    modes: [stream, datagram]
+    preferred: [native, protobuf, cbor]
+
+  - id: compression
+    class: transfer
+    modes: [lossless]
+    preferred: [zstd, gzip]
+
+  - id: chunking
+    class: transfer
+    modes: [resumable, parallel]
+    integrity: sha256
+
+  - id: deduplication
+    class: transfer
+    modes: [content-addressed]
+    integrity: sha256
+
+  - id: hardware-video-encode
+    class: media
+    modes: [h265]
+    implementations:
+      - name: HWEncoderX
+        repository: https://github.com/MacRimi/HWEncoderX
+        license: MIT
+        acceleration: [vaapi, nvenc, qsv]
+        isolation: worker
+
+  - id: media-cut
+    class: media
+    modes: [video-processing]
+    implementations:
+      - name: jumpcutter
+        repository: https://github.com/freearhey/jumpcutter
+        isolation: worker
+
+placement:
+  scheduler_inputs:
+    - cpu
+    - ram
+    - storage
+    - gpu
+    - accelerator
+    - network_capacity
+    - path_health
+    - latency
+  rule: select-capable-node-then-select-best-implementation
+
+service_bindings:
+  ftn-api: [binary-framing, compression]
+  ftn-proxy: [binary-framing, compression]
+  ftn-tunnel: [binary-framing, compression, chunking, deduplication]
+  ftn-capture: [chunking, compression]
+  ftn-storage: [chunking, deduplication, compression]
+  ftn-media: [chunking, compression, hardware-video-encode, media-cut]
+  ftn-ip-stream: [chunking, compression, hardware-video-encode]
+
+execution:
+  control_plane_selects_capability: true
+  workers_are_replaceable: true
+  implementation_is_not_part_of_core_control_plane: true
+  verify_output_before_publish: true
+  retain_rollback_metadata: true
