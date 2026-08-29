@@ -1,0 +1,43 @@
+version: v1
+kind: FTNUserBillingAppFabric
+metadata:
+  name: ftn-user-billing-app-fabric
+spec:
+  identity:
+    user_id: required
+    mobile_association: true
+    kyc: consent_and_provider_verified
+  billing:
+    in_app: true
+    service_wise: true
+    consolidated_home_bill: true
+    invoice_history: true
+    payment_history: true
+    payment_verification: true
+    webhook_idempotency: true
+    authoritative_backend_ledger: true
+    currency: BDT
+  realtime:
+    websocket_status: true
+    payment_status: true
+    entitlement_status: true
+  notice:
+    enabled: true
+    presentation: 3d_optional
+    statuses: [paid, due_soon, due, overdue, restricted]
+    truthful_backend_state_only: true
+  service_delivery:
+    home_user: unified_super_app
+    standalone_service: dedicated_app_or_interface
+    locked_service: catalog_only
+  surfaces:
+    web: true
+    android: true
+    api: true
+  audit:
+    immutable_events: true
+    retention_days: 365
+  security:
+    rbac: true
+    tenant_isolation: true
+    payment_secrets_out_of_source: true
