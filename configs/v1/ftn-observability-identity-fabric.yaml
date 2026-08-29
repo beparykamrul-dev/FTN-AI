@@ -1,0 +1,63 @@
+version: v1
+kind: FTNObservabilityIdentityFabric
+metadata:
+  name: ftn-observability-identity-fabric
+spec:
+  primary_dimension: traffic
+  identity_keys:
+    - ip
+    - ip_range
+    - mac
+    - serial_number
+    - uuid
+    - device_id
+    - tenant_id
+    - service_id
+  topology_keys:
+    - router
+    - mikrotik
+    - olt
+    - onu
+    - interface
+    - vlan
+    - fiber_segment
+    - joint
+    - gateway
+    - path
+    - tunnel
+  measurements:
+    - bytes_in
+    - bytes_out
+    - packets_in
+    - packets_out
+    - throughput
+    - latency
+    - jitter
+    - packet_loss
+    - availability
+    - dns_latency
+    - tls_handshake_latency
+  correlation:
+    flow_to_device: true
+    flow_to_service: true
+    flow_to_tenant: true
+    flow_to_dns: true
+    flow_to_path: true
+    flow_to_fiber: true
+    mac_ip_history: true
+    serial_device_history: true
+    uuid_device_history: true
+  history:
+    immutable_events: true
+    retention_policy_required: true
+    timestamp_utc: true
+  alerts:
+    anomaly_detection: true
+    route_degradation: true
+    device_identity_change: true
+    fiber_degradation: true
+    dns_degradation: true
+  safety:
+    no_unauthorized_device_scanning: true
+    no_unauthorized_location_inference: true
+    audit_all_privileged_actions: true
