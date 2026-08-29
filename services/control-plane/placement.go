@@ -9,14 +9,190 @@ import (
 	"time"
 )
 
-type Node struct { ID string `json:"id"`; Provider string `json:"provider"`; Region string `json:"region,omitempty"`; Services []string `json:"services"`; CPUPercent float64 `json:"cpu_percent"`; RAMPercent float64 `json:"ram_percent"`; SSDPercent float64 `json:"ssd_percent"`; HDDPercent float64 `json:"hdd_percent"`; NetMbps float64 `json:"net_mbps"`; LatencyMs float64 `json:"latency_ms"`; PacketLoss float64 `json:"packet_loss_percent"`; Healthy bool `json:"healthy"` }
-type PlacementRequest struct { ServiceID string `json:"service_id"`; Region string `json:"region,omitempty"`; Provider string `json:"provider,omitempty"` }
+type Node struct {
+	ID           string   `json:"id"`
+	Provider     string   `json:"provider"`
+	Region       string   `json:"region,omitempty"`
+	Services     []string `json:"services"`
+	CPUPercent   float64  `json:"cpu_percent"`
+	RAMPercent   float64  `json:"ram_percent"`
+	SSDPercent   float64  `json:"ssd_percent"`
+	HDDPercent   float64  `json:"hdd_percent"`
+	NetMbps      float64  `json:"net_mbps"`
+	LatencyMs    float64  `json:"latency_ms"`
+	PacketLoss   float64  `json:"packet_loss_percent"`
+	Healthy      bool     `json:"healthy"`
+}
+
+type PlacementRequest struct {
+	ServiceID string `json:"service_id"`
+	Region    string `json:"region,omitempty"`
+	Provider  string `json:"provider,omitempty"`
+}
+
 var nodes = []Node{}
 
-func nodeHasService(n Node, serviceID string) bool { for _,s:=range n.Services { if s==serviceID||s=="*" {return true} }; return false }
-func nodeScore(n Node, req PlacementRequest) float64 { if !n.Healthy||!nodeHasService(n,req.ServiceID){return -1}; score:=100.0; score-=n.CPUPercent*.20; score-=n.RAMPercent*.20; score-=n.SSDPercent*.10; score-=n.HDDPercent*.05; score-=n.LatencyMs*.50; score-=n.PacketLoss*2; if req.Region!=""&&strings.EqualFold(req.Region,n.Region){score+=20}; if req.Provider!=""&&strings.EqualFold(req.Provider,n.Provider){score+=10}; return score }
+func nodeHasService(n Node, serviceID string) bool {
+	for _, s := range n.Services {
+		if s == serviceID || s == "*" {
+			return true
+		}
+	}
+	return false
+}
 
-func (a *App) loadNodes(ctx context.Context) ([]Node,error) { if a.db==nil{return append([]Node(nil),nodes...),nil}; qctx,c:=context.WithTimeout(ctx,2*time.Second);defer c(); rows,err:=a.db.Query(qctx,`select id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy from control_nodes order by id`);if err!=nil{return nil,err};defer rows.Close();out:=[]Node{};for rows.Next(){var n Node;if err:=rows.Scan(&n.ID,&n.Provider,&n.Region,&n.Services,&n.CPUPercent,&n.RAMPercent,&n.SSDPercent,&n.HDDPercent,&n.NetMbps,&n.LatencyMs,&n.PacketLoss,&n.Healthy);err!=nil{return nil,err};out=append(out,n)};return out,rows.Err() }
-func (a *App) nodeCatalog(w http.ResponseWriter,r *http.Request) { if !method(w,r,http.MethodGet){return};out,err:=a.loadNodes(r.Context());if err!=nil{jsonResponse(w,500,map[string]string{"error":"node_query_failed"});return};jsonResponse(w,200,map[string]any{"nodes":out}) }
-func (a *App) registerNode(w http.ResponseWriter,r *http.Request) { if !method(w,r,http.MethodPost){return};var n Node;if err:=json.NewDecoder(r.Body).Decode(&n);err!=nil||n.ID==""||n.Provider==""{jsonResponse(w,400,map[string]string{"error":"node_id_and_provider_required"});return};if a.db==nil{nodes=append(nodes,n);jsonResponse(w,202,map[string]any{"status":"registered","node":n});return};ctx,c:=context.WithTimeout(r.Context(),2*time.Second);defer c();_,err:=a.db.Exec(ctx,`insert into control_nodes(id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) on conflict(id) do update set provider=excluded.provider,region=excluded.region,services=excluded.services,cpu_percent=excluded.cpu_percent,ram_percent=excluded.ram_percent,ssd_percent=excluded.ssd_percent,hdd_percent=excluded.hdd_percent,net_mbps=excluded.net_mbps,latency_ms=excluded.latency_ms,packet_loss_percent=excluded.packet_loss_percent,healthy=excluded.healthy,updated_at=now()`,n.ID,n.Provider,n.Region,n.Services,n.CPUPercent,n.RAMPercent,n.SSDPercent,n.HDDPercent,n.NetMbps,n.LatencyMs,n.PacketLoss,n.Healthy);if err!=nil{jsonResponse(w,500,map[string]string{"error":"node_register_failed"});return};jsonResponse(w,202,map[string]any{"status":"registered","node":n}) }
-func (a *App) placement(w http.ResponseWriter,r *http.Request) { if !method(w,r,http.MethodPost){return};var req PlacementRequest;if err:=json.NewDecoder(r.Body).Decode(&req);err!=nil||req.ServiceID==""{jsonResponse(w,400,map[string]string{"error":"service_id_required"});return};available,err:=a.loadNodes(r.Context());if err!=nil{jsonResponse(w,500,map[string]string{"error":"node_query_failed"});return};candidates:=make([]Node,0,len(available));for _,n:=range available{if nodeScore(n,req)>=0{candidates=append(candidates,n)}};sort.SliceStable(candidates,func(i,j int)bool{return nodeScore(candidates[i],req)>nodeScore(candidates[j],req)});if len(candidates)==0{jsonResponse(w,503,map[string]any{"status":"no_eligible_node","service_id":req.ServiceID});return};best:=candidates[0];jsonResponse(w,200,map[string]any{"status":"placement_ready","service_id":req.ServiceID,"node_id":best.ID,"provider":best.Provider,"region":best.Region,"score":nodeScore(best,req),"candidates":candidates,"execution":"approval_required"}) }
+func validNode(n Node) bool {
+	return n.ID != "" && n.Provider != "" &&
+		n.CPUPercent >= 0 && n.CPUPercent <= 100 &&
+		n.RAMPercent >= 0 && n.RAMPercent <= 100 &&
+		n.SSDPercent >= 0 && n.SSDPercent <= 100 &&
+		n.HDDPercent >= 0 && n.HDDPercent <= 100 &&
+		n.NetMbps >= 0 && n.LatencyMs >= 0 && n.PacketLoss >= 0 && n.PacketLoss <= 100
+}
+
+func serviceExists(catalog []Service, serviceID string) bool {
+	for _, s := range catalog {
+		if s.ID == serviceID {
+			return true
+		}
+	}
+	return false
+}
+
+func nodeScore(n Node, req PlacementRequest) float64 {
+	if !n.Healthy || !nodeHasService(n, req.ServiceID) {
+		return -1
+	}
+	score := 100.0
+	score -= n.CPUPercent * 0.20
+	score -= n.RAMPercent * 0.20
+	score -= n.SSDPercent * 0.10
+	score -= n.HDDPercent * 0.05
+	score -= n.LatencyMs * 0.50
+	score -= n.PacketLoss * 2
+	if req.Region != "" && strings.EqualFold(req.Region, n.Region) {
+		score += 20
+	}
+	if req.Provider != "" && strings.EqualFold(req.Provider, n.Provider) {
+		score += 10
+	}
+	return score
+}
+
+func (a *App) loadNodes(ctx context.Context) ([]Node, error) {
+	if a.db == nil {
+		return append([]Node(nil), nodes...), nil
+	}
+	qctx, c := context.WithTimeout(ctx, 2*time.Second)
+	defer c()
+	rows, err := a.db.Query(qctx, `select id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy from control_nodes order by id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Node{}
+	for rows.Next() {
+		var n Node
+		if err := rows.Scan(&n.ID, &n.Provider, &n.Region, &n.Services, &n.CPUPercent, &n.RAMPercent, &n.SSDPercent, &n.HDDPercent, &n.NetMbps, &n.LatencyMs, &n.PacketLoss, &n.Healthy); err != nil {
+			return nil, err
+		}
+		if validNode(n) {
+			out = append(out, n)
+		}
+	}
+	return out, rows.Err()
+}
+
+func (a *App) nodeCatalog(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, http.MethodGet) {
+		return
+	}
+	out, err := a.loadNodes(r.Context())
+	if err != nil {
+		jsonResponse(w, 500, map[string]string{"error": "node_query_failed"})
+		return
+	}
+	jsonResponse(w, 200, map[string]any{"nodes": out})
+}
+
+func (a *App) registerNode(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, http.MethodPost) {
+		return
+	}
+	var n Node
+	if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
+		jsonResponse(w, 400, map[string]string{"error": "invalid_json"})
+		return
+	}
+	if !validNode(n) {
+		jsonResponse(w, 400, map[string]string{"error": "invalid_node"})
+		return
+	}
+	if a.db == nil {
+		updated := false
+		for i := range nodes {
+			if nodes[i].ID == n.ID {
+				nodes[i] = n
+				updated = true
+				break
+			}
+		}
+		if !updated {
+			nodes = append(nodes, n)
+		}
+		jsonResponse(w, 202, map[string]any{"status": "registered", "node": n})
+		return
+	}
+	ctx, c := context.WithTimeout(r.Context(), 2*time.Second)
+	defer c()
+	_, err := a.db.Exec(ctx, `insert into control_nodes(id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) on conflict(id) do update set provider=excluded.provider,region=excluded.region,services=excluded.services,cpu_percent=excluded.cpu_percent,ram_percent=excluded.ram_percent,ssd_percent=excluded.ssd_percent,hdd_percent=excluded.hdd_percent,net_mbps=excluded.net_mbps,latency_ms=excluded.latency_ms,packet_loss_percent=excluded.packet_loss_percent,healthy=excluded.healthy,updated_at=now()`, n.ID, n.Provider, n.Region, n.Services, n.CPUPercent, n.RAMPercent, n.SSDPercent, n.HDDPercent, n.NetMbps, n.LatencyMs, n.PacketLoss, n.Healthy)
+	if err != nil {
+		jsonResponse(w, 500, map[string]string{"error": "node_register_failed"})
+		return
+	}
+	jsonResponse(w, 202, map[string]any{"status": "registered", "node": n})
+}
+
+func (a *App) placement(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, http.MethodPost) {
+		return
+	}
+	var req PlacementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ServiceID == "" {
+		jsonResponse(w, 400, map[string]string{"error": "service_id_required"})
+		return
+	}
+	if !serviceExists(a.catalog, req.ServiceID) {
+		jsonResponse(w, 404, map[string]string{"error": "service_not_found"})
+		return
+	}
+	available, err := a.loadNodes(r.Context())
+	if err != nil {
+		jsonResponse(w, 500, map[string]string{"error": "node_query_failed"})
+		return
+	}
+	candidates := make([]Node, 0, len(available))
+	for _, n := range available {
+		if nodeScore(n, req) >= 0 {
+			candidates = append(candidates, n)
+		}
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return nodeScore(candidates[i], req) > nodeScore(candidates[j], req)
+	})
+	if len(candidates) == 0 {
+		jsonResponse(w, 503, map[string]any{"status": "no_eligible_node", "service_id": req.ServiceID})
+		return
+	}
+	best := candidates[0]
+	jsonResponse(w, 200, map[string]any{
+		"status":     "placement_ready",
+		"service_id": req.ServiceID,
+		"node_id":    best.ID,
+		"provider":   best.Provider,
+		"region":     best.Region,
+		"score":      nodeScore(best, req),
+		"candidates": candidates,
+		"execution":  "approval_required",
+	})
+}
