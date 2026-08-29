@@ -1,6 +1,6 @@
 version: v1
 name: ftn-core-capability-index
-purpose: single discovery index for FTN core service placement and control-panel capability resolution
+purpose: single discovery index for FTN core service placement, network health and control-panel capability resolution
 registries:
   - ftn-os-module-registry.yaml
   - ftn-provider-registry.yaml
@@ -13,7 +13,7 @@ planes:
   compute:
     services: [server-inventory, resource-balancer, service-placement, deployment]
   network:
-    services: [router, ip-pool, vlan, firewall, routing, bgp, gre, vxlan, ipsec, wireguard, amneziawg]
+    services: [router, ip-pool, vlan, firewall, routing, bgp, gre, vxlan, ipsec, wireguard, amneziawg, network-health, exrouter]
   dns_domain:
     services: [dns, authoritative-dns, recursive-dns, domain, acme, certificate]
   transport:
@@ -51,17 +51,28 @@ mesh:
   routing:
     service_aware: true
     bgp_adapter: gobgp
+    path_selection: exrouter
     route_changes: approval-gated
   placement:
     cross_node: true
     resource_balance: cpu-ram-ssd-hdd-network
     provider_isolated: true
 
+network_intelligence:
+  health_module: true
+  exrouter: true
+  service_replacement: false
+  service_migration: false
+  node_replacement: false
+  metrics: [latency, rtt, packet-loss, jitter, throughput, retransmissions, health]
+  hysteresis: true
+  fastest_healthy_path: true
+
 resolution:
   server_selection: capability-health-capacity-policy
   provider_selection: provider-isolated
   resource_balance: cpu-ram-ssd-hdd-network
-  failover: health-aware
+  failover: health-aware-path-selection
   migration: approval-required
   deployment: versioned-audited-rollbackable
 
@@ -72,6 +83,8 @@ control_panel:
   target_preview: required
   mesh_topology_view: true
   mesh_node_placement: true
+  network_health_view: true
+  exrouter_path_view: true
   approval_for_privileged_actions: true
 
 ai:
