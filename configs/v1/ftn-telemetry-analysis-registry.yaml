@@ -1,0 +1,77 @@
+version: v1
+name: ftn-telemetry-analysis-registry
+purpose: unified flow telemetry, packet capture and analysis capability registry
+
+flow_telemetry:
+  ipfix: {enabled: true}
+  netflow_v5: {enabled: true}
+  netflow_v9: {enabled: true}
+  goflow2: {enabled: true}
+  pmacct: {enabled: true}
+  yaf: {enabled: true}
+  rwflowpack: {enabled: true}
+  silk: {enabled: true}
+  silk_analysis: {enabled: true}
+  netsa: {enabled: true}
+  dpacketplugin: {enabled: true}
+  scrutinizier: {enabled: true, note: spelling-normalized: Scrutinizer}
+  scrutinizer: {enabled: true}
+
+packet_capture:
+  enabled: true
+  mode: end_to_end_observability
+  retention: policy-controlled
+  privacy: minimum-required-data
+  payload_capture: disabled-by-default
+  metadata_capture: true
+  packet_loss_measurement: true
+  latency_measurement: true
+  jitter_measurement: true
+
+tracing:
+  opentelemetry: {enabled: true}
+  jaeger: {enabled: true}
+  correlation: [trace_id, flow_id, service_id, path_id, node_id]
+
+security_observability:
+  wazuh: {enabled: true}
+  anti_spoofing: {enabled: true}
+  zero_trust_gateway: {enabled: true}
+  audit_events: true
+
+runtime:
+  languages:
+    go: {preferred_for: [control_plane, network_services, collectors]}
+    rust: {preferred_for: [memory_safe_dataplane, performance_sensitive_services]}
+    cpp: {preferred_for: [native_acceleration, existing_system_integration]}
+    python: {preferred_for: [automation, analysis, ai_glue]}
+    perl: {preferred_for: [legacy_automation, compatibility]}
+  os:
+    openbsd: true
+    solaris: true
+    cygwin: true
+    turnkey: true
+    openrc: true
+
+high_speed:
+  fdio: true
+  vpp: true
+  dpdk: true
+  ebpf: true
+  xdp: true
+  zero_copy: true
+  memory_to_memory: true
+
+integration:
+  jsdelivr: true
+  nitefood: true
+  multi_database: true
+  database_encryption: true
+  traffic_encryption: true
+  centralized_policy: true
+  exrouter_feed: true
+
+exrouter_metrics:
+  required: [latency, packet-loss, jitter, health, throughput]
+  optional: [mtu, retransmissions, queue-depth, cpu, memory]
+  action: path-selection-only
