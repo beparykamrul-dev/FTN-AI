@@ -1,0 +1,25 @@
+version: v1
+kind: FTNServiceLifecyclePolicy
+metadata:
+  name: ftn-service-lifecycle
+spec:
+  states: [discovering, starting, ready, degraded, draining, stopped, failed]
+  transitions:
+    start: [discovering, stopped, failed]
+    ready: [starting]
+    degraded: [ready]
+    draining: [ready, degraded]
+    stopped: [draining, failed]
+    failed: [starting, ready, degraded]
+  safety:
+    drain_before_path_switch: true
+    health_gate: true
+    rollback: true
+    privileged_changes: approval-required
+  placement:
+    service_migration: approval-required
+    node_replacement: approval-required
+    path_change: exrouter
+  compatibility:
+    protocol_version: v1
+    capability_negotiation: true
