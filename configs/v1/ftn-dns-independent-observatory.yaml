@@ -1,0 +1,106 @@
+version: v1
+kind: FTNDNSIndependentObservatory
+metadata:
+  name: ftn-dns-independent-observatory
+spec:
+  purpose: independent-provider-neutral-dns-observability
+  preserve_existing_dns_fabric: true
+  namespaces:
+    regular:
+      domain: familytimenet.com
+      role: public-service-namespace
+    ddns:
+      domain: ftndns.net
+      role: dynamic-endpoint-namespace
+  node_fabric:
+    target_nodes: 12
+    topology: mesh
+    anycast_ready: true
+    independent_paths: true
+    bdix:
+      enabled: true
+      role: optional-path
+      dependency: false
+    internet_transit:
+      required: true
+      multi_path: true
+  roles:
+    authoritative: true
+    recursive: true
+    cache: true
+    discovery: true
+  protocols:
+    dns: true
+    tcp_dns: true
+    doh: true
+    dot: true
+    doq: capability-aware
+  measurements:
+    query_rtt: true
+    tcp_handshake_latency: true
+    tls_handshake_latency: true
+    quic_handshake_latency: true
+    jitter: true
+    packet_loss: true
+    timeout_rate: true
+    response_size: true
+    qps: true
+    cache_hit_ratio: true
+    servfail_rate: true
+    nxdomain_rate: true
+    refused_rate: true
+    dnssec_validation: true
+    route_context: true
+  path_observability:
+    resolver_to_authoritative: true
+    client_to_resolver: true
+    upstream_resolution: true
+    route_change_correlation: true
+    ipv4_ipv6_comparison: true
+  identity_correlation:
+    client_ip: true
+    mac: true
+    uuid: true
+    device: true
+    vlan: true
+    interface: true
+    service: true
+  telemetry:
+    netflow: true
+    ipfix: true
+    yaf: true
+    silk: true
+    pmacct: true
+    shared_ftn_observability: true
+  routing:
+    exrouter: true
+    health_aware: true
+    latency_aware: true
+    loss_aware: true
+    capacity_aware: true
+    automatic_failover: true
+    hysteresis: true
+  security:
+    dnssec: true
+    anti_spoofing: true
+    pki: true
+    mtls_control_plane: true
+    zero_trust: true
+    credentials_from_git: false
+  provider_policy:
+    provider_neutral: true
+    external_provider_paths_optional: true
+    unauthorized_private_network_access: false
+    cache_only_when_authorized: true
+  dashboard:
+    live_latency_graphs: true
+    historical_latency_graphs: true
+    node_health_map: true
+    dns_error_heatmap: true
+    resolver_path_trace: true
+    ip_dns_block_correlation: true
+    alert_correlation: true
+  control:
+    privileged_changes_require_approval: true
+    audit_required: true
+    rollback_required: true
