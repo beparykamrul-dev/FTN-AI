@@ -1,0 +1,24 @@
+version: v1
+kind: FTNDriverTelemetryContract
+metadata:
+  name: ftn-driver-telemetry
+spec:
+  discovery: automatic
+  driver_identity: true
+  capability_inventory: true
+  collectors:
+    metrics: true
+    events: true
+    health: true
+    flow: true
+  normalization:
+    schema: unified-ftn
+    units: normalized
+    timestamps: monotonic-and-wall
+  correlation: [device_id, service_id, node_id, flow_id, trace_id, path_id]
+  sampling:
+    adaptive: true
+    overload_protection: true
+  privacy:
+    payload_capture: disabled-by-default
+  alerts: ftn-dms-alert-engine
