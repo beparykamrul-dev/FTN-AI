@@ -1,0 +1,28 @@
+version: v1
+kind: FTNPathQoSPolicy
+metadata:
+  name: ftn-path-qos
+spec:
+  metrics: [latency, rtt, packet_loss, jitter, throughput, retransmissions]
+  qos:
+    realtime: [voice, control, gaming]
+    interactive: [api, dns, dashboard]
+    bulk: [media, backup, sync]
+  selection:
+    engine: exrouter
+    healthy_only: true
+    hysteresis: true
+    packet_loss_penalty: high
+    latency_penalty: high
+    jitter_penalty: medium
+    mtu_validation: required
+  dscp:
+    enabled: true
+    policy: service-class-aware
+  jumbo_frames:
+    enabled: true
+    capability_negotiated: true
+  failover:
+    automatic: true
+    security_downgrade: false
+    drain_before_switch: true
