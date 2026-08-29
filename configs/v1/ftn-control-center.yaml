@@ -1,0 +1,50 @@
+version: v1
+kind: FTNControlCenter
+metadata:
+  name: ftn-control-center
+spec:
+  navigation:
+    - overview
+    - services
+    - nodes
+    - devices
+    - dns
+    - routing
+    - exrouter
+    - mesh
+    - transports
+    - dataplane
+    - databases
+    - media
+    - telemetry
+    - incidents
+    - certificates
+    - ai
+    - approvals
+    - audit
+  views:
+    overview: [service-health, node-health, active-incidents, path-health, capacity]
+    topology: [nodes, services, peers, tunnels, routes, dependencies]
+    service: [status, instances, dependencies, paths, metrics, logs, certificates]
+    incident: [timeline, root-cause-chain, affected-services, affected-nodes, evidence, notifications]
+    ai: [network-context, recommendations, confidence, approval-queue, audit]
+  controls:
+    preview_before_change: true
+    approval_before_privileged_change: true
+    rollback: true
+    audit: true
+    dry_run: true
+  realtime:
+    service_health: true
+    exrouter_paths: true
+    mesh: true
+    alerts: true
+    telemetry: true
+  localization:
+    backend_i18n: true
+    ui_i18n: true
+    protocol_names_stable: true
+  performance:
+    lazy_modules: true
+    bounded_cache: true
+    event_driven_updates: true
