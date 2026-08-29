@@ -1,0 +1,27 @@
+version: v1
+kind: FTNDNSFabric
+metadata:
+  name: ftn-dns-fabric
+spec:
+  authoritative: true
+  recursive: true
+  caching: true
+  doh: true
+  dot: true
+  split_dns: true
+  service_discovery: true
+  health_aware: true
+  latency_aware: true
+  geo_aware: true
+  tunnel_endpoint_discovery: true
+  anycast_ready: true
+  mesh_ready: true
+  policy:
+    provider_neutral_core: true
+    service_identity: true
+    dnssec: true
+    mtls_for_control: true
+  integration:
+    exrouter: true
+    telemetry: true
+    service_contract: true
