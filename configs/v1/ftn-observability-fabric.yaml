@@ -5,6 +5,7 @@ metadata:
 spec:
   signals: [metrics, logs, traces, flows, events]
   collectors: [prometheus, opentelemetry, ipfix, netflow, syslog]
+  flow_tools: [goflow2, yaf, rwflowpack, pmacct, silk]
   correlation: [service_id, node_id, device_id, flow_id, trace_id, path_id]
   tracing:
     opentelemetry: true
@@ -25,4 +26,6 @@ spec:
   retention:
     bounded: true
     tiered: true
-  integration: [ftn-ai-network-control, ftn-dms-alert-engine, ftn-control-center]
+  security:
+    payload_capture: disabled-by-default
+  integration: [ftn-ai-network-control, ftn-dms-alert-engine, ftn-control-center, ftn-router-fabric]
