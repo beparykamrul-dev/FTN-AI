@@ -17,11 +17,19 @@ planes:
   dns_domain:
     services: [dns, authoritative-dns, recursive-dns, domain, acme, certificate]
   transport:
-    services: [openvpn3, sslh, shadowsocks, hysteria2, xray, cloak, websocket, batman-adv, yggdrasil, cjdns, aether-core, xry]
+    services: [openvpn3, sslh, shadowsocks, hysteria2, xray, xray-core, cloak, mihomo, sing-box, websocket, batman-adv, yggdrasil, cjdns, aether-core, xry]
   dataplane:
     services: [openvswitch, ovn, kube-ovn, dpdk, xdp, ebpf, raw-socket, can]
+  storage:
+    services: [synology, truenas-scale, storage-pool, backup, snapshot]
+  remote_access:
+    services: [globalprotect, quickconnect, stun, turn, nat-traversal]
   telemetry:
-    services: [prometheus, netflow-v5, netflow-v9, ipfix, yaf, silk, rwflowpack]
+    services: [prometheus, goflow2, netflow-v5, netflow-v9, ipfix, yaf, silk, rwflowpack]
+  media_acceleration:
+    services: [vaapi, intel-qsv]
+  developer_ai:
+    services: [jupyter-notebook, ai-runtime]
   virtualization:
     services: [proxmox, kubernetes, container-networking]
   testing:
