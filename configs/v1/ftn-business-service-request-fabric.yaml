@@ -1,0 +1,94 @@
+version: v1
+kind: FTNBusinessServiceRequestFabric
+metadata:
+  name: ftn-business-service-request-fabric
+spec:
+  purpose: business-driven-self-service-request-and-provisioning
+  provider_neutral: true
+  tenant_isolation: true
+  request_flow:
+    - submit
+    - validate
+    - classify
+    - capacity_check
+    - recommendation
+    - quotation
+    - approval
+    - provisioning
+    - verification
+    - monitoring
+  request_channels:
+    website: true
+    web_app: true
+    mobile_app: true
+    api: true
+  service_catalog:
+    selectable:
+      - domain
+      - dns
+      - ddns
+      - website
+      - hosting
+      - mail
+      - ftp
+      - storage
+      - drive
+      - ecommerce
+      - ai_assistant
+      - ai_agent
+      - ai_billing_gateway
+      - ai_call_center
+      - media_server
+      - tv
+      - iptv
+      - cdn_edge
+      - fiber_intelligence
+      - network_monitoring
+      - custom_service
+  custom_request:
+    enabled: true
+    requirements_text: true
+    attachments: true
+  business_profiles:
+    automatic_recommendation: true
+    manual_override: true
+  ai:
+    requirement_analysis: true
+    package_recommendation: true
+    capacity_analysis: true
+    quotation_assistance: true
+    privileged_actions_require_approval: true
+  billing:
+    quotation: true
+    invoice: true
+    payment_status: true
+    usage_metering: true
+  provisioning:
+    service_registry: ftn-service-discovery
+    shared_identity: true
+    shared_network_context: true
+    shared_telemetry: true
+    shared_policy: true
+    rollback: true
+  monitoring:
+    service_health: true
+    latency: true
+    traffic: true
+    storage: true
+    incidents: true
+    audit: true
+  security:
+    zero_trust: true
+    mtls: true
+    pki: true
+    tenant_data_isolation: true
+    credentials_from_git: false
+  integration:
+    unified_service_fabric: true
+    database_fabric: true
+    dns_fabric: true
+    cache_fabric: true
+    router_fabric: true
+    observability_fabric: true
+    ai_network_control: true
+    dms_alert_engine: true
