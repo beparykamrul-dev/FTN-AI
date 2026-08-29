@@ -1,0 +1,33 @@
+version: v1
+kind: FTNTVMediaCommercialPolicy
+metadata:
+  name: ftn-tv-media-commercial-policy
+spec:
+  principle: infrastructure-components-are-not-user-billable-products
+  existing_services_preserved: true
+  access:
+    identity_required: true
+    entitlement_required: true
+    signed_session: true
+  media:
+    m3u_m3u8: existing
+    epg: existing
+    live: true
+    vod: true
+    catchup: true
+    timeshift: true
+    adaptive_bitrate: true
+    low_latency: true
+    storage: ftn-storage-fabric
+  restreaming:
+    default: deny
+    unauthorized: block
+    commercial: licensed-only
+    detection: [session_identity, concurrency, token_validation, flow_anomaly]
+    mitigation: [revoke_session, rate_limit, block_endpoint]
+  commercial_billing:
+    enabled: true
+    dimensions: [service_tier, bandwidth, concurrent_streams, storage, distribution_scope, usage]
+    metering: ftn-observability-fabric
+    ledger: ftn-billing-service
+  integration: [ftn-unified-service-fabric, ftn-media-fabric, ftn-tv-player, ftn-storage-fabric, ftn-ai-network-control, ftn-dms-alert-engine]
