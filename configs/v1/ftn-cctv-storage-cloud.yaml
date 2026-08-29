@@ -1,0 +1,41 @@
+version: v1
+kind: FTNCCTVStorageCloud
+metadata:
+  name: ftn-cctv-storage-cloud
+spec:
+  sources: [ip_camera, lan_camera, onvif, rtsp, nvr, dvr, xvr]
+  identity: ftn-identity-route-monitor
+  ingest:
+    secure: true
+    local_edge_preferred: true
+    adaptive_bitrate: true
+  player:
+    modes: [original, enhanced, low_bandwidth]
+    super_resolution: capability-aware
+    output_upscale: [1080p, 2k, 4k, 8k]
+    enhancement: [denoise, deblur, low_light]
+    hardware_decode: capability-aware
+    hardware_encode: capability-aware
+  ai:
+    event_detection: true
+    alert_correlation: true
+    assistant: true
+    raw_stream_replacement: false
+  audio:
+    noise_suppression: true
+    echo_reduction: true
+    voice_enhancement: true
+  storage:
+    hot_cache: true
+    event_clips: true
+    original_archive: true
+    enhanced_archive: optional
+    cold_archive: true
+    deduplication: true
+    adaptive_compression: true
+    retention_policy: service-specific
+  resilience:
+    replication: true
+    integrity_verification: true
+    restore_validation: true
+  integration: [ftn-unified-service-fabric, ftn-media-fabric, ftn-router-fabric, ftn-dms-alert-engine, ftn-ai-network-control, ftn-control-center]
