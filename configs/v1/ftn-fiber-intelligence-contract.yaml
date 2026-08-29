@@ -1,0 +1,21 @@
+version: v1
+kind: FTNFiberIntelligenceContract
+spec:
+  topology:
+    entities: [pop, olt, onu, router, switch, port, vlan, fiber, joint, closure, customer]
+    identity: [ip, mac, uuid, serial]
+  measurements:
+    distance_meter: true
+    route_length: true
+    optical_metrics_when_supported: true
+    latency: true
+    loss: true
+  ai:
+    anomaly_detection: true
+    damage_localization_assistance: true
+    joint_recovery_recommendation: true
+    human_approval_required_for_physical_actions: true
+  business:
+    coverage_analysis: true
+    expansion_candidates: true
+    capacity_analysis: true
