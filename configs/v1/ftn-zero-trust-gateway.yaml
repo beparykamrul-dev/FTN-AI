@@ -1,0 +1,24 @@
+version: v1
+kind: FTNZeroTrustGateway
+metadata:
+  name: ftn-zero-trust-gateway
+spec:
+  identity: required
+  device_posture: required
+  service_identity: required
+  policy: least-privilege
+  transport:
+    mtls: true
+    end_to_end_encryption: true
+  access:
+    deny_by_default: true
+    short_lived_credentials: true
+  network:
+    anti_spoofing: true
+    replay_protection: true
+  observability:
+    audit: true
+    flow_correlation: true
+  ai:
+    advisory_only: true
+  privileged_action: approval-required
