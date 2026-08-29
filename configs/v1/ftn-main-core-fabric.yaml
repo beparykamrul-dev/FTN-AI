@@ -1,0 +1,46 @@
+version: v1
+kind: FTNMainCoreFabric
+metadata:
+  name: ftn-main-core
+spec:
+  components:
+    ai:
+      enabled: true
+      trust_boundary: private
+      extension_bus: true
+      execution: approval_gated
+    encoder:
+      enabled: true
+      independent_component: true
+      api_boundary: isolated
+    codec:
+      enabled: true
+      independent_component: true
+      api_boundary: isolated
+  integration:
+    control_plane: true
+    identity: true
+    permissions: true
+    audit: true
+    billing: true
+    websocket: true
+  service_surfaces:
+    web: true
+    android: true
+    tv: true
+    pc: true
+  deployment:
+    local_test_gate: true
+    production_build_gate: true
+    artifact_signing: true
+    rollback: true
+  security:
+    default_deny: true
+    tenant_isolation: true
+    secrets_out_of_source: true
+    sensitive_action_approval: true
+  extensibility:
+    ai_layers: true
+    provider_adapters: true
+    service_plugins: true
+    future_build_targets: true
