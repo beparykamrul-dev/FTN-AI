@@ -4,23 +4,28 @@ metadata:
   name: ftn-ai-network-bridge
 spec:
   mode: network-intelligence
-  inputs: [dns, service-discovery, device-drivers, metrics, telemetry, certificates, database-state, exrouter, mesh-health]
+  inputs: [dns, service-discovery, device-drivers, metrics, telemetry, certificates, database-state, exrouter, mesh-health, incidents]
   context:
     bounded: true
     event_driven: true
     state_store: ftn-database-fabric
     cache: ftn-cache-fabric
+    least_data: true
   inference:
     anomaly_detection: true
     root_cause_ranking: true
     capacity_prediction: true
     latency_analysis: true
+    packet_loss_analysis: true
+    path_analysis: true
     service_health: true
     alert_prioritization: true
-  outputs: [recommendation, incident, alert_priority, path_analysis, capacity_forecast]
+  outputs: [recommendation, incident, alert_priority, path_analysis, capacity_forecast, evidence, affected_services, affected_nodes, proposed_change, confidence]
   execution:
     autonomous_privileged_actions: false
+    preview_required: true
     approval_required: true
+    rollback_required: true
     audit_required: true
   security:
     mtls: true
