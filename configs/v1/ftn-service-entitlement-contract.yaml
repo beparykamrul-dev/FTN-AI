@@ -1,0 +1,15 @@
+version: v1
+kind: FTNServiceEntitlementContract
+spec:
+  model: business-tenant-service
+  services_from_catalog: true
+  bundles: true
+  individual_requests: true
+  custom_requests: true
+  lifecycle: [requested, reviewed, quoted, approved, provisioning, active, suspended, retired]
+  isolation:
+    tenant_data: true
+    credentials: true
+    billing: true
+  approval:
+    privileged_changes: required
