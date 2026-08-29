@@ -13,39 +13,25 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Service struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	Status string `json:"status"`
-	Platforms []string `json:"platforms"`
-}
+type Service struct { ID string `json:"id"`; Name string `json:"name"`; Status string `json:"status"`; Platforms []string `json:"platforms"` }
 type Entitlement struct { ServiceID string `json:"service_id"`; Active bool `json:"active"` }
 type ServiceRequest struct { ServiceID string `json:"service_id"`; DeviceBrand string `json:"device_brand,omitempty"`; Model string `json:"model,omitempty"`; MAC string `json:"mac,omitempty"`; Serial string `json:"serial,omitempty"`; Scope string `json:"scope,omitempty"` }
 type App struct { db *pgxpool.Pool; catalog []Service }
 var requestCount uint64
 var catalog = []Service{
-	{"internet","FTN Internet","available",[]string{"web","android","pc"}},
-	{"ftndns","FTNDNS / Friendly DNS","available",[]string{"web","android","pc"}},
-	{"hosting","FTN Hosting","available",[]string{"web","android","pc"}},
-	{"cloud","FTN Cloud","available",[]string{"web","android","pc"}},
-	{"drive","FTN Drive","available",[]string{"web","android","pc"}},
-	{"cctv","CCTV Cloud","available",[]string{"web","android","pc"}},
-	{"fibermap","FTN FiberMap","available",[]string{"web","android"}},
-	{"ai","FTN AI Assistant","available",[]string{"web","android","pc"}},
-	{"media","FTN Media","available",[]string{"web","android","tv"}},
-	{"tv","FTN TV Player","available",[]string{"web","android","tv"}},
-	{"appstore","FTN App Store","available",[]string{"web","android","pc"}},
-	{"mail","FTN Mail","available",[]string{"web","android","pc"}},
-	{"ecommerce","FTN E-Commerce","available",[]string{"web","android"}},
-	{"developer","FTN Developer Platform","available",[]string{"web","pc"}},
-	{"device-care","FTN Device Care","available",[]string{"web","android","pc"}},
-	{"codec","FTN Codec Fabric","available",[]string{"control-plane","worker"}},
-	{"media-processing","FTN Media Processing","available",[]string{"worker","web"}},
-	{"e2e-transfer","FTN E2E Transfer","available",[]string{"worker","web","pc","android"}},
+	{"internet","FTN Internet","available",[]string{"web","android","pc"}}, {"ftndns","FTNDNS / Friendly DNS","available",[]string{"web","android","pc"}},
+	{"hosting","FTN Hosting","available",[]string{"web","android","pc"}}, {"cloud","FTN Cloud","available",[]string{"web","android","pc"}},
+	{"drive","FTN Drive","available",[]string{"web","android","pc"}}, {"cctv","CCTV Cloud","available",[]string{"web","android","pc"}},
+	{"fibermap","FTN FiberMap","available",[]string{"web","android"}}, {"ai","FTN AI Assistant","available",[]string{"web","android","pc"}},
+	{"media","FTN Media","available",[]string{"web","android","tv"}}, {"tv","FTN TV Player","available",[]string{"web","android","tv"}},
+	{"appstore","FTN App Store","available",[]string{"web","android","pc"}}, {"mail","FTN Mail","available",[]string{"web","android","pc"}},
+	{"ecommerce","FTN E-Commerce","available",[]string{"web","android"}}, {"developer","FTN Developer Platform","available",[]string{"web","pc"}},
+	{"device-care","FTN Device Care","available",[]string{"web","android","pc"}}, {"codec","FTN Codec Fabric","available",[]string{"control-plane","worker"}},
+	{"media-processing","FTN Media Processing","available",[]string{"worker","web"}}, {"e2e-transfer","FTN E2E Transfer","available",[]string{"worker","web","pc","android"}},
 }
 func jsonResponse(w http.ResponseWriter,status int,v any){w.Header().Set("Content-Type","application/json");w.WriteHeader(status);_=json.NewEncoder(w).Encode(v)}
 func method(w http.ResponseWriter,r *http.Request,want string)bool{if r.Method!=want{jsonResponse(w,http.StatusMethodNotAllowed,map[string]string{"error":"method_not_allowed"});return false};return true}
-func(a *App)routes()http.Handler{m:=http.NewServeMux();m.HandleFunc("/healthz",a.health);m.HandleFunc("/readyz",a.ready);m.HandleFunc("/metrics",metricsHandler);m.HandleFunc("/api/v1/services",a.serviceCatalog);m.HandleFunc("/api/v1/entitlements",a.entitlements);m.HandleFunc("/api/v1/service-requests",a.requests);m.HandleFunc("/",a.frontend);return securityHeaders(counting(m))}
+func(a *App)routes()http.Handler{m:=http.NewServeMux();m.HandleFunc("/healthz",a.health);m.HandleFunc("/readyz",a.ready);m.HandleFunc("/metrics",metricsHandler);m.HandleFunc("/api/v1/services",a.serviceCatalog);m.HandleFunc("/api/v1/entitlements",a.entitlements);m.HandleFunc("/api/v1/service-requests",a.requests);m.HandleFunc("/api/v1/nodes",a.nodeCatalog);m.HandleFunc("/api/v1/placement/preview",a.placement);m.HandleFunc("/",a.frontend);return securityHeaders(counting(m))}
 func(a *App)health(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet){return};jsonResponse(w,200,map[string]any{"status":"ok","time":time.Now().UTC()})}
 func(a *App)ready(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet){return};if a.db==nil{jsonResponse(w,200,map[string]string{"status":"ready","database":"disabled"});return};ctx,c:=context.WithTimeout(r.Context(),2*time.Second);defer c();if err:=a.db.Ping(ctx);err!=nil{jsonResponse(w,503,map[string]string{"status":"not_ready","database":"unavailable"});return};jsonResponse(w,200,map[string]string{"status":"ready","database":"ok"})}
 func(a *App)serviceCatalog(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet){return};jsonResponse(w,200,map[string]any{"services":a.catalog})}
