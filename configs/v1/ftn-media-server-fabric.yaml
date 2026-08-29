@@ -1,0 +1,69 @@
+version: v1
+kind: FTNMediaServerFabric
+metadata:
+  name: ftn-media-server-fabric
+spec:
+  role: unified-media-plane
+  existing_protocols:
+    - m3u
+    - m3u8
+    - hls
+    - dash
+    - rtsp
+    - rtmp
+    - srt
+    - webrtc
+  inputs:
+    - ip_camera
+    - lan_camera
+    - nvr
+    - dvr
+    - xvr
+    - satellite_contribution
+    - iptv
+    - live_source
+  outputs:
+    - android
+    - android_tv
+    - smart_tv
+    - web
+    - api
+  functions:
+    - ingest
+    - transcode
+    - remux
+    - package
+    - timeshift
+    - catchup
+    - vod
+    - recording
+    - thumbnail
+    - channel_registry
+    - epg
+  performance:
+    low_latency: true
+    adaptive_bitrate: true
+    hardware_acceleration: capability-aware
+    bounded_buffers: true
+    connection_reuse: true
+    edge_preferred: true
+  efficiency:
+    payload_fabric: ftn-payload-efficiency-fabric
+    cache_bounded: true
+    original_preserved: true
+  security:
+    identity: ftn-identity-route-monitor
+    pki: ftn-pki-certificate-fabric
+    zero_trust: ftn-zero-trust-gateway
+    token_access: true
+  integration:
+    routing: ftn-router-fabric
+    path_engine: exrouter
+    storage: ftn-storage-fabric
+    cctv: ftn-cctv-service
+    tv: ftn-tv-service
+    ai: ftn-ai-network-control
+    dms: ftn-dms-alert-engine
+    telemetry: ftn-observability-fabric
+    control: ftn-control-center
+  provider_neutral: true
