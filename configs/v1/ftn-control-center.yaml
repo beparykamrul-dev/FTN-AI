@@ -20,14 +20,17 @@ spec:
     - incidents
     - certificates
     - ai
+    - automation
     - approvals
     - audit
   views:
     overview: [service-health, node-health, active-incidents, path-health, capacity]
     topology: [nodes, services, peers, tunnels, routes, dependencies]
     service: [status, instances, dependencies, paths, metrics, logs, certificates]
+    device: [identity, driver, capabilities, metrics, telemetry, certificates, alerts]
     incident: [timeline, root-cause-chain, affected-services, affected-nodes, evidence, notifications]
     ai: [network-context, recommendations, confidence, approval-queue, audit]
+    automation: [discovery, policies, jobs, previews, executions, rollback]
   controls:
     preview_before_change: true
     approval_before_privileged_change: true
@@ -40,6 +43,7 @@ spec:
     mesh: true
     alerts: true
     telemetry: true
+    websocket: true
   localization:
     backend_i18n: true
     ui_i18n: true
@@ -48,3 +52,10 @@ spec:
     lazy_modules: true
     bounded_cache: true
     event_driven_updates: true
+    mobile_battery_aware: true
+    mobile_storage_bounded: true
+  security:
+    zero_trust: true
+    mtls: true
+    least_privilege: true
+    secrets_hidden: true
