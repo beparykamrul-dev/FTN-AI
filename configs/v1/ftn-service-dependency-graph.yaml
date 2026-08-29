@@ -1,0 +1,16 @@
+version: v1
+kind: FTNServiceDependencyGraph
+metadata:
+  name: ftn-service-dependency-graph
+spec:
+  graph:
+    nodes: [device, service, route, path, telemetry, database, storage, certificate, ai, alert, client]
+    edges: [depends_on, serves, routes_via, observes, stores_in, secured_by, informs, alerts, consumes]
+  identity_keys: [uuid, mac, serial_number, ipv4, ipv6, node_id, device_id, service_id, interface_id]
+  realtime: true
+  path_health: true
+  blast_radius: true
+  root_cause_context: true
+  dashboard: ftn-control-center
+  ai: ftn-ai-network-control
+  incidents: ftn-incident-correlation
