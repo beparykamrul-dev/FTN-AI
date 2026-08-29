@@ -89,7 +89,7 @@ approval:
   employee_attribution: required
   kyc_override: required
 
- deploy:
+deploy:
   targets:
     - ftn-api
     - ftn-control-plane
