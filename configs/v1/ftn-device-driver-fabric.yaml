@@ -1,0 +1,16 @@
+version: v1
+kind: FTNDeviceDriverFabric
+metadata:
+  name: ftn-device-driver-fabric
+spec:
+  discovery: automatic
+  inventory: true
+  capabilities: true
+  metrics: true
+  telemetry: true
+  certificates: true
+  health: true
+  supported_classes: [router, switch, olt, onu, server, storage, camera, client, virtual_node]
+  lifecycle: [discover, identify, validate, monitor, quarantine, retire]
+  integration: [ftn-service-discovery, ftn-observability-contract, ftn-dms-alert-engine]
+  provider_neutral: true
