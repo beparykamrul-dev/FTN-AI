@@ -1,0 +1,39 @@
+version: v1
+kind: FTNRouterFabric
+metadata:
+  name: ftn-router-fabric
+spec:
+  routing:
+    protocols: [bgp, isis]
+    evpn: true
+    dynamic: true
+    service_aware: true
+  path:
+    engine: exrouter
+    inputs: [latency, jitter, packet_loss, mtu, capacity, health, security]
+    multipath: true
+    hysteresis: true
+    drain_before_switch: true
+  dataplane:
+    ebpf_xdp: true
+    dpdk: true
+    vpp: true
+    zero_copy: preferred
+    memory_to_memory: preferred
+  overlay:
+    vxlan: true
+    ipsec: true
+    gre: true
+  qos:
+    dscp: true
+    service_classes: [realtime, interactive, bulk]
+  safety:
+    anti_spoofing: true
+    security_downgrade: false
+    approval_for_privileged_changes: true
+  telemetry:
+    flow_id: true
+    path_id: true
+    opentelemetry: true
+    ipfix: true
+    netflow: true
