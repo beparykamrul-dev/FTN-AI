@@ -1,0 +1,25 @@
+version: v1
+kind: FTNCacheFabric
+metadata:
+  name: ftn-cache-fabric
+spec:
+  tiers: [memory, local, distributed]
+  bounded: true
+  content_aware: true
+  service_aware: true
+  cache_key: [service_id, content_id, variant, policy]
+  eviction: adaptive
+  integrity: true
+  encryption_at_rest: true
+  transport_encryption: true
+  zero_copy: preferred
+  memory_to_memory: preferred
+  mobile:
+    battery_aware: true
+    storage_budget: true
+  media:
+    segment_cache: true
+    codec_variant_awareness: true
+  consistency:
+    versioned: true
+    stale_rejection: true
