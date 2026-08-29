@@ -1,0 +1,20 @@
+version: v1
+kind: FTNObservabilityStack
+metadata:
+  name: ftn-observability-stack
+spec:
+  metrics: prometheus-compatible
+  traces: opentelemetry
+  logs: structured
+  flows: ftn-flow-telemetry-fabric
+  dashboards: ftn-dashboard-realtime
+  security_events: wazuh-compatible
+  correlation_keys: [service_id, device_id, node_id, flow_id, trace_id, path_id]
+  retention:
+    metrics: policy
+    traces: bounded
+    logs: policy
+    flows: policy
+  overload:
+    adaptive_sampling: true
+    backpressure: true
