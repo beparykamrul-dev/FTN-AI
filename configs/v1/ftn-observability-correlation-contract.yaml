@@ -1,0 +1,16 @@
+version: v1
+kind: FTNObservabilityCorrelationContract
+spec:
+  correlation_keys: [tenant_id, service_id, node_id, ip, mac, uuid, serial]
+  telemetry:
+    network: [netflow, ipfix, silk, pmacct]
+    service: [latency, availability, errors, throughput]
+    infrastructure: [cpu, memory, storage, interface]
+  views:
+    - service-to-network
+    - device-to-customer
+    - route-to-latency
+    - incident-to-impact
+  alerts:
+    emergency_only_when_threshold_or_anomaly: true
+    configurable_per_service: true
