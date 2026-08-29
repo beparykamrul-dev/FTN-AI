@@ -1,0 +1,28 @@
+version: v1
+kind: FTNAIAlertPolicy
+metadata:
+  name: ftn-ai-alert-policy
+spec:
+  context: bounded-incremental
+  inputs: [incidents, metrics, telemetry, device_health, service_health, certificates, dns, paths]
+  scoring:
+    severity: true
+    confidence: true
+    blast_radius: true
+    customer_impact: true
+    recurrence: true
+  suppression:
+    duplicate: true
+    correlated_children: true
+    maintenance: true
+    cooldown: true
+  outputs: [priority, root_cause_candidate, recommended_channel, escalation]
+  channels: [dashboard, in_app, email, sms]
+  sms:
+    emergency_or_policy_match_only: true
+  execution:
+    recommendation_only: true
+    privileged_action: approval-required
+  privacy:
+    secrets: false
+    raw_payload: false
