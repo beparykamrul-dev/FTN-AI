@@ -1,0 +1,39 @@
+version: v1
+kind: FTNUnifiedServiceFabric
+metadata:
+  name: ftn-unified-service-fabric
+spec:
+  principle: all-ftn-services-interconnected
+  registry: ftn-service-discovery
+  control: ftn-control-api
+  identity: ftn-identity-route-monitor
+  routing: ftn-router-fabric
+  path_engine: exrouter
+  telemetry: ftn-observability-fabric
+  ai: ftn-ai-network-control
+  alerts: ftn-dms-alert-engine
+  security: ftn-zero-trust-gateway
+  pki: ftn-pki-certificate-fabric
+  storage: ftn-storage-fabric
+  media: ftn-media-fabric
+  communications: ftn-voice-sms-fabric
+  clients: ftn-app-platform
+  provisioning: ftn-mac-bootstrap-provisioning
+  integration_rules:
+    service_to_service: true
+    shared_identity: true
+    shared_health: true
+    shared_telemetry: true
+    shared_policy: true
+    shared_route_context: true
+    shared_incident_context: true
+    shared_certificate_context: true
+    provider_neutral: true
+  data_plane:
+    direct_when_possible: true
+    local_fast_path: true
+    bounded_cache: true
+    zero_copy_preferred: true
+  control_plane:
+    approval_required_for_privileged_actions: true
+    audit_required: true
