@@ -14,17 +14,27 @@ import (
 )
 
 type Service struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	Status     string   `json:"status"`
-	Platforms  []string `json:"platforms"`
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	Status    string   `json:"status"`
+	Platforms []string `json:"platforms"`
 }
-type Entitlement struct { ServiceID string `json:"service_id"`; Active bool `json:"active"` }
+type Entitlement struct {
+	ServiceID string `json:"service_id"`
+	Active    bool   `json:"active"`
+}
 type ServiceRequest struct {
-	ServiceID string `json:"service_id"`; DeviceBrand string `json:"device_brand,omitempty"`; Model string `json:"model,omitempty"`
-	MAC string `json:"mac,omitempty"`; Serial string `json:"serial,omitempty"`; Scope string `json:"scope,omitempty"`
+	ServiceID   string `json:"service_id"`
+	DeviceBrand string `json:"device_brand,omitempty"`
+	Model       string `json:"model,omitempty"`
+	MAC         string `json:"mac,omitempty"`
+	Serial      string `json:"serial,omitempty"`
+	Scope       string `json:"scope,omitempty"`
 }
-type App struct { db *pgxpool.Pool; catalog []Service }
+type App struct {
+	db      *pgxpool.Pool
+	catalog []Service
+}
 
 var requestCount uint64
 
@@ -44,19 +54,158 @@ var catalog = []Service{
 	{"ecommerce", "FTN E-Commerce", "available", []string{"web", "android"}},
 	{"developer", "FTN Developer Platform", "available", []string{"web", "pc"}},
 	{"device-care", "FTN Device Care", "available", []string{"web", "android", "pc"}},
+	{"codec", "FTN Codec Fabric", "available", []string{"control-plane", "worker"}},
+	{"media-processing", "FTN Media Processing", "available", []string{"worker", "web"}},
+	{"e2e-transfer", "FTN E2E Transfer", "available", []string{"worker", "web", "pc", "android"}},
 }
 
-func jsonResponse(w http.ResponseWriter, status int, v any) { w.Header().Set("Content-Type", "application/json"); w.WriteHeader(status); _ = json.NewEncoder(w).Encode(v) }
-func method(w http.ResponseWriter, r *http.Request, want string) bool { if r.Method != want { jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error":"method_not_allowed"}); return false }; return true }
-func (a *App) routes() http.Handler { m:=http.NewServeMux(); m.HandleFunc("/healthz",a.health); m.HandleFunc("/readyz",a.ready); m.HandleFunc("/metrics",metricsHandler); m.HandleFunc("/api/v1/services",a.serviceCatalog); m.HandleFunc("/api/v1/entitlements",a.entitlements); m.HandleFunc("/api/v1/service-requests",a.requests); m.HandleFunc("/",a.frontend); return securityHeaders(counting(m)) }
-func (a *App) health(w http.ResponseWriter,r *http.Request){ if !method(w,r,http.MethodGet){return}; jsonResponse(w,200,map[string]any{"status":"ok","time":time.Now().UTC()}) }
-func (a *App) ready(w http.ResponseWriter,r *http.Request){ if !method(w,r,http.MethodGet){return}; if a.db==nil {jsonResponse(w,200,map[string]string{"status":"ready","database":"disabled"});return}; ctx,c:=context.WithTimeout(r.Context(),2*time.Second);defer c();if err:=a.db.Ping(ctx);err!=nil{jsonResponse(w,503,map[string]string{"status":"not_ready","database":"unavailable"});return};jsonResponse(w,200,map[string]string{"status":"ready","database":"ok"}) }
-func (a *App) serviceCatalog(w http.ResponseWriter,r *http.Request){ if !method(w,r,http.MethodGet){return}; jsonResponse(w,200,map[string]any{"services":a.catalog}) }
-func (a *App) entitlements(w http.ResponseWriter,r *http.Request){ if !method(w,r,http.MethodGet){return}; seen:=map[string]bool{};for _,v:=range strings.Split(r.Header.Get("X-FTN-Services"),","){v=strings.TrimSpace(v);if v!=""{seen[v]=true}};out:=make([]Entitlement,0,len(a.catalog));for _,s:=range a.catalog{out=append(out,Entitlement{s.ID,seen[s.ID]})};jsonResponse(w,200,map[string]any{"entitlements":out}) }
-func (a *App) requests(w http.ResponseWriter,r *http.Request){ if !method(w,r,http.MethodPost){return};var q ServiceRequest;if err:=json.NewDecoder(r.Body).Decode(&q);err!=nil{jsonResponse(w,400,map[string]string{"error":"invalid_json"});return};if q.ServiceID==""{jsonResponse(w,400,map[string]string{"error":"service_id_required"});return};ok:=false;for _,s:=range a.catalog{if s.ID==q.ServiceID{ok=true;break}};if !ok{jsonResponse(w,404,map[string]string{"error":"service_not_found"});return};if a.db!=nil{_,err:=a.db.Exec(r.Context(),`insert into service_requests(service_id,device_brand,model,mac,serial,scope) values($1,$2,$3,$4,$5,$6)`,q.ServiceID,q.DeviceBrand,q.Model,q.MAC,q.Serial,q.Scope);if err!=nil{jsonResponse(w,500,map[string]string{"error":"request_persist_failed"});return}};jsonResponse(w,202,map[string]any{"status":"accepted","service_id":q.ServiceID,"firmware_push":false,"message":"request accepted; device changes require authorization"}) }
-func (a *App) frontend(w http.ResponseWriter,r *http.Request){if r.URL.Path!="/"{http.NotFound(w,r);return};w.Header().Set("Content-Type","text/html; charset=utf-8");_,_=w.Write([]byte(indexHTML))}
-func counting(next http.Handler)http.Handler{return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){atomic.AddUint64(&requestCount,1);next.ServeHTTP(w,r)})}
-func securityHeaders(next http.Handler)http.Handler{return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){w.Header().Set("X-Content-Type-Options","nosniff");w.Header().Set("X-Frame-Options","DENY");w.Header().Set("Referrer-Policy","no-referrer");w.Header().Set("Content-Security-Policy","default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'");next.ServeHTTP(w,r)})}
-func main(){addr:=os.Getenv("FTN_CONTROL_ADDR");if addr==""{addr=":8080"};var db *pgxpool.Pool;if dsn:=os.Getenv("DATABASE_URL");dsn!=""{ctx,c:=context.WithTimeout(context.Background(),10*time.Second);defer c();var err error;db,err=pgxpool.New(ctx,dsn);if err!=nil{log.Fatal(err)};if err=db.Ping(ctx);err!=nil{log.Fatal(err)};defer db.Close()};app:=&App{db:db,catalog:catalog};srv:=&http.Server{Addr:addr,Handler:app.routes(),ReadHeaderTimeout:5*time.Second,ReadTimeout:15*time.Second,WriteTimeout:15*time.Second,IdleTimeout:60*time.Second};log.Printf("FTN control plane listening on %s",addr);log.Fatal(srv.ListenAndServe())}
+func jsonResponse(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+func method(w http.ResponseWriter, r *http.Request, want string) bool {
+	if r.Method != want {
+		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "method_not_allowed"})
+		return false
+	}
+	return true
+}
+func (a *App) routes() http.Handler {
+	m := http.NewServeMux()
+	m.HandleFunc("/healthz", a.health)
+	m.HandleFunc("/readyz", a.ready)
+	m.HandleFunc("/metrics", metricsHandler)
+	m.HandleFunc("/api/v1/services", a.serviceCatalog)
+	m.HandleFunc("/api/v1/entitlements", a.entitlements)
+	m.HandleFunc("/api/v1/service-requests", a.requests)
+	m.HandleFunc("/", a.frontend)
+	return securityHeaders(counting(m))
+}
+func (a *App) health(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, http.MethodGet) {
+		return
+	}
+	jsonResponse(w, 200, map[string]any{"status": "ok", "time": time.Now().UTC()})
+}
+func (a *App) ready(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, http.MethodGet) {
+		return
+	}
+	if a.db == nil {
+		jsonResponse(w, 200, map[string]string{"status": "ready", "database": "disabled"})
+		return
+	}
+	ctx, c := context.WithTimeout(r.Context(), 2*time.Second)
+	defer c()
+	if err := a.db.Ping(ctx); err != nil {
+		jsonResponse(w, 503, map[string]string{"status": "not_ready", "database": "unavailable"})
+		return
+	}
+	jsonResponse(w, 200, map[string]string{"status": "ready", "database": "ok"})
+}
+func (a *App) serviceCatalog(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, http.MethodGet) {
+		return
+	}
+	jsonResponse(w, 200, map[string]any{"services": a.catalog})
+}
+func (a *App) entitlements(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, http.MethodGet) {
+		return
+	}
+	seen := map[string]bool{}
+	for _, v := range strings.Split(r.Header.Get("X-FTN-Services"), ",") {
+		v = strings.TrimSpace(v)
+		if v != "" {
+			seen[v] = true
+		}
+	}
+	out := make([]Entitlement, 0, len(a.catalog))
+	for _, s := range a.catalog {
+		out = append(out, Entitlement{s.ID, seen[s.ID]})
+	}
+	jsonResponse(w, 200, map[string]any{"entitlements": out})
+}
+func (a *App) requests(w http.ResponseWriter, r *http.Request) {
+	if !method(w, r, http.MethodPost) {
+		return
+	}
+	var q ServiceRequest
+	if err := json.NewDecoder(r.Body).Decode(&q); err != nil {
+		jsonResponse(w, 400, map[string]string{"error": "invalid_json"})
+		return
+	}
+	if q.ServiceID == "" {
+		jsonResponse(w, 400, map[string]string{"error": "service_id_required"})
+		return
+	}
+	ok := false
+	for _, s := range a.catalog {
+		if s.ID == q.ServiceID {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		jsonResponse(w, 404, map[string]string{"error": "service_not_found"})
+		return
+	}
+	if a.db != nil {
+		_, err := a.db.Exec(r.Context(), `insert into service_requests(service_id,device_brand,model,mac,serial,scope) values($1,$2,$3,$4,$5,$6)`, q.ServiceID, q.DeviceBrand, q.Model, q.MAC, q.Serial, q.Scope)
+		if err != nil {
+			jsonResponse(w, 500, map[string]string{"error": "request_persist_failed"})
+			return
+		}
+	}
+	jsonResponse(w, 202, map[string]any{"status": "accepted", "service_id": q.ServiceID, "firmware_push": false, "message": "request accepted; device changes require authorization"})
+}
+func (a *App) frontend(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write([]byte(indexHTML))
+}
+func counting(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddUint64(&requestCount, 1)
+		next.ServeHTTP(w, r)
+	})
+}
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'")
+		next.ServeHTTP(w, r)
+	})
+}
+func main() {
+	addr := os.Getenv("FTN_CONTROL_ADDR")
+	if addr == "" {
+		addr = ":8080"
+	}
+	var db *pgxpool.Pool
+	if dsn := os.Getenv("DATABASE_URL"); dsn != "" {
+		ctx, c := context.WithTimeout(context.Background(), 10*time.Second)
+		defer c()
+		var err error
+		db, err = pgxpool.New(ctx, dsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err = db.Ping(ctx); err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
+	}
+	app := &App{db: db, catalog: catalog}
+	srv := &http.Server{Addr: addr, Handler: app.routes(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	log.Printf("FTN control plane listening on %s", addr)
+	log.Fatal(srv.ListenAndServe())
+}
 
-const indexHTML=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FTN Control Center</title><style>body{font-family:system-ui;margin:0;background:#08111f;color:#edf4ff}main{max-width:1180px;margin:auto;padding:28px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#101c2e;border:1px solid #263953;border-radius:16px;padding:18px}.ok{color:#5de2a0}.muted{color:#9fb2ca}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#1a2b44;margin:3px;font-size:12px}</style></head><body><main><h1>FTN Control Center</h1><p class="muted">Unified service-aware control plane</p><section class="grid" id="services">Loading…</section></main><script>fetch('/api/v1/services').then(r=>r.json()).then(d=>document.getElementById('services').innerHTML=d.services.map(s=>'<article class="card"><h2>'+s.name+'</h2><div class="ok">'+s.status+'</div><p>'+s.platforms.map(p=>'<span class="pill">'+p+'</span>').join('')+'</p></article>').join('')).catch(()=>document.getElementById('services').textContent='Control API unavailable')</script></body></html>`
+const indexHTML = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FTN Control Center</title><style>body{font-family:system-ui;margin:0;background:#08111f;color:#edf4ff}main{max-width:1180px;margin:auto;padding:28px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.card{background:#101c2e;border:1px solid #263953;border-radius:16px;padding:18px}.ok{color:#5de2a0}.muted{color:#9fb2ca}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#1a2b44;margin:3px;font-size:12px}</style></head><body><main><h1>FTN Control Center</h1><p class="muted">Unified service-aware control plane</p><section class="grid" id="services">Loading…</section></main><script>fetch('/api/v1/services').then(r=>r.json()).then(d=>document.getElementById('services').innerHTML=d.services.map(s=>'<article class="card"><h2>'+s.name+'</h2><div class="ok">'+s.status+'</div><p>'+s.platforms.map(p=>'<span class="pill">'+p+'</span>').join('')+'</p></article>').join('')).catch(()=>document.getElementById('services').textContent='Control API unavailable')</script></body></html>`
