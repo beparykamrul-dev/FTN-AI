@@ -1,0 +1,27 @@
+version: v1
+kind: FTNPKICertificateFabric
+metadata:
+  name: ftn-pki-certificate-fabric
+spec:
+  ca: internal
+  identities: [service, node, device, user]
+  certificates:
+    issuance: automated
+    renewal: automated
+    rotation: staged
+    revocation: monitored
+  acme: true
+  mtls: true
+  trust:
+    chain_validation: true
+    hostname_validation: true
+    key_usage_validation: true
+    algorithm_policy: true
+  alerts:
+    dms: true
+    expiry_windows: [30d, 14d, 7d, 24h]
+    emergency_on_invalid: true
+  security:
+    private_keys_externalized: true
+    secrets_in_logs: false
+  rollback: true
