@@ -1,0 +1,39 @@
+version: v1
+kind: FTNObservabilityContract
+metadata:
+  name: ftn-observability-contract
+spec:
+  correlation:
+    flow_id: required
+    trace_id: required
+    service_id: required
+    instance_id: required
+    path_id: required
+  metrics:
+    - latency
+    - packet_loss
+    - jitter
+    - throughput
+    - retransmissions
+    - health
+    - cpu
+    - memory
+  flow:
+    ipfix: true
+    netflow_v5: true
+    netflow_v9: true
+    goflow2: true
+    pmacct: true
+    yaf: true
+    silk: true
+    rwflowpack: true
+  tracing:
+    opentelemetry: true
+    jaeger: true
+  security:
+    wazuh: true
+    payload_capture: disabled-by-default
+    privacy_minimization: true
+  exrouter_feed:
+    enabled: true
+    path_selection_only: true
