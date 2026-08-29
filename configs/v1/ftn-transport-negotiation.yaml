@@ -1,0 +1,22 @@
+version: v1
+kind: FTNTransportNegotiation
+metadata:
+  name: ftn-transport-negotiation
+spec:
+  capability_negotiation: true
+  security_first: true
+  candidates:
+    secure: [wireguard, amneziawg, aether-core, hysteria2, shadowsocks, openvpn]
+    overlay: [gre, vxlan, ipsec]
+    compatibility: [sslh, pptp]
+  selection:
+    inputs: [security_policy, latency, packet_loss, jitter, mtu, health, capacity]
+    engine: exrouter
+    healthy_only: true
+    security_downgrade: prohibited
+  keepalive:
+    adaptive: true
+  failover:
+    health_aware: true
+    hysteresis: true
+    drain_before_switch: true
