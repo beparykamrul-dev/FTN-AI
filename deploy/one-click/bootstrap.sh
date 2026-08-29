@@ -27,8 +27,13 @@ docker compose version >/dev/null 2>&1 || fail 'Docker Compose v2 is required'
 mkdir -p data logs backups secrets
 chmod 700 secrets
 
-# Keep provider credentials outside Git. Create local env only when an example exists.
-[ -f .env ] || { [ -f .env.example ] && cp .env.example .env && chmod 600 .env || true; }
+# Generate a local database password for first boot when the deployment has not supplied one.
+# This file is runtime state and must never be committed to Git.
+touch .env
+chmod 600 .env
+if ! grep -q '^FTN_DB_PASSWORD=' .env; then
+  printf 'FTN_DB_PASSWORD=%s\n' "$(openssl rand -hex 32)" >> .env
+fi
 
 COMPOSE_FILE=''
 if [ -f docker-compose.yml ]; then
