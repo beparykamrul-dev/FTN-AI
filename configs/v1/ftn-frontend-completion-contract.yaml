@@ -1,0 +1,31 @@
+version: v1
+kind: FTNFrontendCompletionContract
+spec:
+  entrypoint: /
+  control_api: /api/v1
+  views:
+    - control-center
+    - services
+    - service-requests
+    - entitlements
+    - nodes
+    - network-health
+    - fiber-map
+    - storage
+    - media
+    - tv
+    - cctv
+    - ecommerce
+    - billing
+    - ai
+  principles:
+    service-aware: true
+    responsive: true
+    accessibility: true
+    tenant-aware: true
+    approval-aware: true
+  identity_fields:
+    - ip
+    - mac
+    - uuid
+    - serial
