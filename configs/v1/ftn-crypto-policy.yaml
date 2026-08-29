@@ -1,0 +1,24 @@
+version: v1
+kind: FTNCryptoPolicy
+metadata:
+  name: ftn-crypto-policy
+spec:
+  identity:
+    pki: true
+    mtls: true
+    acme: true
+    certificate_rotation: true
+  transport:
+    end_to_end_encryption: true
+    protocol_negotiation: true
+    key_rotation: true
+    replay_protection: true
+  rules:
+    security_downgrade: prohibited
+    insecure_fallback: prohibited
+    ca_validation_bypass: prohibited
+    secrets_in_logs: false
+  observability:
+    audit_events: true
+    crypto_metadata_only: true
+  privileged_changes: approval-required
