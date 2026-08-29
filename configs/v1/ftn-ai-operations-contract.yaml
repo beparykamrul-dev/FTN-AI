@@ -1,0 +1,15 @@
+version: v1
+kind: FTNAIOperationsContract
+spec:
+  roles:
+    assistant: analysis_and_guidance
+    agent: approved_automation
+    personal: private_operator_assistance
+    public: tenant_facing_assistance
+  network_context: required
+  service_context: required
+  telemetry_context: required
+  safety:
+    no_unapproved_privileged_action: true
+    audit_all_actions: true
+    rollback_supported: true
