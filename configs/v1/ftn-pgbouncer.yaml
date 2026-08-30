@@ -1,0 +1,33 @@
+version: v1
+kind: FTNPgBouncerPolicy
+metadata:
+  name: ftn-pgbouncer
+spec:
+  mode: transaction
+  listen:
+    host: 127.0.0.1
+    port: 6432
+  upstream:
+    host: ${PGHOST}
+    port: ${PGPORT}
+    database: ${PGDATABASE}
+  pool:
+    min_pool_size: 2
+    default_pool_size: 20
+    reserve_pool_size: 5
+    reserve_pool_timeout: 3s
+    server_idle_timeout: 300s
+    server_lifetime: 3600s
+  health:
+    connect_timeout: 5s
+    query_timeout: 5s
+    readiness_required: true
+  safety:
+    tls_required: true
+    credentials_from_environment: true
+    log_credentials: false
+    destructive_migrations: false
+  resilience:
+    fail_closed_on_database_unavailable: true
+    retry_backoff: 1s
+    max_retries: 3
