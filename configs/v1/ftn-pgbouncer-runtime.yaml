@@ -1,0 +1,33 @@
+version: v1
+kind: FTNPgBouncerRuntime
+metadata:
+  name: ftn-pgbouncer-runtime
+spec:
+  mode: transaction
+  listen:
+    address: 127.0.0.1
+    port: 6432
+  backend:
+    driver: postgresql
+    sslmode: verify-full
+  pool:
+    min_size: 2
+    max_size: 20
+    max_client_connections: 200
+    max_db_connections: 20
+    reserve_pool_size: 5
+    reserve_pool_timeout: 5s
+  health:
+    enabled: true
+    interval: 30s
+    timeout: 5s
+    stale_state_rejected: true
+  resilience:
+    reconnect_backoff: 2s
+    max_reconnect_backoff: 30s
+  safety:
+    credentials_from_environment: true
+    secrets_in_logs: false
+    destructive_migrations: false
+    network_mutation: false
+    audit_required: true
