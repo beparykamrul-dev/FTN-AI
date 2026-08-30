@@ -1,0 +1,11 @@
+version: v1
+kind: FTNProviderCT
+id: sing-box
+provider_name: sing-box
+category: transport_framework
+source_repo: https://github.com/SagerNet/sing-box
+adapter_kind: transport-agent
+capabilities: [multi_transport, proxy_runtime]
+policy_mode: restricted
+agent_transition: [discovered, normalized, validated, approved, agent_ready]
+production_gates: [source_provenance, license_record, vulnerability_scan, healthcheck, signed_policy, control_panel_approval]
