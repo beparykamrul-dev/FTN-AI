@@ -8,24 +8,13 @@ type UnifiedRouteCandidate struct {
     Fabric RouteFabricState `json:"fabric"`
 }
 
-func nodeFabricState(n Node) RouteFabricState {
-    return RouteFabricState{
-        BGPUp: n.BGPUp, BFDUp: n.BFDUp, ISISUp: n.ISISUp,
-        EVPNReady: n.EVPNReady, AnycastReady: n.AnycastReady,
-        RPKIValid: n.RPKIValid, PrefixCount: n.PrefixCount,
-        CapacityMbps: n.CapacityMbps, UtilizationPercent: n.UtilizationPercent,
-    }
-}
-
 func buildUnifiedCandidates(nodes []Node, req PlacementRequest, policy AdvancedRoutePolicy, now time.Time) []UnifiedRouteCandidate {
     out := make([]UnifiedRouteCandidate, 0, len(nodes))
     for _, n := range nodes {
         if !n.Healthy || !nodeHasService(n, req.ServiceID) { continue }
         fabric := nodeFabricState(n)
         score, eligible, reasons := routeFabricScore(fabric, policy)
-        if eligible {
-            score += routePreferenceMatch(n.Provider, n.Region, req.Provider, req.Region)
-        }
+        if eligible { score += routePreferenceMatch(n.Provider, n.Region, req.Provider, req.Region) }
         out = append(out, UnifiedRouteCandidate{Node:n, Fabric:fabric, Decision:AdvancedRouteDecision{PathID:n.ID, Score:score, Eligible:eligible, Reasons:reasons}})
     }
     return out
