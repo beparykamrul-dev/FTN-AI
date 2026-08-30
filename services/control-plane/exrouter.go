@@ -2,32 +2,43 @@ package main
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 	"sort"
+	"strings"
+	"sync"
+	"time"
 )
 
 type ExRouterRequest struct {
 	ServiceID string `json:"service_id"`
-	Region    string `json:"region,omitempty"`
-	Provider  string `json:"provider,omitempty"`
+	Region string `json:"region,omitempty"`
+	Provider string `json:"provider,omitempty"`
 }
 
 type ExRoute struct {
-	PathID     string  `json:"path_id"`
-	Provider   string  `json:"provider"`
-	Region     string  `json:"region,omitempty"`
-	Score      float64 `json:"score"`
-	LatencyMs  float64 `json:"latency_ms"`
+	PathID string `json:"path_id"`
+	Provider string `json:"provider"`
+	Region string `json:"region,omitempty"`
+	Score float64 `json:"score"`
+	LatencyMs float64 `json:"latency_ms"`
 	PacketLoss float64 `json:"packet_loss_percent"`
-	Healthy    bool    `json:"healthy"`
+	JitterMs float64 `json:"jitter_ms,omitempty"`
+	ThroughputMbps float64 `json:"throughput_mbps,omitempty"`
+	Retransmissions float64 `json:"retransmissions,omitempty"`
+	Healthy bool `json:"healthy"`
+	LastSeen time.Time `json:"last_seen,omitempty"`
 }
 
+var exRouteState = struct { sync.Mutex; selected map[string]string }{selected: map[string]string{}}
+
 func exRouteScore(n Node, req ExRouterRequest) float64 {
-	if !n.Healthy { return -1 }
-	// ExRouter changes the traffic path only; it never replaces or migrates a service.
-	score := 100.0 - n.LatencyMs*1.0 - n.PacketLoss*4.0
-	if req.Region != "" && req.Region == n.Region { score += 15 }
-	if req.Provider != "" && req.Provider == n.Provider { score += 8 }
+	if !n.Healthy || !nodeHasService(n, req.ServiceID) { return -1 }
+	// Lower latency/loss/jitter/retransmissions are better; higher throughput is better.
+	score := 100.0 - n.LatencyMs - n.PacketLoss*4 - n.JitterMs*0.5 - n.Retransmissions*2
+	score += math.Min(n.NetMbps/100.0, 20.0)
+	if req.Region != "" && strings.EqualFold(req.Region, n.Region) { score += 15 }
+	if req.Provider != "" && strings.EqualFold(req.Provider, n.Provider) { score += 8 }
 	return score
 }
 
@@ -46,12 +57,18 @@ func (a *App) exRouter(w http.ResponseWriter, r *http.Request) {
 	for _, n := range ns {
 		score := exRouteScore(n, req)
 		if score < 0 { continue }
-		routes = append(routes, ExRoute{PathID:n.ID, Provider:n.Provider, Region:n.Region, Score:score, LatencyMs:n.LatencyMs, PacketLoss:n.PacketLoss, Healthy:n.Healthy})
+		routes = append(routes, ExRoute{PathID:n.ID, Provider:n.Provider, Region:n.Region, Score:score, LatencyMs:n.LatencyMs, PacketLoss:n.PacketLoss, JitterMs:n.JitterMs, ThroughputMbps:n.NetMbps, Retransmissions:n.Retransmissions, Healthy:n.Healthy, LastSeen:n.LastSeen})
 	}
 	sort.SliceStable(routes, func(i, j int) bool { return routes[i].Score > routes[j].Score })
 	if len(routes) == 0 { jsonResponse(w, http.StatusServiceUnavailable, map[string]any{"status":"no_healthy_path","service_id":req.ServiceID}); return }
-	jsonResponse(w, http.StatusOK, map[string]any{
-		"status":"path_ready", "service_id":req.ServiceID, "selected_path":routes[0],
-		"paths":routes, "service_unchanged":true, "execution":"policy_controlled",
-	})
+	// Hysteresis: retain the current path unless the new path is materially better.
+	exRouteState.Lock()
+	current := exRouteState.selected[req.ServiceID]
+	selected := routes[0]
+	if current != "" {
+		for _, candidate := range routes { if candidate.PathID == current && candidate.Score+10 >= selected.Score { selected = candidate; break } }
+	}
+	exRouteState.selected[req.ServiceID] = selected.PathID
+	exRouteState.Unlock()
+	jsonResponse(w, http.StatusOK, map[string]any{"status":"path_ready", "service_id":req.ServiceID, "selected_path":selected, "paths":routes, "service_unchanged":true, "execution":"policy_controlled", "hysteresis":true})
 }
