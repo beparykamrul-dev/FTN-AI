@@ -1,0 +1,29 @@
+version: v1
+kind: FTNMeshPeerPolicy
+metadata:
+  name: ftn-mesh-peer-policy
+spec:
+  discovery:
+    mode: outbound-first
+    requireApprovedPeer: true
+  identity:
+    requireMTLS: true
+    requireValidCertificate: true
+    allowedIssuers: []
+  connectivity:
+    transports: []
+    requireHealthProbe: true
+    requireReadProbe: true
+  pathSelection:
+    mode: policy-authorized
+    automaticRouteMutation: false
+    autoFailover: true
+    fallbackRequiresApproval: true
+  scope:
+    allowedPeers: []
+    allowedServices: []
+  safety:
+    defaultAction: deny
+    failClosedOnIdentityFailure: true
+    failClosedOnPolicyFailure: true
+    auditRequired: true
