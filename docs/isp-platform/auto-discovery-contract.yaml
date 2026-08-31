@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: FTN ISP Discovery and Monitoring API
+  version: 1.0.0
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/discovery/jobs:
+    post:
+      summary: Start an authorized discovery job
+      responses:
+        '202': {description: Discovery accepted}
+  /api/v1/discovery/jobs/{id}:
+    get:
+      summary: Get discovery job status
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Discovery status}
+  /api/v1/inventory/devices:
+    get:
+      summary: List discovered devices
+      responses:
+        '200': {description: Device inventory}
+  /api/v1/topology:
+    get:
+      summary: Get authorized network topology
+      responses:
+        '200': {description: Topology graph}
+  /api/v1/monitoring/metrics:
+    get:
+      summary: Query authorized monitoring metrics
+      responses:
+        '200': {description: Metrics}
+  /api/v1/incidents:
+    get:
+      summary: List network incidents
+      responses:
+        '200': {description: Incidents}
+  /api/v1/incidents/{id}/recovery-plan:
+    post:
+      summary: Generate an AI recovery proposal
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '202': {description: Recovery proposal created}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

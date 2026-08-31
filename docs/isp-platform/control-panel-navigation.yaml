@@ -1,0 +1,62 @@
+version: 1
+app: FTN Control Panel
+route_prefix: /control
+navigation:
+  super-admin:
+    - overview
+    - accounts
+    - administrators
+    - roles-permissions
+    - billing
+    - payments
+    - network
+    - devices
+    - discovery
+    - topology
+    - monitoring
+    - incidents
+    - ai-operations
+    - recovery-approvals
+    - audit
+    - system
+  admin:
+    - overview
+    - accounts
+    - billing
+    - payments
+    - network
+    - devices
+    - incidents
+    - support
+    - audit
+  billing:
+    - overview
+    - accounts
+    - invoices
+    - payments
+    - reconciliation
+  noc:
+    - overview
+    - topology
+    - devices
+    - discovery
+    - telemetry
+    - incidents
+    - recovery
+  engineer:
+    - overview
+    - devices
+    - discovery
+    - topology
+    - telemetry
+    - incidents
+  support:
+    - overview
+    - customers
+    - services
+    - tickets
+    - notifications
+security:
+  hide_unauthorized_routes: true
+  enforce_permissions_server_side: true
+  never_trust_navigation_visibility_as_authorization: true

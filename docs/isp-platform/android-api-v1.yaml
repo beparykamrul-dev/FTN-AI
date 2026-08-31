@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: FTN ISP Mobile API
+  version: 1.0.0
+servers:
+  - url: https://api.familytimenet.com
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/account/me:
+    get:
+      summary: Current account
+      responses:
+        '200': {description: Account}
+  /api/v1/services:
+    get:
+      summary: Available services
+      responses:
+        '200': {description: Service catalog}
+  /api/v1/billing/invoices:
+    get:
+      summary: Customer invoices
+      responses:
+        '200': {description: Invoice list}
+  /api/v1/billing/payments:
+    get:
+      summary: Payment history
+      responses:
+        '200': {description: Payment list}
+  /api/v1/support/tickets:
+    get:
+      summary: Support tickets
+      responses:
+        '200': {description: Ticket list}
+    post:
+      summary: Create support ticket
+      responses:
+        '201': {description: Ticket created}
+  /api/v1/ai/chat:
+    post:
+      summary: AI support conversation
+      responses:
+        '200': {description: AI response}
+  /api/v1/ai/call/session:
+    post:
+      summary: Request AI call-center session
+      responses:
+        '202': {description: Call session accepted}
+  /api/v1/network/status:
+    get:
+      summary: Authorized customer service status
+      responses:
+        '200': {description: Network status}
+  /api/v1/speedtest/session:
+    post:
+      summary: Create speed-test session
+      responses:
+        '202': {description: Speed test accepted}
+  /api/v1/devices:
+    get:
+      summary: Authorized customer devices
+      responses:
+        '200': {description: Device list}
+  /api/v1/notifications:
+    get:
+      summary: Customer notifications
+      responses:
+        '200': {description: Notification list}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

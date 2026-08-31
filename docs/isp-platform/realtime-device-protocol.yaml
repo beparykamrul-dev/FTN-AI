@@ -1,0 +1,54 @@
+version: 1
+transport:
+  websocket: wss://api.familytimenet.com/ws/v1
+  heartbeat_seconds: 30
+  reconnect: exponential_backoff
+  max_frame_bytes: 1048576
+channels:
+  - account
+  - billing
+  - notifications
+  - tickets
+  - incidents
+  - topology
+  - device_telemetry
+  - discovery
+  - recovery
+message:
+  required: [id, type, timestamp, channel]
+  fields:
+    id: uuid
+    type: string
+    timestamp: rfc3339
+    channel: string
+    sequence: integer
+    payload: object
+subscriptions:
+  client_must_authorize_each_channel: true
+  server_must_filter_by_resource_scope: true
+  default: none
+device_adapters:
+  - mikrotik
+  - olt
+  - onu
+  - switch
+  - server
+  - ftn-node
+interfaces:
+  read_telemetry: true
+  read_inventory: true
+  read_status: true
+  configuration_change: approval_required
+  restart_or_shutdown: approval_required
+  credential_rotation: privileged_only
+audit:
+  record_connect: true
+  record_subscribe: true
+  record_command: true
+  record_result: true
+security:
+  tls_required: true
+  bearer_auth: true
+  rate_limit: true
+  fail_closed: true
+  infrastructure_credentials_never_sent_to_clients: true

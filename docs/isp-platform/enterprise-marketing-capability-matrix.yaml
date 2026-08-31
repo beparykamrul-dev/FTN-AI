@@ -1,0 +1,60 @@
+version: 1
+product: FTN Unified ISP Operations Platform
+positioning:
+  headline: Unified billing, customer experience and network operations
+  principles:
+    - evidence_based_claims
+    - security_by_design
+    - multi_vendor_architecture
+    - human_approval_for_privileged_actions
+capabilities:
+  customer_experience:
+    - android_customer_app
+    - account_and_service_management
+    - billing_and_payment
+    - speed_test
+    - support_tickets
+    - ai_assistant
+    - ai_call_center_entry
+    - realtime_notifications
+  operations:
+    - multi_admin_panels
+    - realtime_websocket_events
+    - device_inventory
+    - topology
+    - auto_discovery
+    - network_monitoring
+    - incident_management
+  network_interfaces:
+    - mikrotik_adapter
+    - olt_onu_adapter_boundary
+    - snmp_adapter
+    - ssh_adapter_boundary
+    - netconf_adapter_boundary
+    - restconf_adapter_boundary
+    - server_and_ftn_node_interfaces
+  intelligence:
+    - incident_classification
+    - ai_diagnosis
+    - recovery_plan_proposals
+    - approval_workflow
+    - post_action_verification
+    - rollback_boundary
+  governance:
+    - rbac
+    - resource_ownership
+    - audit_trail
+    - tenant_isolation
+    - secret_isolation
+    - fail_closed_privileged_actions
+marketing_claim_rules:
+  allowed:
+    - say_supported_when_implemented_and_tested
+    - say_integrated_when_integration_is_verified
+    - describe_architecture_as_capability_when_not_yet_deployed
+  prohibited_without_evidence:
+    - guaranteed_zero_downtime
+    - universal_vendor_compatibility
+    - security_certification_claims
+    - carrier_grade_claims
+    - autonomous_unapproved_network_changes

@@ -25,9 +25,13 @@ CREATE TABLE IF NOT EXISTS control_nodes (
   net_mbps DOUBLE PRECISION NOT NULL DEFAULT 0,
   latency_ms DOUBLE PRECISION NOT NULL DEFAULT 0,
   packet_loss_percent DOUBLE PRECISION NOT NULL DEFAULT 0,
+  jitter_ms DOUBLE PRECISION NOT NULL DEFAULT 0,
+  retransmissions DOUBLE PRECISION NOT NULL DEFAULT 0,
   healthy BOOLEAN NOT NULL DEFAULT false,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE control_nodes ADD COLUMN IF NOT EXISTS jitter_ms DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE control_nodes ADD COLUMN IF NOT EXISTS retransmissions DOUBLE PRECISION NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS control_nodes_provider_idx ON control_nodes(provider);
 CREATE INDEX IF NOT EXISTS control_nodes_region_idx ON control_nodes(region);
 CREATE INDEX IF NOT EXISTS control_nodes_health_idx ON control_nodes(healthy);

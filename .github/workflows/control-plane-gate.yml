@@ -1,0 +1,35 @@
+name: control-plane-gate
+
+on:
+  push:
+    paths:
+      - 'services/control-plane/**'
+      - '.github/workflows/control-plane-gate.yml'
+  pull_request:
+    paths:
+      - 'services/control-plane/**'
+      - '.github/workflows/control-plane-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test-build:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: services/control-plane
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/control-plane/go.mod
+          cache-dependency-path: services/control-plane/go.sum
+      - name: Download dependencies
+        run: go mod download
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build ./...
