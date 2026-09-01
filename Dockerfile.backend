@@ -1,0 +1,12 @@
+﻿FROM golang:1.24-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum* ./
+COPY . .
+RUN CGO_ENABLED=0 go build -o backend ./internal/diagnostics/service.go
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates curl
+WORKDIR /app
+COPY --from=builder /app/backend .
+EXPOSE 8080
+CMD ["./backend"]

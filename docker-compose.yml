@@ -1,0 +1,49 @@
+﻿version: "3.8"
+
+services:
+  ftn-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8080:8080"
+    environment:
+      - GO_ENV=development
+      - LOG_LEVEL=debug
+    volumes:
+      - ./backend:/app/backend
+      - ./internal:/app/internal
+      - ./configs:/app/configs
+    command: go run ./internal/diagnostics/service.go
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ftn-frontend:
+    build:
+      context: ./frontend/control-center
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8080
+      - VITE_WS_URL=ws://localhost:8080
+    volumes:
+      - ./frontend/control-center:/app
+      - /app/node_modules
+    command: npm run dev
+    depends_on:
+      - ftn-backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  default:
+    name: ftn-network
+    driver: bridge
