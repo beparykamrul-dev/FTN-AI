@@ -3,6 +3,7 @@ WORKDIR /src
 COPY services/control-plane/go.mod services/control-plane/go.sum ./
 RUN go mod download
 COPY services/control-plane/*.go ./
+COPY services/control-plane/internal ./internal
 RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/ftn-control-plane .
 
 FROM gcr.io/distroless/static-debian12
