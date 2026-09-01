@@ -25,6 +25,8 @@ spec:
     sharedZoneMode: logical-zone
     zoneSourceOfTruth: familytimenet-dns-registry
     zoneDistribution: registry-driven
+    registryDriven: true
+    additiveNodes: true
     nodeLifecycle: register-validate-authenticate-health-sync-route
     addProviderWithoutRebuild: true
     addNodeWithoutReplacingExistingNodes: true
@@ -87,3 +89,4 @@ spec:
   safety:
     providerCredentialsServerSide: true
     privilegedChangesRequireApproval: true
+

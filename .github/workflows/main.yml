@@ -4,12 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [mainname: FTN-AI CI
-
-on:
-  push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 permissions:
@@ -29,33 +23,6 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@3041bf56c941b3fc661b6598a5d08b95c7c4106d # v5.3.0
-        with:
-          go-version: '1.24.x'
-          cache: false
-
-      - name: Validate repository
-        run: bash scripts/validate-repo.sh
-
-      - name: Validate FTN architecture contracts
-        run: bash scripts/validate-contracts.sh]
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ftn-ai-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-jobs:
-  validate:
-    name: Repository validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
           cache: false
