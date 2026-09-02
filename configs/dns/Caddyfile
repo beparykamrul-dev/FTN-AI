@@ -1,0 +1,7 @@
+{
+    auto_https off
+}
+
+# Caddy is an ACME edge component, not an authoritative DNS server.
+# DNS-01 provider credentials are supplied through the deployment secret store.
+# No credentials are committed to the repository.
