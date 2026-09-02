@@ -1,0 +1,9 @@
+.:53 {
+    errors
+    cache 300
+    health :8080
+    prometheus :9153
+    forward . ftn-unbound:53
+    loop
+    reload
+}
