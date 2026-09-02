@@ -1,0 +1,33 @@
+apiVersion: ftn.network/v1
+kind: NetworkAdapterContract
+metadata:
+  name: ftn-network-adapters
+spec:
+  scope: ftn-owned-only
+  lifecycle:
+    discover: true
+    health: true
+    snapshot_before_change: true
+    validate_before_apply: true
+    apply_requires_approval: true
+    verify_after_apply: true
+    rollback_when_safe: true
+  adapters:
+    - id: mikrotik-routeros
+      capabilities: [inventory, health, interfaces, routes, firewall, pppoe, vlan]
+      credentials: secret-store-only
+    - id: gobgp
+      capabilities: [peer-state, rib, policy-preview, route-events, bmp]
+      credentials: secret-store-only
+    - id: snmp
+      capabilities: [interfaces, system, optical, health]
+      credentials: secret-store-only
+    - id: olt
+      capabilities: [inventory, onu-discovery, onu-health, vlan]
+      credentials: secret-store-only
+  execution:
+    arbitrary_shell: prohibited
+    arbitrary_remote_commands: prohibited
+    timeout_required: true
+    idempotency_required: true
+    audit_required: true
