@@ -13,7 +13,7 @@ services:
       - ./migrations/003_durable_execution.sql:/docker-entrypoint-initdb.d/003-durable-execution.sql:ro
       - ./migrations/004_approval_execution.sql:/docker-entrypoint-initdb.d/004-approval-execution.sql:ro
       - ./migrations/005_job_integrity_leases.sql:/docker-entrypoint-initdb.d/005-job-integrity-leases.sql:ro
-      - ./migrations/006_job_event_triggers.sql:/docker-entrypoint-initdb.d/006-job-event-triggers.sql:ro
+      - ./migrations/006_job_events.sql:/docker-entrypoint-initdb.d/006-job-events.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ftn -d ftn"]
       interval: 5s
