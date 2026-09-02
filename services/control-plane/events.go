@@ -1,6 +1,7 @@
 package main
 
 import (
+    "context"
     "encoding/json"
     "errors"
     "net/http"
@@ -14,8 +15,6 @@ type DurableEvent struct { ID string `json:"id,omitempty"`; TenantID string `jso
 type EventOffset struct { ConsumerID string `json:"consumer_id"`; TenantID string `json:"tenant_id"`; Sequence int64 `json:"sequence"` }
 
 // appendEventTx is the transaction-safe primitive used by state-changing operations.
-// The caller must already hold the transaction; tenant sequencing is serialized with
-// a transaction-scoped advisory lock so state and journal entries commit atomically.
 func appendEventTx(tx pgx.Tx, ctx context.Context, tenantID, eventType, correlationID, causationID, aggregateID string, payload json.RawMessage) (DurableEvent, error) {
     if strings.TrimSpace(eventType)=="" { return DurableEvent{}, errors.New("event_type_required") }
     if payload==nil { payload=json.RawMessage(`{}`) }
@@ -31,7 +30,7 @@ func (a *App) appendEvent(w http.ResponseWriter,r *http.Request){
     if err:=json.NewDecoder(r.Body).Decode(&e);err!=nil||strings.TrimSpace(e.Type)==""{jsonResponse(w,400,map[string]string{"error":"invalid_event"});return}
     rc:=requestInfo(r);if e.CorrelationID==""{e.CorrelationID=rc.CorrelationID};if a.db==nil{jsonResponse(w,503,map[string]string{"error":"database_required"});return}
     tx,err:=a.db.Begin(r.Context());if err!=nil{jsonResponse(w,500,map[string]string{"error":"event_begin_failed"});return};defer tx.Rollback(r.Context())
-    out,err:=appendEventTx(tx,r.Context(),rc.TenantID,e.Type,e.CorrelationID,e.CausationID,e.AggregateID,e.Payload);if err!=nil{a.audit(r,"event.append",e.Type,"failed",map[string]string{"error":"persist_failed"});jsonResponse(w,500,map[string]string{"error":"event_append_failed"});return}
+    out,err:=appendEventTx(tx,r.Context(),rc.TenantID,e.Type,e.CorrelationID,e.CausationID,e.AggregateID,e.Payload);if err!=nil{jsonResponse(w,500,map[string]string{"error":"event_append_failed"});return}
     if err=tx.Commit(r.Context());err!=nil{jsonResponse(w,500,map[string]string{"error":"event_commit_failed"});return};a.audit(r,"event.append",out.Type,"accepted",out);jsonResponse(w,202,out)
 }
 
