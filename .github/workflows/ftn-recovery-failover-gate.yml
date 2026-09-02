@@ -1,0 +1,175 @@
+name: FTN Recovery Failover Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ftn-recovery-failover-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recovery:
+    name: Restart, persistence, lease and idempotency recovery
+    runs-on: ubuntu-latest
+    env:
+      FTN_DB_PASSWORD: ci-recovery-password
+      FTN_API_AUTH_TOKEN: ci-recovery-token
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Start FTN control plane
+        working-directory: services/control-plane
+        run: docker compose up -d --build
+
+      - name: Wait for readiness
+        run: |
+          set -euo pipefail
+          for i in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:8080/readyz >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker compose -f services/control-plane/docker-compose.yml logs control-plane postgres
+          exit 1
+
+      - name: Create and approve privileged change
+        id: approval
+        run: |
+          set -euo pipefail
+          body="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{"action":"network.change","resource":"ci/recovery","payload":{"source":"github-actions"},"expires_in_seconds":3600}' \
+            http://127.0.0.1:8080/api/v1/approvals)"
+          approval_id="$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["approval_id"])')"
+          test -n "$approval_id"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{"decision":"approve","reason":"CI recovery gate"}' \
+            "http://127.0.0.1:8080/api/v1/approvals/${approval_id}/decide" | grep -q '"status":"approved"'
+          echo "approval_id=$approval_id" >> "$GITHUB_OUTPUT"
+
+      - name: Submit idempotent privileged job
+        id: job
+        run: |
+          set -euo pipefail
+          approval_id="${{ steps.approval.outputs.approval_id }}"
+          body="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -H 'Idempotency-Key: recovery-${GITHUB_SHA}' \
+            -d "{\"job_type\":\"network.change\",\"payload\":{\"source\":\"recovery-gate\"},\"approval_id\":\"${approval_id}\",\"execution_action\":\"network.change\"}" \
+            http://127.0.0.1:8080/api/v1/jobs)"
+          job_id="$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')"
+          test -n "$job_id"
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+
+      - name: Verify duplicate request is idempotent
+        run: |
+          set -euo pipefail
+          approval_id="${{ steps.approval.outputs.approval_id }}"
+          body="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -H 'Idempotency-Key: recovery-${GITHUB_SHA}' \
+            -d "{\"job_type\":\"network.change\",\"payload\":{\"source\":\"recovery-gate\"},\"approval_id\":\"${approval_id}\",\"execution_action\":\"network.change\"}" \
+            http://127.0.0.1:8080/api/v1/jobs)"
+          printf '%s' "$body" | grep -q '"id":"${{ steps.job.outputs.job_id }}"'
+
+      - name: Verify conflicting duplicate is rejected
+        run: |
+          set -euo pipefail
+          approval_id="${{ steps.approval.outputs.approval_id }}"
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -H 'Idempotency-Key: recovery-${GITHUB_SHA}' \
+            -d "{\"job_type\":\"network.change\",\"payload\":{\"source\":\"different-request\"},\"approval_id\":\"${approval_id}\",\"execution_action\":\"network.change\"}" \
+            http://127.0.0.1:8080/api/v1/jobs)"
+          test "$status" = "409"
+
+      - name: Claim job with short lease
+        id: first_claim
+        run: |
+          set -euo pipefail
+          body="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{"worker_id":"recovery-worker-1","lease_seconds":10}' \
+            http://127.0.0.1:8080/api/v1/jobs/claim)"
+          printf '%s' "$body" | grep -q '"status":"running"'
+          attempt="$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["attempts"])')"
+          echo "attempt=$attempt" >> "$GITHUB_OUTPUT"
+
+      - name: Reclaim expired lease
+        id: second_claim
+        run: |
+          set -euo pipefail
+          sleep 12
+          body="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{"worker_id":"recovery-worker-2","lease_seconds":60}' \
+            http://127.0.0.1:8080/api/v1/jobs/claim)"
+          printf '%s' "$body" | grep -q '"status":"running"'
+          attempt="$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["attempts"])')"
+          test "$attempt" -gt "${{ steps.first_claim.outputs.attempt }}"
+          echo "attempt=$attempt" >> "$GITHUB_OUTPUT"
+
+      - name: Finish reclaimed attempt with verification
+        run: |
+          set -euo pipefail
+          job_id="${{ steps.job.outputs.job_id }}"
+          attempt="${{ steps.second_claim.outputs.attempt }}"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"worker_id\":\"recovery-worker-2\",\"attempt_no\":${attempt},\"success\":true,\"verification\":{\"verified\":true,\"source\":\"recovery-gate\"}}" \
+            "http://127.0.0.1:8080/api/v1/jobs/${job_id}/finish" | grep -q '"status":"succeeded"'
+
+      - name: Restart PostgreSQL and verify durable state persists
+        working-directory: services/control-plane
+        run: |
+          set -euo pipefail
+          job_id="${{ steps.job.outputs.job_id }}"
+          docker compose restart postgres
+          for i in {1..45}; do
+            if docker compose exec -T postgres pg_isready -U ftn -d ftn >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl --fail --silent --show-error http://127.0.0.1:8080/readyz | grep -q '"database":"ok"'
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 \
+            -c "select status, attempts from durable_jobs where id='${job_id}'::uuid and status='succeeded';" | grep -q succeeded
+
+      - name: Restart control plane and verify persistence
+        working-directory: services/control-plane
+        run: |
+          set -euo pipefail
+          job_id="${{ steps.job.outputs.job_id }}"
+          docker compose restart control-plane
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8080/readyz >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs control-plane
+          exit 1
+          
+      - name: Verify persisted job after control-plane restart
+        run: |
+          set -euo pipefail
+          job_id="${{ steps.job.outputs.job_id }}"
+          curl --fail --silent -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            "http://127.0.0.1:8080/api/v1/jobs/${job_id}" | grep -q '"status":"succeeded"'
+
+      - name: Shutdown cleanly
+        if: always()
+        working-directory: services/control-plane
+        run: docker compose down -v --remove-orphans
