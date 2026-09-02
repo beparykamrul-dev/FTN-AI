@@ -1,0 +1,45 @@
+apiVersion: ftn.network/v1
+kind: ActiveDefensePolicy
+metadata:
+  name: ftn-wazuh-active-defense
+spec:
+  purpose: protect FTN-owned infrastructure with bounded defensive response
+  scope:
+    assets: ftn-owned-only
+    inbound_sources: untrusted
+  mode: defensive-containment
+  automatic:
+    - detect
+    - correlate
+    - alert
+    - rate-limit
+    - temporary-block
+    - isolate-compromised-ftn-asset
+    - revoke-active-session
+    - rotate-exposed-credential
+    - backup
+    - verify
+  approval_required:
+    - permanent-block
+    - firewall-policy-change
+    - routing-policy-change
+    - service-disable
+    - credential-policy-change
+  explicit_approval_required:
+    - delete
+    - destructive-recovery
+    - action-against-external-system
+  prohibitions:
+    - retaliation
+    - exploit-external-host
+    - unauthorized-access
+    - malware-deployment
+    - credential-theft
+    - data-exfiltration
+  safeguards:
+    max_automatic_block_seconds: 3600
+    require_asset_ownership_check: true
+    require_prechange_snapshot: true
+    verify_after_action: true
+    audit_every_action: true
+    rollback_when_safe: true
