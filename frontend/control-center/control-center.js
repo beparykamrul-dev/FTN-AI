@@ -4,6 +4,13 @@
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const token = () => sessionStorage.getItem(tokenKey) || '';
+  const connectivityProtocols = [
+    ['WireGuard','VPN','UDP'],['AmneziaWG','VPN','UDP'],['OpenVPN','VPN','TCP/UDP'],
+    ['Hysteria2','QUIC','UDP'],['Shadowsocks','Proxy','TCP/UDP'],['Xray','Transport framework','TCP/UDP/QUIC'],
+    ['GRE','Tunnel','IP'],['SSLH','Multiplexer','TCP'],['WebSocket','Application transport','TCP'],
+    ['gRPC','Application transport','TCP'],['QUIC','Transport','UDP'],['TLS','Security','TCP'],
+    ['DoT','DNS secure transport','TCP/853'],['DoH','DNS secure transport','TCP/443'],['DoQ','DNS secure transport','UDP/853']
+  ];
   async function api(path) {
     const headers = {Accept:'application/json'};
     if (token()) headers.Authorization = `Bearer ${token()}`;
@@ -12,6 +19,10 @@
     return r.json();
   }
   function setConnection(ok, text) { const e=$('connection'); e.textContent=text; e.className=`status ${ok?'online':'offline'}`; }
+  function renderConnectivity() {
+    $('tunnelCount').textContent = connectivityProtocols.length;
+    $('connectivityGrid').innerHTML = connectivityProtocols.map(([name,family,transport]) => `<article class="service active"><div class="service-top"><h3>${esc(name)}</h3><span>registered</span></div><p><span class="tag">${esc(family)}</span><span class="tag">${esc(transport)}</span></p><small>Health check → deterministic selection → automatic non-destructive failover</small></article>`).join('') + `<article class="card"><h3>Control policy</h3><p>FTN-owned assets only · secret-store credentials · route/firewall changes approval-gated · pre-change snapshot · post-change verification · rollback when safe.</p><span class="tag">FTN-owned</span><span class="tag">Approval-gated</span><span class="tag">Audited</span></article>`;
+  }
   function renderServices(data, ent) {
     const active = new Set((ent?.entitlements || []).filter(x=>x.active).map(x=>x.service_id));
     const services = data.services || [];
@@ -37,6 +48,7 @@
   }
   async function load() {
     $('updated').textContent = `Refreshing ${new Date().toLocaleTimeString()}`;
+    renderConnectivity();
     try { const h=await fetch('/healthz',{cache:'no-store'}); if(!h.ok) throw new Error(); const d=await h.json(); setConnection(true,'API: online'); $('apiStatus').textContent='Healthy'; $('apiDetail').textContent=new Date(d.time).toLocaleTimeString(); }
     catch { setConnection(false,'API: offline'); $('apiStatus').textContent='Offline'; $('apiDetail').textContent='Health check failed'; }
     try { const d=await api('/api/v1/services'); let e=null; try { e=await api('/api/v1/entitlements'); } catch {} renderServices(d,e); } catch { $('servicesGrid').innerHTML='<article class="card">Services require an authenticated session.</article>'; $('serviceCount').textContent='—'; }
