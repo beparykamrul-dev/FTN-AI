@@ -1,0 +1,91 @@
+apiVersion: ftn.network/v1
+kind: TransportProtocolRegistry
+metadata:
+  name: ftn-transport-registry
+spec:
+  purpose: legitimate FTN connectivity, interoperability, resilience and controlled transport selection
+  scope:
+    assets: ftn-owned-only
+    users: authorized-ftn-identities
+  protocols:
+    - id: wireguard
+      family: vpn
+      transport: udp
+      production: true
+    - id: amneziawg
+      family: vpn
+      transport: udp
+      production: true
+    - id: openvpn
+      family: vpn
+      transports: [tcp, udp]
+      production: true
+    - id: hysteria2
+      family: quic
+      transport: udp
+      production: true
+    - id: shadowsocks
+      family: proxy
+      transports: [tcp, udp]
+      production: true
+    - id: xray
+      family: transport-framework
+      transports: [tcp, udp, quic]
+      production: true
+    - id: gre
+      family: tunnel
+      transport: ip
+      production: true
+    - id: sslh
+      family: multiplexer
+      transport: tcp
+      production: true
+    - id: websocket
+      family: application-transport
+      transport: tcp
+      production: true
+    - id: grpc
+      family: application-transport
+      transport: tcp
+      production: true
+    - id: quic
+      family: transport
+      transport: udp
+      production: true
+    - id: tls
+      family: security
+      transport: tcp
+      production: true
+    - id: dot
+      family: dns
+      transport: tcp
+      port: 853
+      production: true
+    - id: doh
+      family: dns
+      transport: tcp
+      port: 443
+      production: true
+    - id: doq
+      family: dns
+      transport: udp
+      port: 853
+      production: true
+    - id: pptp
+      family: legacy-vpn
+      transport: tcp
+      production: false
+      status: legacy-only
+  policy:
+    default_action: deny-unregistered
+    protocol_allowlist_required: true
+    health_check_before_selection: true
+    failover: automatic-for-non-destructive-connectivity
+    qos_and_rate_limits: policy-controlled
+    audit_selection: true
+    credentials: secret-store-only
+  safety:
+    external_restriction_bypass: prohibited
+    unauthorized_access: prohibited
+    credential_theft: prohibited
+    traffic_retaliation: prohibited
