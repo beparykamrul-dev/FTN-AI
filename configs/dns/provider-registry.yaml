@@ -1,0 +1,87 @@
+version: 1
+service: ftn-dns
+
+# Provider registry is data-only. The resolver selects only healthy endpoints.
+# Add/remove providers here without changing resolver code.
+providers:
+  - id: cloudflare
+    name: Cloudflare DNS
+    enabled: true
+    endpoints:
+      - protocol: udp
+        address: 1.1.1.1:53
+      - protocol: udp
+        address: 1.0.0.1:53
+      - protocol: tcp
+        address: 1.1.1.1:53
+      - protocol: tls
+        address: 1.1.1.1:853
+        server_name: cloudflare-dns.com
+      - protocol: https
+        address: https://cloudflare-dns.com/dns-query
+
+  - id: google
+    name: Google Public DNS
+    enabled: true
+    endpoints:
+      - protocol: udp
+        address: 8.8.8.8:53
+      - protocol: udp
+        address: 8.8.4.4:53
+      - protocol: tcp
+        address: 8.8.8.8:53
+      - protocol: tls
+        address: 8.8.8.8:853
+        server_name: dns.google
+      - protocol: https
+        address: https://dns.google/dns-query
+
+  - id: quad9
+    name: Quad9
+    enabled: true
+    endpoints:
+      - protocol: udp
+        address: 9.9.9.9:53
+      - protocol: udp
+        address: 149.112.112.112:53
+      - protocol: tls
+        address: 9.9.9.9:853
+        server_name: dns.quad9.net
+      - protocol: https
+        address: https://dns.quad9.net/dns-query
+
+  - id: adguard
+    name: AdGuard DNS
+    enabled: true
+    endpoints:
+      - protocol: udp
+        address: 94.140.14.14:53
+      - protocol: udp
+        address: 94.140.15.15:53
+      - protocol: tls
+        address: 94.140.14.14:853
+        server_name: dns.adguard-dns.com
+      - protocol: https
+        address: https://dns.adguard-dns.com/dns-query
+
+  - id: opendns
+    name: Cisco OpenDNS
+    enabled: true
+    endpoints:
+      - protocol: udp
+        address: 208.67.222.222:53
+      - protocol: udp
+        address: 208.67.220.220:53
+
+# Selection is latency/health based, not round-robin only.
+policy:
+  mode: lowest_healthy_latency
+  max_probe_latency_ms: 500
+  probe_interval_seconds: 15
+  failure_threshold: 3
+  recovery_threshold: 2
+  parallel_candidates: 2
+  cache_ttl_seconds: 30
+  stale_if_error_seconds: 300
+  prefer_protocols: [udp, tls, https]
+  require_tls_for_remote_control_plane: true
