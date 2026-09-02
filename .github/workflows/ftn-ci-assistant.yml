@@ -1,0 +1,67 @@
+name: FTN CI Assistant
+
+on:
+  workflow_run:
+    workflows:
+      - FTN-AI CI
+      - FTN Security Gate
+      - FTN API Boundary Gate
+      - FTN Durable Execution Gate
+      - FTN Data Recovery Gate
+      - FTN Runtime Integration
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: ftn-ci-assistant-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    name: Record failed gate for repair
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update repair issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title="FTN CI repair: ${RUN_NAME} (${HEAD_SHA:0:12})"
+          body=$(cat <<EOF
+          ## FTN CI repair task
+
+          **Gate:** ${RUN_NAME}
+          **Commit:** ${HEAD_SHA}
+          **Run:** ${RUN_URL}
+
+          This issue was created automatically because a protected FTN validation gate failed.
+
+          ### Repair order
+          1. Inspect the failed job and logs.
+          2. Reproduce the failure locally/inside CI where possible.
+          3. Make the smallest production-safe fix.
+          4. Run the affected gate plus repository validation.
+          5. Do not perform real router/OLT/network mutations from CI.
+          6. Close this issue only after the repaired gate is green.
+
+          ### Safety boundary
+          CI may validate, build, test, inspect, and record evidence. Privileged infrastructure changes remain approval-gated.
+          EOF
+          )
+
+          existing=$(gh issue list --state open --search "${title} in:title" --json number --jq '.[0].number // empty')
+          if [[ -n "${existing}" ]]; then
+            gh issue comment "${existing}" --body "A new failure was recorded: ${RUN_URL}\n\nCommit: ${HEAD_SHA}"
+          else
+            gh issue create --title "${title}" --body "${body}"
+          fi
