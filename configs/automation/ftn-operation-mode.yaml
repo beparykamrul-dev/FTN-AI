@@ -1,0 +1,31 @@
+apiVersion: ftn.network/v1
+kind: OperationMode
+metadata:
+  name: ftn-default
+spec:
+  mode: manual-by-default
+  automatic:
+    - telemetry
+    - monitoring
+    - alerting
+    - correlation
+    - backup
+    - recommendation
+    - non-destructive-health-recovery
+  approval:
+    - network-configuration
+    - firewall-policy
+    - BGP-policy
+    - DNS-policy
+    - service-restart-outside-health-recovery
+    - credential-rotation
+  explicitApproval:
+    - delete
+    - destructive-action
+    - irreversible-change
+  safety:
+    dry_run_before_change: true
+    validate_before_apply: true
+    verify_after_apply: true
+    audit_every_change: true
+    rollback_when_safe: true
