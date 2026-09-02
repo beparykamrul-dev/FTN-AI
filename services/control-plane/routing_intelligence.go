@@ -3,33 +3,34 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/netip"
 	"strings"
 )
 
 type RouteIntelligenceInput struct {
-	Prefix        string `json:"prefix"`
-	ASN           uint32 `json:"asn"`
-	Country       string `json:"country"`
-	LatencyClass  string `json:"latency_class"`
-	TrafficClass  string `json:"traffic_class"`
-	PeerRole      string `json:"peer_role"`
-	RouteSource   string `json:"route_source"`
+	Prefix       string `json:"prefix"`
+	ASN          uint32 `json:"asn"`
+	Country      string `json:"country"`
+	LatencyClass string `json:"latency_class"`
+	TrafficClass string `json:"traffic_class"`
+	PeerRole     string `json:"peer_role"`
+	RouteSource  string `json:"route_source"`
 }
 
 type RouteIntelligenceDecision struct {
-	Decision      string `json:"decision"`
-	LocalPref     uint32 `json:"local_preference"`
-	MED           uint32 `json:"med"`
-	Communities   []string `json:"communities,omitempty"`
-	Reason        string `json:"reason"`
-	DecisionHash  string `json:"decision_hash"`
-	RequiresApproval bool `json:"requires_approval"`
+	Decision         string   `json:"decision"`
+	LocalPref        uint32   `json:"local_preference"`
+	MED              uint32   `json:"med"`
+	Communities      []string `json:"communities,omitempty"`
+	Reason           string   `json:"reason"`
+	DecisionHash     string   `json:"decision_hash"`
+	RequiresApproval bool     `json:"requires_approval"`
 }
 
 func NormalizeRouteIntelligenceInput(in RouteIntelligenceInput) (RouteIntelligenceInput, bool) {
 	p, err := netip.ParsePrefix(strings.TrimSpace(in.Prefix))
-	if err != nil || !p.IsValid() || in.ASN > 4294967295 {
+	if err != nil || !p.IsValid() {
 		return RouteIntelligenceInput{}, false
 	}
 	in.Prefix = p.String()
@@ -42,7 +43,7 @@ func NormalizeRouteIntelligenceInput(in RouteIntelligenceInput) (RouteIntelligen
 }
 
 func HashRouteDecision(d RouteIntelligenceDecision) string {
-	b := d.Decision + "|" + d.Reason + "|" + string(rune(d.LocalPref)) + "|" + string(rune(d.MED))
+	b := fmt.Sprintf("%s|%d|%d|%s|%t|%s", d.Decision, d.LocalPref, d.MED, strings.Join(d.Communities, ","), d.RequiresApproval, d.Reason)
 	h := sha256.Sum256([]byte(b))
 	return hex.EncodeToString(h[:])
 }
@@ -52,7 +53,9 @@ func HashRouteDecision(d RouteIntelligenceDecision) string {
 func BuildRouteDecision(in RouteIntelligenceInput) RouteIntelligenceDecision {
 	in, ok := NormalizeRouteIntelligenceInput(in)
 	if !ok {
-		return RouteIntelligenceDecision{Decision: "deny", Reason: "invalid_route_input", RequiresApproval: true}
+		d := RouteIntelligenceDecision{Decision: "deny", Reason: "invalid_route_input", RequiresApproval: true}
+		d.DecisionHash = HashRouteDecision(d)
+		return d
 	}
 	d := RouteIntelligenceDecision{Decision: "allow", LocalPref: 100, Reason: "default_policy", RequiresApproval: true}
 	if in.RouteSource == "external" && in.TrafficClass == "untrusted" {
