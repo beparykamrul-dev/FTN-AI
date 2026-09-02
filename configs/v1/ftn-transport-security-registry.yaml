@@ -41,7 +41,7 @@ network_stack:
   frr: {enabled: true}
   gobgp: {enabled: true}
   isis: {enabled: true}
-  vbnG: {enabled: true, note: spelling-normalized: vBNG}
+  vbnG: {enabled: true, note: "spelling-normalized: vBNG"}
   vBNG: {enabled: true, role: broadband-network-gateway}
   jumbo_frames: {enabled: true, mtu_policy: path-capability-aware}
   anti_spoofing: {enabled: true}
