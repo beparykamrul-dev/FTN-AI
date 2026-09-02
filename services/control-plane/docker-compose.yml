@@ -18,11 +18,26 @@ services:
       - ./migrations/008_data_governor.sql:/docker-entrypoint-initdb.d/008-data-governor.sql:ro
       - ./migrations/009_data_governance_controls.sql:/docker-entrypoint-initdb.d/009-data-governance-controls.sql:ro
       - ./migrations/010_dns_guard_filtering.sql:/docker-entrypoint-initdb.d/010-dns-guard-filtering.sql:ro
+      - ./migrations/011_migration_registry.sql:/docker-entrypoint-initdb.d/011-migration-registry.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ftn -d ftn"]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  migration-runner:
+    image: postgres:17-alpine
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://ftn:${FTN_DB_PASSWORD}@postgres:5432/ftn?sslmode=disable
+    volumes:
+      - ./migrations:/migrations:ro
+      - ./scripts/migrate.sh:/usr/local/bin/ftn-migrate.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["bash /usr/local/bin/ftn-migrate.sh"]
 
   control-plane:
     build:
@@ -39,6 +54,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migration-runner:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "/ftn-control-plane", "--healthcheck"]
       interval: 10s
