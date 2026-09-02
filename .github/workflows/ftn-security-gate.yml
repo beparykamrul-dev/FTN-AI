@@ -1,0 +1,60 @@
+name: FTN Security Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ftn-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security:
+    name: Security and approval boundary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Reject embedded credentials and private keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -nEI '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|aws_secret_access_key|api[_-]?key[[:space:]]*[:=][[:space:]]*["'"']?[A-Za-z0-9_+/=-]{20,}|password[[:space:]]*[:=][[:space:]]*["'"'][^"'"']{8,}["'"'])' -- ':!go.sum'; then
+            echo 'Potential embedded credential/private key found.'
+            exit 1
+          fi
+
+      - name: Check workflow action pinning
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad=0
+          while IFS= read -r file; do
+            while IFS= read -r line; do
+              if [[ "$line" =~ uses:[[:space:]]*[^[:space:]@]+@[^[:space:]]+ ]] && [[ ! "$line" =~ uses:[[:space:]]*[^[:space:]@]+@[0-9a-f]{40}([[:space:]]|$) ]]; then
+                echo "Unpinned action in $file: $line"
+                bad=1
+              fi
+            done < "$file"
+          done < <(git ls-files '.github/workflows/*.yml' '.github/workflows/*.yaml')
+          exit "$bad"
+
+      - name: Validate approval-first implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -R -n 'requirePermission(a,"approval.create"' services/control-plane
+          grep -R -n 'requirePermission(a,"approval.decide"' services/control-plane
+          grep -R -n 'approval_required\|approval_not_approved' services/control-plane
+          grep -R -n 'job.rollback' services/control-plane
+          grep -R -n 'audit(' services/control-plane
+
+      - name: Run control-plane tests
+        working-directory: services/control-plane
+        run: go test ./...
