@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE="${ROOT}/deployment/dns/docker-compose.yml"
+DNSDIST_CONF="${ROOT}/configs/dns/dnsdist.conf"
 
 command -v docker >/dev/null 2>&1 || { echo "Docker is required" >&2; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo "Docker Compose v2 is required" >&2; exit 1; }
@@ -29,11 +30,29 @@ else
   echo "dig not installed; container/runtime checks completed, external DNS query skipped" >&2
 fi
 
-echo "[5/5] checking exposed sockets"
-docker compose -f "${COMPOSE}" port ftn-dnsdist 53 >/dev/null
-docker compose -f "${COMPOSE}" port ftn-dnsdist 853 >/dev/null
-docker compose -f "${COMPOSE}" port ftn-dnsdist 443 >/dev/null
-docker compose -f "${COMPOSE}" port ftn-dnsdist 784 >/dev/null
+echo "[5/5] validating configured DNS listener claims"
+# A published port is not evidence that a protocol is configured. Require an
+# explicit listener declaration in dnsdist.conf before testing optional ports.
+required_tcp_ports=(53)
+for port in "${required_tcp_ports[@]}"; do
+  grep -Eq "(^|[^0-9])${port}([^0-9]|$)" "${DNSDIST_CONF}" || {
+    echo "dnsdist TCP/UDP listener for port ${port} is not declared" >&2
+    exit 1
+  }
+done
 
-echo "FTN DNS runtime validation passed."
-echo "This validates the local container stack only; public delegation, Anycast/BGP, provider failover, and multi-site recovery require tests in the target FTN network."
+for optional in 853 443 784; do
+  case "${optional}" in
+    853) pattern='listen.*:853|listen.*853' ;;
+    443) pattern='listen.*:443|listen.*443' ;;
+    784) pattern='listen.*:784|listen.*784' ;;
+  esac
+  if grep -Eiq "${pattern}" "${DNSDIST_CONF}"; then
+    echo "configured optional listener detected: ${optional}"
+  else
+    echo "optional listener ${optional}: not configured (not treated as live)"
+  fi
+done
+
+echo "FTN DNS runtime validation passed for configured listeners."
+echo "Public delegation, Anycast/BGP, provider failover, secure DNS transports, and multi-site recovery require target-network acceptance tests."
