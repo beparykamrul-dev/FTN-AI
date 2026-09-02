@@ -10,6 +10,8 @@ services:
       - ftn-postgres:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
       - ./migrations/002_platform_foundation.sql:/docker-entrypoint-initdb.d/002-platform-foundation.sql:ro
+      - ./migrations/003_durable_execution.sql:/docker-entrypoint-initdb.d/003-durable-execution.sql:ro
+      - ./migrations/004_approval_execution.sql:/docker-entrypoint-initdb.d/004-approval-execution.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ftn -d ftn"]
       interval: 5s
