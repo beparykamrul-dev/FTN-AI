@@ -1,6 +1,6 @@
 services:
   ftn-dnsdist:
-    image: powerdns/dnsdist-19:latest
+    image: powerdns/dnsdist-19:1.9.16
     restart: unless-stopped
     command: ["dnsdist", "--supervised", "/etc/dnsdist/dnsdist.conf"]
     ports:
@@ -13,9 +13,9 @@ services:
       - ../../configs/dns/dnsdist.conf:/etc/dnsdist/dnsdist.conf:ro
     depends_on:
       ftn-unbound:
-        condition: service_healthy
+        condition: service_started
       ftn-coredns:
-        condition: service_healthy
+        condition: service_started
 
   ftn-unbound:
     image: mvance/unbound:1.22.0
@@ -39,13 +39,12 @@ services:
     expose:
       - "53/udp"
       - "53/tcp"
+      - "9153/tcp"
     volumes:
       - ../../configs/dns/Corefile:/etc/coredns/Corefile:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9153/metrics >/dev/null 2>&1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
+    depends_on:
+      ftn-unbound:
+        condition: service_healthy
 
   ftn-technitium:
     image: technitium/dns-server:latest
