@@ -1,0 +1,36 @@
+version: v1
+kind: UpstreamMonitoring
+
+monitoring:
+  enabled: true
+  collection_interval: 15s
+  health_interval: 30s
+  metrics:
+    - upstream_healthy
+    - upstream_latency_ms
+    - upstream_packet_loss_pct
+    - upstream_prefix_count
+    - upstream_prefix_limit
+    - upstream_last_check_timestamp
+    - upstream_state
+  alerts:
+    - name: upstream-down
+      condition: healthy == false
+      severity: critical
+    - name: upstream-latency
+      condition: latency_ms > 200
+      severity: warning
+    - name: upstream-packet-loss
+      condition: packet_loss_pct >= 2
+      severity: warning
+    - name: prefix-limit
+      condition: prefix_count / prefix_limit >= 0.8
+      severity: warning
+    - name: prefix-limit-critical
+      condition: prefix_count / prefix_limit >= 0.95
+      severity: critical
+
+privacy:
+  payload_collection: false
+  credentials_collection: false
+  external_telemetry_export: false
