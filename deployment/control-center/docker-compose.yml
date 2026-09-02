@@ -4,8 +4,6 @@ services:
       context: ../..
       dockerfile: services/control-plane/Dockerfile
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       FTN_CONTROL_ADDR: ":8080"
       FTN_HEALTH_URL: "http://127.0.0.1:8080/healthz"
