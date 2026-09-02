@@ -1,0 +1,34 @@
+apiVersion: ftn.network/v1
+kind: ActiveDefenseExecution
+metadata:
+  name: ftn-owned-containment
+spec:
+  scope:
+    ownership: ftn-owned-only
+    require_verified_asset: true
+  automatic_actions:
+    - nftables-temporary-block
+    - nftables-rate-limit
+    - xdp-attachment-health-check
+    - mikrotik-temporary-address-list
+    - session-revoke
+    - credential-rotation-request
+    - service-health-recovery
+  controls:
+    max_block_seconds: 3600
+    require_snapshot: true
+    require_postcheck: true
+    require_audit_event: true
+    idempotency_key_required: true
+    rollback_on_failed_verification: true
+  approval_required:
+    - persistent-firewall-policy
+    - routing-policy-change
+    - service-disable
+  prohibited:
+    - external-target
+    - retaliation
+    - exploit
+    - malware
+    - credential-theft
+    - data-exfiltration
