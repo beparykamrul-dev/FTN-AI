@@ -1,0 +1,85 @@
+name: FTN Runtime Integration Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ftn-runtime-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runtime:
+    name: PostgreSQL + Control Plane integration
+    runs-on: ubuntu-latest
+    env:
+      FTN_DB_PASSWORD: ci-runtime-password
+      FTN_API_AUTH_TOKEN: ci-runtime-token
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate Compose
+        working-directory: services/control-plane
+        run: docker compose config --quiet
+
+      - name: Start PostgreSQL
+        working-directory: services/control-plane
+        run: docker compose up -d postgres
+
+      - name: Wait for PostgreSQL
+        working-directory: services/control-plane
+        run: |
+          for i in {1..30}; do
+            if docker compose exec -T postgres pg_isready -U ftn -d ftn >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs postgres
+          exit 1
+
+      - name: Verify schema and migrations
+        working-directory: services/control-plane
+        run: |
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 -c '\dt'
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM tenants;'
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM permissions;'
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM service_registry;'
+
+      - name: Start control plane
+        working-directory: services/control-plane
+        run: docker compose up -d control-plane
+
+      - name: Wait for control plane health
+        working-directory: services/control-plane
+        run: |
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8080/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          docker compose logs control-plane
+          exit 1
+
+      - name: Check health response
+        run: curl --fail --silent --show-error http://127.0.0.1:8080/healthz
+
+      - name: Verify service state
+        working-directory: services/control-plane
+        run: |
+          docker compose ps
+          docker compose logs --no-color control-plane
+
+      - name: Shutdown cleanly
+        if: always()
+        working-directory: services/control-plane
+        run: docker compose down -v --remove-orphans
