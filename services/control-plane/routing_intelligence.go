@@ -42,8 +42,11 @@ func NormalizeRouteIntelligenceInput(in RouteIntelligenceInput) (RouteIntelligen
 	return in, true
 }
 
-func HashRouteDecision(d RouteIntelligenceDecision) string {
-	b := fmt.Sprintf("%s|%d|%d|%s|%t|%s", d.Decision, d.LocalPref, d.MED, strings.Join(d.Communities, ","), d.RequiresApproval, d.Reason)
+func HashRouteDecision(in RouteIntelligenceInput, d RouteIntelligenceDecision) string {
+	b := fmt.Sprintf("%s|%d|%s|%s|%s|%s|%s|%s|%d|%d|%s|%t|%s",
+		in.Prefix, in.ASN, in.Country, in.LatencyClass, in.TrafficClass,
+		in.PeerRole, in.RouteSource, d.Decision, d.LocalPref, d.MED,
+		strings.Join(d.Communities, ","), d.RequiresApproval, d.Reason)
 	h := sha256.Sum256([]byte(b))
 	return hex.EncodeToString(h[:])
 }
@@ -54,7 +57,7 @@ func BuildRouteDecision(in RouteIntelligenceInput) RouteIntelligenceDecision {
 	in, ok := NormalizeRouteIntelligenceInput(in)
 	if !ok {
 		d := RouteIntelligenceDecision{Decision: "deny", Reason: "invalid_route_input", RequiresApproval: true}
-		d.DecisionHash = HashRouteDecision(d)
+		d.DecisionHash = HashRouteDecision(RouteIntelligenceInput{}, d)
 		return d
 	}
 	d := RouteIntelligenceDecision{Decision: "allow", LocalPref: 100, Reason: "default_policy", RequiresApproval: true}
@@ -62,6 +65,6 @@ func BuildRouteDecision(in RouteIntelligenceInput) RouteIntelligenceDecision {
 		d.Decision = "deny"
 		d.Reason = "untrusted_external_route"
 	}
-	d.DecisionHash = HashRouteDecision(d)
+	d.DecisionHash = HashRouteDecision(in, d)
 	return d
 }
