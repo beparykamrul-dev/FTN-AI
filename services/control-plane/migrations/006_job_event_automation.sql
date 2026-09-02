@@ -1,5 +1,5 @@
 -- FTN durable job lifecycle journal. Additive/idempotent.
--- Database trigger keeps job state and its lifecycle event in the same transaction.
+-- Canonical database trigger keeps job state and its lifecycle event in the same transaction.
 
 CREATE OR REPLACE FUNCTION ftn_journal_job_transition() RETURNS trigger
 LANGUAGE plpgsql AS $$
@@ -33,7 +33,7 @@ BEGIN
     NEW.tenant_id,
     transition,
     next_sequence,
-    NEW.correlation_id,
+    COALESCE(NEW.correlation_id, ''),
     '',
     NEW.id::text,
     jsonb_build_object(
@@ -52,7 +52,11 @@ BEGIN
 END;
 $$;
 
+-- Remove every known legacy job lifecycle trigger before installing the canonical one.
+DROP TRIGGER IF EXISTS durable_jobs_lifecycle_event ON durable_jobs;
+DROP TRIGGER IF EXISTS durable_jobs_event_trigger ON durable_jobs;
 DROP TRIGGER IF EXISTS durable_jobs_event_journal ON durable_jobs;
+
 CREATE TRIGGER durable_jobs_event_journal
 AFTER INSERT OR UPDATE OF status ON durable_jobs
 FOR EACH ROW EXECUTE FUNCTION ftn_journal_job_transition();
