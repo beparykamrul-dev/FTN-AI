@@ -1,0 +1,35 @@
+apiVersion: ftn.network/v1
+kind: GoBGPRouting
+metadata:
+  name: ftn-core-routing
+spec:
+  implementation: github.com/osrg/gobgp/v4
+  version: v4.5.0
+  mode: controller-managed
+  safety:
+    default_action: reject
+    require_approval_for_route_change: true
+    max_prefixes_per_peer: 1000000
+    max_prefixes_per_session: 100000
+    graceful_restart: true
+    enforce_rpki_when_available: true
+  address_families:
+    - ipv4-unicast
+    - ipv6-unicast
+    - l2vpn-evpn
+  capabilities:
+    ebgp: true
+    ibgp: true
+    route_reflector: true
+    multipath: true
+    graceful_restart: true
+    bmp: true
+    flowspec: true
+  telemetry:
+    prometheus: true
+    route_events: true
+    peer_state_events: true
+  integration:
+    control_plane: ftn-control-plane
+    policy_engine: lua
+    geo_engine: geoflow2
