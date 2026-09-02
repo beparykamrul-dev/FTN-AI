@@ -28,12 +28,33 @@ spec:
     hysteria2:
       enabled: true
       role: quic-transport
-    pptp:
-      enabled: false
-      role: legacy-compatibility
+    xray:
+      enabled: true
+      role: transport-framework
     websocket:
       enabled: true
       role: application-transport
+    grpc:
+      enabled: true
+      role: application-transport
+    quic:
+      enabled: true
+      role: transport
+    tls:
+      enabled: true
+      role: secure-transport
+    dot:
+      enabled: true
+      role: dns-secure-transport
+    doh:
+      enabled: true
+      role: dns-secure-transport
+    doq:
+      enabled: true
+      role: dns-secure-transport
+    pptp:
+      enabled: false
+      role: legacy-compatibility
   mesh:
     batmanAdv:
       enabled: true
@@ -53,6 +74,9 @@ spec:
     secretsServerSide: true
     approvalRequiredForPrivilegedChanges: true
     arbitraryShellCommands: false
+    externalRestrictionBypass: false
   lifecycle:
     verifyAfterChange: true
     auditEveryOperation: true
+    healthCheckBeforeSelection: true
+    automaticFailoverForConnectivity: true
