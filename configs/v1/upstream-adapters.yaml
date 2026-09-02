@@ -1,0 +1,49 @@
+version: v1
+kind: UpstreamAdapterCatalog
+
+# Provider-neutral upstream/interconnect configuration. Provider-specific
+# credentials must be injected through the deployment secret store and are
+# intentionally not represented here.
+policy:
+  approval_required_for_changes: true
+  allow_automatic_failover: true
+  require_prefix_limits: true
+  require_health_checks: true
+  reject_unlisted_prefixes: true
+
+adapters:
+  - name: transit-primary
+    type: bgp
+    enabled: false
+    role: transit
+    local_asn: 0
+    sessions: []
+    allowed_prefixes: []
+    max_prefix_count: 0
+    health:
+      interval: 30s
+      timeout: 5s
+
+  - name: approved-cdn-interconnect
+    type: provider-cdn
+    enabled: false
+    role: content-delivery
+    provider: ""
+    sessions: []
+    allowed_prefixes: []
+    max_prefix_count: 0
+    health:
+      interval: 30s
+      timeout: 5s
+
+  - name: ix-interconnect
+    type: ix
+    enabled: false
+    role: peering
+    local_asn: 0
+    sessions: []
+    allowed_prefixes: []
+    max_prefix_count: 0
+    health:
+      interval: 30s
+      timeout: 5s
