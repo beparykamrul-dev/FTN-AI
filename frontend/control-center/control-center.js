@@ -47,6 +47,7 @@
     try { renderJobs(await api('/api/v1/jobs')); } catch { $('jobsGrid').innerHTML='<div class="card muted">Execution timeline requires job.read.</div>'; }
     try { const d=await api('/api/v1/data-governor/assets'); const n=Array.isArray(d.assets)?d.assets.length:0; $('governanceGrid').innerHTML=`<article class="card"><h3>Governed assets</h3><div class="big">${n}</div><small>returned by policy API</small></article><article class="card"><h3>Raw secrets</h3><div class="big">Never</div><small>not rendered by this UI</small></article>`; } catch { $('governanceGrid').innerHTML='<article class="card muted">Governance state requires an authenticated session.</article>'; }
     $('updated').textContent = `Updated ${new Date().toLocaleString()}`;
+    if (window.FTNUpstreamMonitoring) window.FTNUpstreamMonitoring.refresh();
   }
   $('refresh').addEventListener('click', load);
   $('saveToken').addEventListener('click', () => { const v=$('token').value.trim(); if(v) sessionStorage.setItem(tokenKey,v); else sessionStorage.removeItem(tokenKey); $('token').value=''; load(); });
