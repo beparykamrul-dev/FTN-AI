@@ -1,0 +1,122 @@
+name: FTN Durable Execution Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ftn-durable-execution-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  durable:
+    name: Approval, durable job execution and audit
+    runs-on: ubuntu-latest
+    env:
+      FTN_DB_PASSWORD: ci-durable-password
+      FTN_API_AUTH_TOKEN: ci-durable-token
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Start PostgreSQL and control plane
+        working-directory: services/control-plane
+        run: docker compose up -d --build
+
+      - name: Wait for readiness
+        run: |
+          set -euo pipefail
+          for i in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:8080/readyz >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker compose -f services/control-plane/docker-compose.yml ps
+          docker compose -f services/control-plane/docker-compose.yml logs control-plane
+          exit 1
+
+      - name: Create and approve privileged change
+        id: approval
+        run: |
+          set -euo pipefail
+          approval_body="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{"action":"network.change","resource":"ci/durable-execution","payload":{"source":"github-actions"},"expires_in_seconds":3600}' \
+            http://127.0.0.1:8080/api/v1/approvals)"
+          approval_id="$(printf '%s' "$approval_body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["approval_id"])')"
+          test -n "$approval_id"
+          decision_body="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{"decision":"approve","reason":"CI end-to-end gate"}' \
+            "http://127.0.0.1:8080/api/v1/approvals/${approval_id}/decide")"
+          printf '%s' "$decision_body" | grep -q '"status":"approved"'
+          echo "approval_id=$approval_id" >> "$GITHUB_OUTPUT"
+
+      - name: Submit privileged durable job
+        id: submit
+        run: |
+          set -euo pipefail
+          approval_id="${{ steps.approval.outputs.approval_id }}"
+          body="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -H 'Idempotency-Key: ci-durable-job-${GITHUB_SHA}' \
+            -d "{\"job_type\":\"network.change\",\"payload\":{\"source\":\"github-actions\",\"sha\":\"${GITHUB_SHA}\"},\"approval_id\":\"${approval_id}\",\"execution_action\":\"network.change\"}" \
+            http://127.0.0.1:8080/api/v1/jobs)"
+          job_id="$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')"
+          test -n "$job_id"
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+
+      - name: Claim job
+        id: claim
+        run: |
+          set -euo pipefail
+          body="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{"worker_id":"ci-worker","lease_seconds":60}' \
+            http://127.0.0.1:8080/api/v1/jobs/claim)"
+          printf '%s' "$body" | grep -q '"status":"running"'
+          attempt="$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["attempts"])')"
+          echo "attempt=$attempt" >> "$GITHUB_OUTPUT"
+
+      - name: Finish job successfully with verification
+        run: |
+          set -euo pipefail
+          job_id="${{ steps.submit.outputs.job_id }}"
+          attempt="${{ steps.claim.outputs.attempt }}"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"worker_id\":\"ci-worker\",\"attempt_no\":${attempt},\"success\":true,\"verification\":{\"verified\":true,\"source\":\"ci\"}}" \
+            "http://127.0.0.1:8080/api/v1/jobs/${job_id}/finish" | grep -q '"status":"succeeded"'
+
+      - name: Verify durable state and audit trail
+        working-directory: services/control-plane
+        run: |
+          set -euo pipefail
+          job_id="${{ steps.submit.outputs.job_id }}"
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 \
+            -c "select status, attempts, approval_id is not null as has_approval from durable_jobs where id='${job_id}'::uuid and status='succeeded';" \
+            | grep -q succeeded
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 \
+            -c "select status from execution_attempts where job_id='${job_id}'::uuid and status='succeeded';" \
+            | grep -q succeeded
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 \
+            -c "select count(*) from event_journal where aggregate_id='${job_id}'::uuid and event_type in ('job.submitted','job.claimed','job.succeeded');" \
+            | grep -Eq '[[:space:]]+3[[:space:]]*$'
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 \
+            -c "select count(*) from audit_events where action in ('approval.create','approval.approve','job.submit','job.claim','job.finish') and resource_id='${job_id}';" \
+            | grep -Eq '[[:space:]]+3[[:space:]]*$|[[:space:]]+[4-9][0-9]*[[:space:]]*$'
+
+      - name: Shutdown cleanly
+        if: always()
+        working-directory: services/control-plane
+        run: docker compose down -v --remove-orphans
