@@ -1,0 +1,37 @@
+apiVersion: ftn.network/v1
+kind: TelemetryPipeline
+metadata:
+  name: ftn-unified-telemetry
+spec:
+  sources:
+    - snmp
+    - netflow
+    - ipfix
+    - sflow
+    - bgp
+    - bmp
+    - syslog
+    - dns
+    - eBPF-XDP
+    - application
+  processing:
+    normalize: true
+    deduplicate: true
+    correlate: true
+    aggregate_before_persistence: true
+  outputs:
+    metrics: prometheus-compatible
+    logs: structured
+    events: event-journal
+    flows: privacy-preserving-aggregates
+  privacy:
+    raw_dns_queries: false
+    raw_credentials: false
+    raw_payloads: false
+  reliability:
+    buffering: true
+    backpressure: true
+    collector_failure_must_not_stop_forwarding: true
+  security:
+    mTLS_management: true
+    FTN_owned_assets_only: true
