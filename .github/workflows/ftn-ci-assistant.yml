@@ -31,10 +31,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
+          REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          gh run rerun --failed "$RUN_ID"
+          gh run rerun --failed "$RUN_ID" --repo "$REPOSITORY"
 
       - name: Create or update repair issue
         env:
