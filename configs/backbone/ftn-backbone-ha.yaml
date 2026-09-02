@@ -1,0 +1,26 @@
+apiVersion: ftn.network/v1
+kind: BackboneResilience
+metadata:
+  name: ftn-backbone-ha
+spec:
+  topology: dynamic-mesh
+  path_selection:
+    metrics: [latency, packet_loss, utilization, health]
+    strategy: lowest-healthy-cost
+    ecmp: true
+  failure_handling:
+    link_failure: automatic-reconvergence
+    node_failure: automatic-reconvergence
+    pop_failure: alternate-path
+    control_plane_failure: data-plane-independent
+  safeguards:
+    route_mutation_requires_approval: true
+    prechange_snapshot: true
+    verify_after_change: true
+    rollback_when_safe: true
+  telemetry:
+    links: true
+    paths: true
+    capacity: true
+    latency: true
+    packet_loss: true
