@@ -29,10 +29,10 @@ jobs:
             'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY'
             'aws_secret_access_key'
             'api[_-]?key[[:space:]]*[:=]'
-            'password[[:space:]]*[:=][[:space:]]*["'"']'
+            'password[[:space:]]*[:=][[:space:]]*'
           )
           for pattern in "${patterns[@]}"; do
-            if git grep -nEI "$pattern" -- ':!go.sum'; then
+            if git grep -nEI "$pattern" -- ':!go.sum' ':!.github/workflows/ftn-security-gate.yml'; then
               echo "Potential embedded credential/private key found for pattern: $pattern"
               exit 1
             fi
