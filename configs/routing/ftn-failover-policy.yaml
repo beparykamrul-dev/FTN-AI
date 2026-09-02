@@ -1,0 +1,23 @@
+apiVersion: ftn.network/v1
+kind: RoutingFailoverPolicy
+metadata:
+  name: ftn-core-failover
+spec:
+  scope: ftn-owned-only
+  detection:
+    peer_down: bfd-or-bgp
+    path_degraded: latency-loss-thresholds
+    node_unhealthy: health-endpoint-and-telemetry
+  response:
+    withdraw_unhealthy_routes: true
+    prefer_healthy_ecmp_paths: true
+    preserve_policy_constraints: true
+    automatic_for_non_destructive_connectivity: true
+  recovery:
+    restore_only_after_health_stability: true
+    require_route_verification: true
+    require_event_journal: true
+  safety:
+    route_mutation_requires_approval: true
+    external_system_actions: prohibited
+    destructive_actions: prohibited
