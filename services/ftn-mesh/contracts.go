@@ -14,28 +14,28 @@ type Node struct {
 }
 
 type Link struct {
-	ID         string  `json:"id"`
-	A          string  `json:"a"`
-	B          string  `json:"b"`
-	CapacityMbps uint64 `json:"capacity_mbps"`
-	LatencyMs  float64 `json:"latency_ms"`
-	LossPct    float64 `json:"loss_pct"`
-	AdminUp    bool    `json:"admin_up"`
-	OperUp     bool    `json:"oper_up"`
+	ID           string  `json:"id"`
+	A            string  `json:"a"`
+	B            string  `json:"b"`
+	CapacityMbps uint64  `json:"capacity_mbps"`
+	LatencyMs    float64 `json:"latency_ms"`
+	LossPct      float64 `json:"loss_pct"`
+	AdminUp      bool    `json:"admin_up"`
+	OperUp       bool    `json:"oper_up"`
 }
 
 type RouteIntent struct {
-	ID        string   `json:"id"`
-	Prefix    string   `json:"prefix"`
-	Source    string   `json:"source"`
-	Targets   []string `json:"targets"`
-	Metric    uint32   `json:"metric,omitempty"`
-	Approved  bool     `json:"approved"`
+	ID       string   `json:"id"`
+	Prefix   string   `json:"prefix"`
+	Source   string   `json:"source"`
+	Targets  []string `json:"targets"`
+	Metric   uint32   `json:"metric,omitempty"`
+	Approved bool     `json:"approved"`
 }
 
 type MeshSnapshot struct {
-	Nodes  []Node `json:"nodes"`
-	Links  []Link `json:"links"`
+	Nodes  []Node        `json:"nodes"`
+	Links  []Link        `json:"links"`
 	Routes []RouteIntent `json:"routes"`
 }
 
@@ -88,5 +88,7 @@ func (s MeshSnapshot) Validate() error {
 }
 
 type validationError string
+
 func (e validationError) Error() string { return string(e) }
+
 func errInvalid(s string) error { return validationError(s) }
