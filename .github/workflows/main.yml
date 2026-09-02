@@ -41,3 +41,13 @@ jobs:
 
       - name: Validate control-plane Dockerfile
         run: docker build -f services/control-plane/Dockerfile .
+
+      - name: Validate FTN observability Compose
+        working-directory: deployment/observability
+        env:
+          OPENSEARCH_INITIAL_ADMIN_PASSWORD: ci-observability-password
+          KOPIA_PASSWORD: ci-kopia-repository-password
+          KOPIA_SERVER_USERNAME: ci-kopia
+          KOPIA_SERVER_PASSWORD: ci-kopia-server-password
+          KOPIA_VERSION: latest
+        run: docker compose -f docker-compose.yml --profile observability --profile backup --profile wireless config --quiet
