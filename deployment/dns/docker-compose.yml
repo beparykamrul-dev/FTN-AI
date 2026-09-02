@@ -1,0 +1,75 @@
+services:
+  ftn-dnsdist:
+    image: powerdns/dnsdist-19:latest
+    restart: unless-stopped
+    command: ["dnsdist", "--supervised", "/etc/dnsdist/dnsdist.conf"]
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "853:853/tcp"
+      - "443:443/tcp"
+      - "784:784/udp"
+    volumes:
+      - ../../configs/dns/dnsdist.conf:/etc/dnsdist/dnsdist.conf:ro
+    depends_on:
+      ftn-unbound:
+        condition: service_healthy
+      ftn-coredns:
+        condition: service_healthy
+
+  ftn-unbound:
+    image: mvance/unbound:1.22.0
+    restart: unless-stopped
+    expose:
+      - "53/udp"
+      - "53/tcp"
+    volumes:
+      - ../../configs/dns/unbound.conf:/opt/unbound/etc/unbound/unbound.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "drill @127.0.0.1 -p 53 familytimenet.com SOA >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  ftn-coredns:
+    image: coredns/coredns:1.12.4
+    restart: unless-stopped
+    command: ["-conf", "/etc/coredns/Corefile"]
+    expose:
+      - "53/udp"
+      - "53/tcp"
+    volumes:
+      - ../../configs/dns/Corefile:/etc/coredns/Corefile:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9153/metrics >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  ftn-technitium:
+    image: technitium/dns-server:latest
+    restart: unless-stopped
+    profiles: ["enterprise"]
+    ports:
+      - "5380:5380/tcp"
+      - "53443:53443/tcp"
+    volumes:
+      - ftn-technitium:/etc/dns
+
+  ftn-caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    profiles: ["acme"]
+    volumes:
+      - ../../configs/dns/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ftn-caddy-data:/data
+      - ftn-caddy-config:/config
+    depends_on:
+      ftn-dnsdist:
+        condition: service_started
+
+volumes:
+  ftn-technitium:
+  ftn-caddy-data:
+  ftn-caddy-config:
