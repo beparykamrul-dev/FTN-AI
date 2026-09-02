@@ -6,6 +6,7 @@
   <meta name="description" content="FTN unified operations control center">
   <title>FTN Control Center</title>
   <link rel="stylesheet" href="/control-center.css">
+  <link rel="stylesheet" href="/upstream-monitoring.css">
 </head>
 <body>
   <header class="topbar">
@@ -15,7 +16,7 @@
   <div class="layout">
     <aside class="sidebar">
       <nav aria-label="Primary">
-        <a class="active" href="#overview">Overview</a><a href="#network">Network</a><a href="#topology">Topology</a><a href="#dns">DNS Guard</a><a href="#security">Security</a><a href="#automation">Automation</a><a href="#approvals">Approvals</a><a href="#jobs">Jobs</a><a href="#services">Services</a><a href="#governance">Governance</a><a href="#system">System</a>
+        <a class="active" href="#overview">Overview</a><a href="#network">Network</a><a href="#upstream-monitoring">Upstream Monitoring</a><a href="#topology">Topology</a><a href="#dns">DNS Guard</a><a href="#security">Security</a><a href="#automation">Automation</a><a href="#approvals">Approvals</a><a href="#jobs">Jobs</a><a href="#services">Services</a><a href="#governance">Governance</a><a href="#system">System</a>
       </nav>
       <div class="policy"><strong>Safety policy</strong><span>Manual-by-default</span><small>Privileged network, firewall, routing and destructive actions remain approval-gated.</small></div>
     </aside>
@@ -28,6 +29,7 @@
         <article class="metric"><span>Governance</span><strong>Approval</strong><small>privileged changes gated</small></article>
       </section>
       <section id="network" class="panel"><div class="panel-head"><div><h2>Network & control-plane</h2><p class="muted">Live endpoints are shown only when the API provides evidence.</p></div></div><div id="networkGrid" class="cards"><article class="card muted">Loading network health…</article></div></section>
+      <section id="upstream-monitoring" class="panel"><div class="panel-head"><div><h2>Upstream Monitoring</h2><p class="muted">Provider-neutral health for transit, approved CDN/interconnect and IX paths.</p><p id="upstreamMonitoringSummary" class="upstream-monitoring-note muted">Waiting for telemetry…</p></div></div><div id="upstreamMonitoringGrid" class="upstream-monitoring-grid"><article class="card muted">Loading upstream telemetry…</article></div></section>
       <section id="topology" class="panel"><div class="panel-head"><div><h2>Topology & infrastructure evidence</h2><p class="muted">No fabricated topology: only registered nodes and integration health are displayed.</p></div></div><div id="topologyGrid" class="cards"><article class="card muted">Loading topology evidence…</article></div></section>
       <section id="dns" class="panel"><div class="panel-head"><div><h2>DNS Guard</h2><p class="muted">Policy metadata and aggregate events; raw DNS queries are never rendered here.</p></div></div><div id="dnsGrid" class="cards"><article class="card muted">Loading DNS Guard…</article></div></section>
       <section id="security" class="panel"><div class="panel-head"><div><h2>Security & active defense</h2><p class="muted">Defensive actions are limited to authorized FTN-owned assets and remain auditable.</p></div></div><div class="cards"><article class="card"><h3>Detection</h3><p>Wazuh, control-plane, DNS, routing and observability correlation.</p><span class="tag">Observe</span><span class="tag">Correlate</span><span class="tag">Alert</span></article><article class="card"><h3>Containment</h3><p>Bounded health recovery, rate limiting and temporary containment only.</p><span class="tag">FTN-owned only</span><span class="tag">Verified</span></article><article class="card"><h3>Prohibited</h3><p>No retaliation, external exploitation, credential theft or data exfiltration.</p><span class="tag">Policy enforced</span></article></div></section>
@@ -41,5 +43,6 @@
     </main>
   </div>
   <script src="/control-center.js" defer></script>
+  <script src="/upstream-monitoring.js" defer></script>
 </body>
 </html>
