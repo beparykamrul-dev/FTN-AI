@@ -51,3 +51,17 @@ jobs:
           KOPIA_SERVER_PASSWORD: ci-kopia-server-password
           KOPIA_VERSION: latest
         run: docker compose -f docker-compose.yml --profile observability --profile backup --profile wireless config --quiet
+
+      - name: Validate FTN control center assets
+        run: |
+          node --check frontend/control-center/control-center.js
+          test -s frontend/control-center/index.html
+          test -s frontend/control-center/control-center.css
+          test -s deployment/control-center/nginx.conf
+
+      - name: Validate FTN control center Compose
+        working-directory: deployment/control-center
+        env:
+          FTN_API_AUTH_TOKEN: ci-control-token
+          DATABASE_URL: postgres://ftn:ci-password@localhost:5432/ftn?sslmode=disable
+        run: docker compose -f docker-compose.yml config --quiet
