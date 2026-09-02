@@ -1,0 +1,94 @@
+name: FTN Production Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ftn-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy FTN-owned control plane
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate deployment inputs
+        run: |
+          set -euo pipefail
+          test -f services/control-plane/Dockerfile
+          test -f services/control-plane/docker-compose.yml
+          test -f services/control-plane/go.mod
+          test -f services/control-plane/schema.sql
+          for f in services/control-plane/migrations/*.sql; do test -s "$f"; done
+
+      - name: Repository validation
+        run: bash scripts/validate-repo.sh
+
+      - name: Build and test control plane
+        working-directory: services/control-plane
+        run: |
+          set -euo pipefail
+          go test ./...
+          go build -trimpath ./...
+          docker compose config --quiet
+
+      - name: Configure SSH
+        env:
+          FTN_DEPLOY_SSH_KEY: ${{ secrets.FTN_DEPLOY_SSH_KEY }}
+          FTN_PRODUCTION_HOST: ${{ secrets.FTN_PRODUCTION_HOST }}
+          FTN_PRODUCTION_PORT: ${{ secrets.FTN_PRODUCTION_PORT }}
+        run: |
+          set -euo pipefail
+          test -n "$FTN_DEPLOY_SSH_KEY"
+          test -n "$FTN_PRODUCTION_HOST"
+          port="${FTN_PRODUCTION_PORT:-22}"
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$FTN_DEPLOY_SSH_KEY" > ~/.ssh/ftn_deploy_key
+          ssh-keygen -y -f ~/.ssh/ftn_deploy_key >/dev/null
+          ssh-keyscan -p "$port" -H "$FTN_PRODUCTION_HOST" >> ~/.ssh/known_hosts
+          echo "FTN_SSH_PORT=$port" >> "$GITHUB_ENV"
+
+      - name: Package release
+        run: |
+          set -euo pipefail
+          tar --exclude=.git --exclude=.github --exclude='*.log' -czf ftn-ai-release.tar.gz services/control-plane scripts configs
+
+      - name: Upload release
+        env:
+          FTN_PRODUCTION_HOST: ${{ secrets.FTN_PRODUCTION_HOST }}
+          FTN_PRODUCTION_USER: ${{ secrets.FTN_PRODUCTION_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$FTN_PRODUCTION_USER"
+          ssh -i ~/.ssh/ftn_deploy_key -p "$FTN_SSH_PORT" -o BatchMode=yes "$FTN_PRODUCTION_USER@$FTN_PRODUCTION_HOST" 'mkdir -p /opt/ftn-ai/releases'
+          scp -i ~/.ssh/ftn_deploy_key -P "$FTN_SSH_PORT" -o BatchMode=yes ftn-ai-release.tar.gz "$FTN_PRODUCTION_USER@$FTN_PRODUCTION_HOST:/opt/ftn-ai/releases/ftn-ai-${GITHUB_SHA}.tar.gz"
+
+      - name: Activate release and verify
+        env:
+          FTN_PRODUCTION_HOST: ${{ secrets.FTN_PRODUCTION_HOST }}
+          FTN_PRODUCTION_USER: ${{ secrets.FTN_PRODUCTION_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/ftn_deploy_key -p "$FTN_SSH_PORT" -o BatchMode=yes "$FTN_PRODUCTION_USER@$FTN_PRODUCTION_HOST" \
+            "set -euo pipefail; mkdir -p /opt/ftn-ai/current; tar -xzf /opt/ftn-ai/releases/ftn-ai-${GITHUB_SHA}.tar.gz -C /opt/ftn-ai/current --strip-components=0; cd /opt/ftn-ai/current/services/control-plane; docker compose up -d --build; for i in \$(seq 1 45); do if curl --fail --silent http://127.0.0.1:8080/readyz >/dev/null; then exit 0; fi; sleep 2; done; docker compose logs --tail=200 control-plane postgres; exit 1"
+
+      - name: Production health check
+        env:
+          FTN_PRODUCTION_HOST: ${{ secrets.FTN_PRODUCTION_HOST }}
+          FTN_PRODUCTION_USER: ${{ secrets.FTN_PRODUCTION_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/ftn_deploy_key -p "$FTN_SSH_PORT" -o BatchMode=yes "$FTN_PRODUCTION_USER@$FTN_PRODUCTION_HOST" \
+            'set -euo pipefail; curl --fail --silent --show-error http://127.0.0.1:8080/healthz; curl --fail --silent --show-error http://127.0.0.1:8080/readyz'
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/ftn_deploy_key
