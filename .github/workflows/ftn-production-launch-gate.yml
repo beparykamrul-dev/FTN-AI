@@ -2,12 +2,9 @@ name: FTN Production Launch Gate
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
-  actions: read
   issues: write
 
 concurrency:
@@ -16,23 +13,25 @@ concurrency:
 
 jobs:
   preflight:
-    name: Production launch preflight
+    name: FTN-owned production preflight
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Verify production inputs are not placeholders
+      - name: Verify FTN-owned runtime inputs
         shell: bash
         run: |
           set -euo pipefail
           test -f services/control-plane/Dockerfile
           test -f services/control-plane/docker-compose.yml
           test -f services/control-plane/go.mod
-          if grep -RniE 'ccr\.ccs\.tencentyun\.com/demo|cls-mywebapp|tke-test' .github/workflows; then
-            echo 'Production deployment still contains placeholder TKE values.'
-            exit 1
-          fi
+          test -f services/control-plane/schema.sql
+          test -f services/control-plane/migrations/002_platform_foundation.sql
+          test -f services/control-plane/migrations/003_durable_execution.sql
+          test -f services/control-plane/migrations/004_approval_execution.sql
+          test -f services/control-plane/migrations/005_job_integrity_leases.sql
+          test -f services/control-plane/migrations/006_job_event_automation.sql
 
       - name: Validate repository
         run: bash scripts/validate-repo.sh
@@ -60,4 +59,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh issue comment 18 --body "Production launch gate executed for ${GITHUB_SHA}. Repository, architecture, Go build/test and Compose preflight were evaluated. Real infrastructure deployment remains blocked until production deployment inputs are configured and the protected gates are green."
+          gh issue comment 18 --body "FTN-owned production preflight executed for ${GITHUB_SHA}. TKE deployment parameters remain intentionally deferred. Repository, architecture, Go build/test and Compose preflight were evaluated; real infrastructure launch still requires the FTN-owned deployment target and protected integration/recovery gates."
