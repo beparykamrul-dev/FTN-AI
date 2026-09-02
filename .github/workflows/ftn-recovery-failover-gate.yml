@@ -141,27 +141,31 @@ jobs:
           set -euo pipefail
           job_id="${{ steps.job.outputs.job_id }}"
           docker compose restart postgres
+          ready=0
           for i in {1..45}; do
-            if docker compose exec -T postgres pg_isready -U ftn -d ftn >/dev/null 2>&1; then break; fi
+            if docker compose exec -T postgres pg_isready -U ftn -d ftn >/dev/null 2>&1; then ready=1; break; fi
             sleep 2
           done
+          test "$ready" = 1
           curl --fail --silent --show-error http://127.0.0.1:8080/readyz | grep -q '"database":"ok"'
           docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 \
             -c "select status, attempts from durable_jobs where id='${job_id}'::uuid and status='succeeded';" | grep -q succeeded
 
-      - name: Restart control plane and verify persistence
+      - name: Restart control plane and verify readiness
         working-directory: services/control-plane
         run: |
           set -euo pipefail
-          job_id="${{ steps.job.outputs.job_id }}"
           docker compose restart control-plane
+          ready=0
           for i in {1..45}; do
-            if curl --fail --silent http://127.0.0.1:8080/readyz >/dev/null; then exit 0; fi
+            if curl --fail --silent http://127.0.0.1:8080/readyz >/dev/null; then ready=1; break; fi
             sleep 2
           done
-          docker compose logs control-plane
-          exit 1
-          
+          if [[ "$ready" != 1 ]]; then
+            docker compose logs control-plane
+            exit 1
+          fi
+
       - name: Verify persisted job after control-plane restart
         run: |
           set -euo pipefail
