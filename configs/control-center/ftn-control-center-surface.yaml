@@ -1,0 +1,43 @@
+apiVersion: ftn.network/v1
+kind: ControlCenterSurface
+metadata:
+  name: ftn-unified-control-center
+spec:
+  sourceOfTruth: control-plane
+  sections:
+    - overview
+    - network
+    - core-router
+    - backbone
+    - multi-tunnel
+    - routing
+    - dns
+    - security
+    - monitoring
+    - automation
+    - approvals
+    - jobs
+    - services
+    - billing
+    - customers
+    - governance
+    - backup
+    - disaster-recovery
+    - system
+  execution:
+    read: automatic
+    health: automatic
+    plan: automatic
+    configure: approval-required
+    route-change: approval-required
+    firewall-change: approval-required
+    delete: explicit-approval
+  evidence:
+    no-fabricated-state: true
+    audit-every-privileged-action: true
+    prechange-snapshot: true
+    postchange-verification: true
+    rollback-when-safe: true
+  ownership:
+    network-actions: ftn-owned-only
+    credentials: secret-store-only
