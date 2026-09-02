@@ -1,0 +1,68 @@
+apiVersion: ftn.network/v1
+kind: MultiTunnelTransportPolicy
+metadata:
+  name: ftn-multi-tunnel
+spec:
+  purpose: resilient multi-path connectivity across authorized FTN infrastructure
+  scope:
+    assets: ftn-owned-only
+    identities: authorized-ftn-identities
+  paths:
+    - protocol: wireguard
+      transports: [udp]
+      role: primary
+    - protocol: amneziawg
+      transports: [udp]
+      role: secondary
+    - protocol: openvpn
+      transports: [tcp, udp]
+      role: secondary
+    - protocol: hysteria2
+      transports: [udp]
+      role: quic-secondary
+    - protocol: shadowsocks
+      transports: [tcp, udp]
+      role: application-transport
+    - protocol: xray
+      transports: [tcp, udp, quic]
+      role: application-transport
+    - protocol: gre
+      transports: [ip]
+      role: site-to-site
+    - protocol: sslh
+      transports: [tcp]
+      role: multiplexer
+    - protocol: websocket
+      transports: [tcp]
+      role: application-transport
+    - protocol: grpc
+      transports: [tcp]
+      role: application-transport
+    - protocol: quic
+      transports: [udp]
+      role: transport
+    - protocol: tls
+      transports: [tcp]
+      role: security
+    - protocol: dot
+      transports: [tcp]
+      role: dns
+    - protocol: doh
+      transports: [tcp]
+      role: dns
+    - protocol: doq
+      transports: [udp]
+      role: dns
+  selection:
+    max_active_paths: 4
+    health_required: true
+    latency_weighted: true
+    automatic_failover: true
+    deterministic_order: true
+  safety:
+    ownership_verification: required
+    credentials: secret-store-only
+    route_or_firewall_change: approval-required
+    external_restriction_bypass: prohibited
+    unauthorized_access: prohibited
+    retaliation: prohibited
