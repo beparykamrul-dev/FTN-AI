@@ -1,0 +1,43 @@
+apiVersion: ftn.network/v1
+kind: SecurityIntegration
+metadata:
+  name: wazuh
+spec:
+  enabled: true
+  mode: hybrid
+  collection:
+    endpoint: env:WAZUH_API_URL
+    credentials: secret-store:wazuh-api
+    tls_verify: true
+    raw_event_retention: false
+  scope:
+    hosts: ftn-owned
+    network_devices: ftn-owned
+    workloads: ftn-owned
+  correlation:
+    sources: [wazuh, control-plane, dns, routing, observability]
+    severity_mapping: [info, low, medium, high, critical]
+  automation:
+    mode: manual-by-default
+    auto:
+      - observe
+      - correlate
+      - alert
+      - recommend
+      - backup
+      - health-recover
+    approval_required:
+      - configuration-change
+      - firewall-change
+      - routing-change
+      - credential-change
+      - service-disable
+    explicit_approval_required:
+      - delete
+      - destructive-recovery
+  audit:
+    enabled: true
+    immutable_decision_log: true
+  privacy:
+    raw_credentials: never-store
+    raw_dns_queries: disabled
