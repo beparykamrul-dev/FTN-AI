@@ -1,4 +1,6 @@
-# This workflow builds, publishes and deploys the FTN-AI container to Tencent Kubernetes Engine (TKE).
+# This workflow builds, publishes and deploys the FTN-AI control-plane container to Tencent Kubernetes Engine (TKE).
+# The repository is a multi-service monorepo, so the Docker build context must point at the
+# service Dockerfile instead of assuming a repository-root Dockerfile exists.
 name: Tencent Kubernetes Engine
 
 on:
@@ -10,6 +12,7 @@ env:
   TKE_REGION: ap-guangzhou
   TKE_CLUSTER_ID: cls-mywebapp
   DEPLOYMENT_NAME: tke-test
+  DOCKERFILE: services/control-plane/Dockerfile
 
 permissions:
   contents: read
@@ -23,8 +26,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      - name: Verify build inputs
+        run: |
+          test -f "$DOCKERFILE"
+          test -f services/control-plane/go.mod
+          test -f services/control-plane/go.sum
+
       - name: Build Docker image
-        run: docker build -t "${TKE_IMAGE_URL}:${GITHUB_SHA}" .
+        run: docker build --file "$DOCKERFILE" --tag "${TKE_IMAGE_URL}:${GITHUB_SHA}" .
 
       - name: Login TKE Registry
         env:
