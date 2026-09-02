@@ -1,0 +1,36 @@
+apiVersion: ftn.network/v1
+kind: GeoFlow2
+metadata:
+  name: ftn-geo-flow
+spec:
+  purpose: geo-aware flow classification and routing telemetry
+  inputs:
+    - netflow
+    - ipfix
+    - sflow
+    - bgp-rib
+    - bgp-bmp
+    - dns-metadata
+  enrichment:
+    ip_database: geoip2-compatible-mmdb
+    asn_database: geoip2-compatible-mmdb
+    cache_ttl_seconds: 3600
+  privacy:
+    raw_payload_capture: false
+    raw_dns_queries: false
+    retain_source_ip: false
+    aggregate_before_persistence: true
+  outputs:
+    - country
+    - region
+    - asn
+    - prefix
+    - provider
+    - latency_class
+    - traffic_class
+  routing_integration:
+    bgp_policy_input: true
+    route_change_requires_approval: true
+  observability:
+    prometheus: true
+    event_stream: true
