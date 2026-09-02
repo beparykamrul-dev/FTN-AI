@@ -12,7 +12,7 @@ on:
     types: [completed]
 
 permissions:
-  actions: read
+  actions: write
   contents: read
   issues: write
 
@@ -22,14 +22,23 @@ concurrency:
 
 jobs:
   triage:
-    name: Record failed gate for repair
+    name: Record failure and perform one safe retry
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Create or update repair issue
+      - name: Retry failed jobs once
+        if: ${{ github.event.workflow_run.run_attempt == 1 }}
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run rerun --failed "$RUN_ID"
+
+      - name: Create or update repair issue
+        env:
+          GH_TOKEN: ${{ github.token }}
           RUN_NAME: ${{ github.event.workflow_run.name }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -46,6 +55,9 @@ jobs:
 
           This issue was created automatically because a protected FTN validation gate failed.
 
+          The assistant performs one safe automatic retry of failed jobs. If the failure remains,
+          the issue becomes the repair queue for the next engineering pass.
+
           ### Repair order
           1. Inspect the failed job and logs.
           2. Reproduce the failure locally/inside CI where possible.
@@ -55,13 +67,14 @@ jobs:
           6. Close this issue only after the repaired gate is green.
 
           ### Safety boundary
-          CI may validate, build, test, inspect, and record evidence. Privileged infrastructure changes remain approval-gated.
+          CI may validate, build, test, retry failed CI jobs once, and record evidence.
+          Privileged infrastructure changes remain approval-gated.
           EOF
           )
 
           existing=$(gh issue list --state open --search "${title} in:title" --json number --jq '.[0].number // empty')
           if [[ -n "${existing}" ]]; then
-            gh issue comment "${existing}" --body "A new failure was recorded: ${RUN_URL}\n\nCommit: ${HEAD_SHA}"
+            gh issue comment "${existing}" --body "Failure recorded: ${RUN_URL}\n\nCommit: ${HEAD_SHA}\n\nOne automatic CI retry was requested when eligible."
           else
             gh issue create --title "${title}" --body "${body}"
           fi
