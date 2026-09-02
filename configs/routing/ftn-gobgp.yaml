@@ -4,7 +4,7 @@ metadata:
   name: ftn-core-routing
 spec:
   implementation: github.com/osrg/gobgp/v4
-  version: v4.5.0
+  version: v4.8.0
   mode: controller-managed
   safety:
     default_action: reject
@@ -13,6 +13,11 @@ spec:
     max_prefixes_per_session: 100000
     graceful_restart: true
     enforce_rpki_when_available: true
+    enforce_max_prefixes: true
+    enforce_bfd_when_configured: true
+    prechange_snapshot: true
+    postchange_verification: true
+    rollback_when_safe: true
   address_families:
     - ipv4-unicast
     - ipv6-unicast
@@ -29,7 +34,10 @@ spec:
     prometheus: true
     route_events: true
     peer_state_events: true
+    bmp: true
   integration:
     control_plane: ftn-control-plane
     policy_engine: lua
     geo_engine: geoflow2
+    approval_engine: change-approvals
+    audit_engine: event-journal
