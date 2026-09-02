@@ -60,10 +60,10 @@
   async function refresh() {
     grid.innerHTML = '<article class="card muted">Refreshing upstream telemetry…</article>';
     try {
-      const headers = {};
-      const token = sessionStorage.getItem('ftn_api_token');
+      const headers = {Accept: 'application/json'};
+      const token = sessionStorage.getItem('ftn-control-token');
       if (token) headers.Authorization = `Bearer ${token}`;
-      const response = await fetch(endpoint, { headers, cache: 'no-store' });
+      const response = await fetch(endpoint, {headers, cache: 'no-store'});
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       render(normalize(await response.json()));
     } catch (error) {
@@ -72,7 +72,7 @@
     }
   }
 
-  window.FTNUpstreamMonitoring = { refresh };
+  window.FTNUpstreamMonitoring = {refresh};
   refresh();
   setInterval(refresh, 15000);
 })();
