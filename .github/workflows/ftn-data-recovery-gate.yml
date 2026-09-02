@@ -1,0 +1,30 @@
+name: FTN Data Recovery Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ftn-recovery-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  database-recovery:
+    name: Database migration and restore integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate Compose configuration
+        env:
+          FTN_DB_PASSWORD: ci-only-password
+        run: docker compose -f services/control-plane/docker-compose.yml config
+
+      - name: Validate PostgreSQL migration chain and restore
+        run: bash scripts/validate-db-restore.sh
