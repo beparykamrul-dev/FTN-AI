@@ -16,6 +16,7 @@ services:
       - ./migrations/006_job_event_automation.sql:/docker-entrypoint-initdb.d/006-job-event-automation.sql:ro
       - ./migrations/007_qkd_security.sql:/docker-entrypoint-initdb.d/007-qkd-security.sql:ro
       - ./migrations/008_data_governor.sql:/docker-entrypoint-initdb.d/008-data-governor.sql:ro
+      - ./migrations/009_data_governance_controls.sql:/docker-entrypoint-initdb.d/009-data-governance-controls.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ftn -d ftn"]
       interval: 5s
