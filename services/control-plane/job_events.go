@@ -3,13 +3,13 @@ package main
 import (
     "context"
     "encoding/json"
+
+    "github.com/jackc/pgx/v5"
 )
 
 // appendJobEventTx records a job lifecycle transition in the same transaction
 // as the state mutation. This keeps the execution journal authoritative.
-func appendJobEventTx(ctx context.Context, tx interface {
-    Exec(context.Context, string, ...any) (interface{ RowsAffected() int64 }, error)
-}, tenantID, eventType, correlationID, aggregateID string, payload any) error {
+func appendJobEventTx(ctx context.Context, tx pgx.Tx, tenantID, eventType, correlationID, aggregateID string, payload any) error {
     b, err := json.Marshal(payload)
     if err != nil { return err }
     if _, err = tx.Exec(ctx, `select pg_advisory_xact_lock(hashtext($1::text))`, tenantID); err != nil { return err }
