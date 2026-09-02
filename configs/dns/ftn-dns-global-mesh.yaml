@@ -1,0 +1,65 @@
+apiVersion: ftn.network/v1
+kind: DNSGlobalMesh
+metadata:
+  name: ftn-global-dns
+spec:
+  domain: familytimenet.com
+  architecture: anycast-mesh
+  authoritative:
+    primary:
+      engine: powerdns
+      nodes: [ns1]
+    secondary:
+      engine: knot
+      nodes: [ns2, ns3]
+  recursive:
+    engine: unbound
+    policy_engine: dns-guard
+    frontends:
+      engine: dnsdist
+      protocols: [udp, tcp, dot, doh, doq]
+  anycast:
+    enabled: true
+    health_routing: true
+    withdraw_on_failure: true
+    communities:
+      - ftn-dns
+  geo_routing:
+    enabled: true
+    strategy: latency
+    fallback: nearest-healthy
+  upstream_pool:
+    mode: adaptive
+    selection: lowest-healthy-latency
+    parallel_probe: true
+    failover: automatic
+    providers:
+      - id: cloudflare
+        role: upstream
+        protocols: [udp, tcp, dot, doh]
+      - id: google
+        role: upstream
+        protocols: [udp, tcp, dot, doh]
+      - id: quad9
+        role: upstream
+        protocols: [udp, tcp, dot, doh]
+      - id: adguard
+        role: upstream
+        protocols: [udp, tcp, dot, doh]
+      - id: opendns
+        role: upstream
+        protocols: [udp, tcp, dot, doh]
+  resilience:
+    cache: local-and-shared
+    stale_if_error: true
+    circuit_breaker: true
+    dnssec_validation: true
+  observability:
+    metrics: prometheus
+    logs: structured
+    latency_histograms: true
+  security:
+    dnssec: enabled
+    tls_certificates: private-pki-or-acme
+    management_mtls: true
+    raw_query_logging: false
