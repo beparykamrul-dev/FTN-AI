@@ -1,19 +1,19 @@
-# FTN One-Click Production Bootstrap
+# FTN One-Click Production Deployment
 
-The installer is idempotent: it installs host prerequisites, Docker Engine/Compose, clones or updates FTN-AI, generates missing runtime secrets locally, validates Compose, builds the control plane, starts PostgreSQL + migrations + control-plane, and waits for readiness.
+FTN uses one canonical deployment path for the repository's production-marked Compose stacks.
 
 ## Fresh Debian/Ubuntu server
 
-After this branch is merged to `main`:
+For a specific branch:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/beparykamrul-dev/FTN-AI/fix/migration-validation-015-023/install.sh | sudo env FTN_REF=fix/migration-validation-015-023 bash
+```
+
+After this work is merged to `main`, use:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/beparykamrul-dev/FTN-AI/main/install.sh | sudo bash
-```
-
-For branch testing:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/beparykamrul-dev/FTN-AI/repair/ci-build-2026-09-03/install.sh | sudo env FTN_REF=repair/ci-build-2026-09-03 bash
 ```
 
 ## Existing checkout
@@ -22,18 +22,41 @@ curl -fsSL https://raw.githubusercontent.com/beparykamrul-dev/FTN-AI/repair/ci-b
 sudo bash deploy/one-click/bootstrap.sh
 ```
 
-Default installation directory: `/opt/ftn-ai`. Override with `FTN_INSTALL_DIR=/srv/ftn-ai`.
+The bootstrap prepares the host and hands off to `deploy/one-click/live.sh`. The live runner discovers every `docker-compose.yml` / `compose.yml` explicitly marked with:
 
-## Runtime behavior
+```yaml
+x-ftn-production-stack: true
+```
 
-- Docker is enabled and started through systemd.
-- PostgreSQL data persists in the named Compose volume.
-- Missing `FTN_DB_PASSWORD` and `FTN_API_AUTH_TOKEN` are generated locally with OpenSSL and stored only in `.env` (`0600`).
-- Compose is validated before startup.
-- Bootstrap waits for `/readyz` or `/healthz` and prints service diagnostics if readiness fails.
-- Credentials are never printed and provider credentials are not embedded in the repository.
+It validates every discovered stack before changing runtime state, starts the control-plane/migration foundation first, then starts the remaining production stacks, waits for control-plane readiness, and prints final service status.
+
+## Runtime guarantees
+
+- Docker Engine and Compose v2 are required.
+- Runtime secrets are generated locally when missing and stored in `.env` with mode `0600`.
+- Existing secrets are preserved; credentials are never printed.
+- Production discovery is opt-in; test/development Compose files are not started accidentally.
+- PostgreSQL data uses persistent Compose volumes.
+- Database migrations run through the declared migration runner.
 - Privileged FTN operations remain policy/approval-gated.
+- Deployment fails closed if no production stack is marked or a Compose validation/readiness check fails.
 
-## Public production exposure
+## Adding another production service
 
-The one-click bootstrap starts the FTN control plane but does not silently change DNS, router ACLs, firewall policy, or provider credentials. Public exposure should add the approved TLS/reverse-proxy, DNS, firewall, backup, monitoring, and secret-management configuration for the target FTN environment.
+Put its Compose manifest anywhere in the repository and add:
+
+```yaml
+x-ftn-production-stack: true
+```
+
+Then redeploy with:
+
+```bash
+sudo bash deploy/one-click/live.sh
+```
+
+No second deployment script is required.
+
+## Public exposure
+
+One-click deployment does not silently change DNS, router ACLs, firewall policy, certificates, or provider credentials. Those changes remain explicit and environment-specific. TLS/reverse proxy, DNS, firewall, backups, monitoring, and external-provider credentials must be configured through their approved FTN deployment components.
