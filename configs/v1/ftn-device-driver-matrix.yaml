@@ -1,0 +1,104 @@
+version: v1
+kind: FTNDeviceDriverMatrix
+metadata:
+  name: ftn-device-driver-matrix
+spec:
+  architecture:
+    core: provider-neutral
+    adapter_isolation: true
+    discovery: automatic
+    read_only_probe: automatic
+    privileged_mutation: approval-required
+    snapshot_before_change: true
+    verify_after_change: true
+    rollback_when_safe: true
+  device_classes:
+    router:
+      drivers: [mikrotik-routeros, frr, generic-snmp, netconf, restconf, gnmi, ssh]
+      telemetry: [snmp, netflow, ipfix, streaming-telemetry]
+    switch:
+      drivers: [generic-snmp, netconf, restconf, gnmi, ssh]
+      telemetry: [snmp, streaming-telemetry]
+    olt:
+      drivers: [bdcom-olt, vsol-olt, dbc-olt, corlink-olt, generic-snmp, ssh]
+      telemetry: [snmp, syslog, vendor-telemetry]
+    onu:
+      drivers: [generic-omci, vendor-snmp, vendor-api]
+      telemetry: [omci, snmp]
+    server:
+      drivers: [redfish, ipmi, ssh, generic-snmp]
+      telemetry: [redfish, snmp, node-exporter]
+    storage:
+      drivers: [redfish, vendor-api, generic-snmp, ssh]
+      telemetry: [snmp, vendor-telemetry]
+    camera:
+      drivers: [onvif]
+      telemetry: [onvif]
+    tv:
+      drivers: [ftn-client, generic-http]
+      telemetry: [ftn-metrics]
+    mobile:
+      drivers: [ftn-client]
+      telemetry: [ftn-metrics]
+    embedded:
+      drivers: [generic-snmp, ssh, vendor-api]
+      telemetry: [snmp, vendor-telemetry]
+    virtual_node:
+      drivers: [libvirt, proxmox, kubernetes, generic-api]
+      telemetry: [metrics, events]
+  vendor_profiles:
+    mikrotik:
+      driver: mikrotik-routeros
+      management: [routeros-api, ssh]
+      telemetry: [snmp, netflow, ipfix]
+      configuration: approval-required
+    bdcom:
+      driver: bdcom-olt
+      management: [snmp, ssh]
+      telemetry: [snmp, syslog]
+      configuration: approval-required
+    vsol:
+      driver: vsol-olt
+      management: [snmp, ssh]
+      telemetry: [snmp, syslog]
+      configuration: approval-required
+    dbc:
+      driver: dbc-olt
+      management: [snmp, ssh]
+      telemetry: [snmp, syslog]
+      configuration: approval-required
+    corlink:
+      driver: corlink-olt
+      management: [snmp, ssh]
+      telemetry: [snmp, syslog]
+      configuration: approval-required
+    generic:
+      driver: generic-snmp
+      management: [snmp, ssh]
+      telemetry: [snmp, syslog]
+  protocol_policy:
+    capability_negotiation: true
+    multi_protocol: true
+    multi_transport: true
+    health_required: true
+    automatic_non_destructive_failover: true
+    security_downgrade: prohibited
+    unregistered_driver: prohibited
+    unknown_vendor_fallback: read_only
+  identity:
+    keys: [device_id, vendor_neutral_model, serial_fingerprint]
+    credentials: external-secret-store
+    private_keys: external-secret-store
+  observability:
+    metrics: ftn-metrics
+    flow_telemetry: silk-primary
+    raw_payload_persistence: false
+    secret_logging: false
+    audit_events: true
+  lifecycle: [discover, identify, validate, probe, monitor, reconcile, quarantine, retire]
+  safety:
+    ftn_owned_or_authorized_devices_only: true
+    external_target_control: prohibited
+    destructive_actions: explicit-approval
+    firmware_upgrade: explicit-approval
+    configuration_change: approval-required
