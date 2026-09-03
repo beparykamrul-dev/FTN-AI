@@ -1,0 +1,28 @@
+id: ftn-core-router-ecmp
+version: v1
+kind: FTNCoreRouterECMP
+metadata:
+  name: FTN Core Router ECMP
+  vendor: Family Time Network
+spec:
+  multipath:
+    enabled: true
+    max_paths: 8
+    deterministic_selection: true
+  eligibility:
+    require_healthy: true
+    reject_bfd_down: true
+    require_next_hop: true
+  selection:
+    primary: path_health_score
+    tie_break: path_id
+    secondary_tie_break: next_hop
+  reconciliation:
+    drift_detection: true
+    apply_requires_approval: true
+    pre_change_snapshot: true
+    post_change_verify: true
+    rollback_when_safe: true
+  safety:
+    plan_only: true
+    ft_owned_only: true
