@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestValidNode(t *testing.T) {
@@ -41,10 +42,11 @@ func TestRegisterNodeUpsertsInMemory(t *testing.T) {
 
 func TestPlacementChoosesHealthyLowLatencyNode(t *testing.T) {
 	old := nodes
+	now := time.Now().UTC()
 	nodes = []Node{
-		{ID: "slow", Provider: "p1", Region: "BD", Services: []string{"media"}, CPUPercent: 20, RAMPercent: 20, LatencyMs: 80, Healthy: true},
-		{ID: "fast", Provider: "p2", Region: "BD", Services: []string{"media"}, CPUPercent: 30, RAMPercent: 30, LatencyMs: 10, Healthy: true},
-		{ID: "down", Provider: "p3", Region: "BD", Services: []string{"media"}, LatencyMs: 1, Healthy: false},
+		{ID: "slow", Provider: "p1", Region: "BD", Services: []string{"media"}, CPUPercent: 20, RAMPercent: 20, LatencyMs: 80, Healthy: true, LastSeen: now},
+		{ID: "fast", Provider: "p2", Region: "BD", Services: []string{"media"}, CPUPercent: 30, RAMPercent: 30, LatencyMs: 10, Healthy: true, LastSeen: now},
+		{ID: "down", Provider: "p3", Region: "BD", Services: []string{"media"}, LatencyMs: 1, Healthy: false, LastSeen: now},
 	}
 	defer func() { nodes = old }()
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/placement/preview", strings.NewReader(`{"service_id":"media","region":"BD"}`))
@@ -72,7 +74,7 @@ func TestPlacementRejectsUnknownService(t *testing.T) {
 
 func TestPlacementRejectsUnsupportedServiceOnNodes(t *testing.T) {
 	old := nodes
-	nodes = []Node{{ID: "n1", Provider: "p1", Services: []string{"ftndns"}, Healthy: true}}
+	nodes = []Node{{ID: "n1", Provider: "p1", Services: []string{"ftndns"}, Healthy: true, LastSeen: time.Now().UTC()}}
 	defer func() { nodes = old }()
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/placement/preview", strings.NewReader(`{"service_id":"media"}`))
 	w := httptest.NewRecorder()

@@ -42,14 +42,15 @@ func TestFlowTemplateCacheScopedByExporter(t *testing.T) {
 func TestDecodeIPFIXDataSet(t *testing.T) {
 	c := NewFlowTemplateCache()
 	key := FlowExporterKey{Address: "192.0.2.1", Protocol: "ipfix"}
-	t := FlowTemplate{ID: 256, Fields: []FlowTemplateField{
+	template := FlowTemplate{ID: 256, Fields: []FlowTemplateField{
 		{IE: 8, Length: 4}, {IE: 12, Length: 4}, {IE: 7, Length: 2}, {IE: 11, Length: 2},
 		{IE: 4, Length: 1}, {IE: 1, Length: 8}, {IE: 2, Length: 8},
 	}}
-	if err := c.Put(key, t); err != nil {
+	if err := c.Put(key, template); err != nil {
 		t.Fatal(err)
 	}
-	p := make([]byte, 37)
+	// 4+4+2+2+1+8+8 = 29 bytes for one complete record.
+	p := make([]byte, 29)
 	copy(p[0:4], []byte{192, 0, 2, 10})
 	copy(p[4:8], []byte{198, 51, 100, 20})
 	binary.BigEndian.PutUint16(p[8:10], 1234)
