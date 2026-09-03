@@ -1,0 +1,62 @@
+version: v1
+kind: FTNSystemUnification
+metadata:
+  name: ftn-system-unification
+spec:
+  identity:
+    platform: FTN
+    implementation: original-ftn
+    provider_neutral_core: true
+  native_fabric:
+    services: all-ftn-services
+    protocols: all-registered-ftn-protocols
+    transports: multi-protocol-multi-transport
+    negotiation: capability-health-policy
+    failover: deterministic-non-destructive
+  planes:
+    control: ftn-control-plane
+    service: ftn-main-server
+    routing: ftn-routed
+    backbone: ftn-buckboon
+    mesh: ftn-mesh
+    access: ftn-interface
+    drivers: ftn-device-driver
+    dns: ftn-dns
+    ddns: ftn-ddns
+    anycast: ftn-anycast
+    telemetry: silk-primary
+    metrics: ftn-metrics
+    security: ftn-pki
+    ai: ftn-ai
+    billing: ftn-billing
+    support: ftn-support
+    clients: ftn-client-fabric
+  data:
+    transactional: postgresql
+    pooling: pgbouncer
+    flow_telemetry: silk
+    metrics: timescaledb
+    cache: redis
+    analytics: clickhouse
+    backup: s3-compatible
+  device_fabric:
+    classes: [router, switch, olt, onu, server, storage, camera, tv, mobile, embedded, virtual_node]
+    discovery: automatic-read-only
+    capability_detection: automatic
+    mutation: approval-required
+  security:
+    identity: pki-mtls
+    secrets: external-secret-store
+    raw_payload_persistence: false
+    credential_logging: false
+    unauthorized_external_control: prohibited
+  change_control:
+    snapshot_before_change: true
+    approval_for_privileged_change: true
+    verification_after_change: true
+    rollback_when_safe: true
+    destructive_action: explicit-approval
+  release:
+    implementation_claims_require_evidence: true
+    production_verification_requires_live_evidence: true
+    no_simulation_as_production_evidence: true
