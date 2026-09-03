@@ -6,32 +6,15 @@ import (
 	"sync"
 )
 
-type ProviderKind string
-
-const (
-	ProviderPowerDNS ProviderKind = "powerdns"
-	ProviderTechnitium ProviderKind = "technitium"
-	ProviderCoreDNS ProviderKind = "coredns"
-	ProviderUnbound ProviderKind = "unbound"
-	ProviderDNSDist ProviderKind = "dnsdist"
-	ProviderGoDNS ProviderKind = "godns"
-	ProviderAnycast ProviderKind = "anycast"
-	ProviderDNSPod ProviderKind = "dnspod"
-	ProviderCloudflare ProviderKind = "cloudflare"
-	ProviderAkamai ProviderKind = "akamai"
-	ProviderFTN ProviderKind = "ftn"
-	ProviderGoBGP ProviderKind = "gobgp"
-)
-
 // Provider is the provider-neutral DNS/node contract. Adding a provider or
 // FTN DNS node must not require rebuilding the existing FamilyTimeNet DNS.
 type Provider struct {
 	ID           string       `json:"id"`
-	Kind         ProviderKind `json:"kind"`
+	Kind         ProviderType `json:"kind"`
 	Name         string       `json:"name"`
 	Endpoint     string       `json:"endpoint,omitempty"`
 	Region       string       `json:"region,omitempty"`
-	Scope        string       `json:"scope,omitempty"` // local|global
+	Scope        string       `json:"scope,omitempty"`
 	Enabled      bool         `json:"enabled"`
 	Primary      bool         `json:"primary"`
 	Capabilities []string     `json:"capabilities,omitempty"`
@@ -85,8 +68,6 @@ func (r *ProviderRegistry) List() []Provider {
 	return out
 }
 
-// Select returns enabled providers matching the requested scope and zone.
-// Existing providers remain untouched when a new node is registered.
 func (r *ProviderRegistry) Select(scope, zone string) []Provider {
 	scope = strings.ToLower(strings.TrimSpace(scope))
 	zone = strings.TrimSpace(zone)
