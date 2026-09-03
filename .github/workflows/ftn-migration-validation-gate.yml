@@ -7,6 +7,7 @@ on:
       - 'services/control-plane/migrations/**'
       - 'services/control-plane/scripts/migrate.sh'
       - 'services/control-plane/scripts/validate_migrations.sh'
+      - 'services/control-plane/tests/sql/**'
       - '.github/workflows/ftn-migration-validation-gate.yml'
   pull_request:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - 'services/control-plane/migrations/**'
       - 'services/control-plane/scripts/migrate.sh'
       - 'services/control-plane/scripts/validate_migrations.sh'
+      - 'services/control-plane/tests/sql/**'
       - '.github/workflows/ftn-migration-validation-gate.yml'
   workflow_dispatch:
 
@@ -26,7 +28,7 @@ concurrency:
 
 jobs:
   migration-validation:
-    name: PostgreSQL 015-023 migration validation
+    name: PostgreSQL 015-024 migration + execution-integrity validation
     runs-on: ubuntu-latest
 
     services:
@@ -56,3 +58,24 @@ jobs:
           MIGRATION_VALIDATION_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
           MIGRATION_VALIDATION_ALLOW_CREATE: '1'
         run: bash services/control-plane/scripts/validate_migrations.sh
+
+      - name: Replay migrations into isolated semantic-test database
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: |
+          set -euo pipefail
+          db="ftn_semantic_gate_${GITHUB_RUN_ID}"
+          cleanup() { psql "$PGURL" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$db\" WITH (FORCE);" >/dev/null || true; }
+          trap cleanup EXIT
+          psql "$PGURL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";" >/dev/null
+          mapfile -t migrations < <(find services/control-plane/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort -V)
+          last_version=''
+          for file in "${migrations[@]}"; do
+            version="${file%%_*}"
+            [[ "$version" =~ ^[0-9]+$ ]] || continue
+            [[ "$version" == "$last_version" ]] && continue
+            echo "Applying $file"
+            psql "$PGURL" -d "$db" -X -v ON_ERROR_STOP=1 -f "services/control-plane/migrations/$file" >/dev/null
+            last_version="$version"
+          done
+          psql "$PGURL" -d "$db" -X -v ON_ERROR_STOP=1 -f services/control-plane/tests/sql/024_execution_integrity_state_machine.sql
