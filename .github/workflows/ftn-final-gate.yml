@@ -1,0 +1,54 @@
+name: FTN Final Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+      - name: Go format
+        run: |
+          files=$(gofmt -l .)
+          test -z "$files" || { echo "$files"; exit 1; }
+      - name: Go test
+        run: go test ./...
+      - name: Go vet
+        run: go vet ./...
+      - name: Validate shell scripts
+        run: |
+          find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n
+      - name: Validate YAML and JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          try:
+              import yaml
+          except ImportError:
+              print('PyYAML unavailable'); sys.exit(1)
+          for p in Path('.').rglob('*'):
+              if '.git' in p.parts or not p.is_file():
+                  continue
+              if p.suffix.lower() in {'.yaml','.yml'}:
+                  yaml.safe_load(p.read_text())
+              elif p.suffix.lower()=='.json':
+                  json.loads(p.read_text())
+          print('config validation: PASS')
+          PY
+      - name: Final integrity check
+        run: bash scripts/ftn-final-integrity-check.sh
