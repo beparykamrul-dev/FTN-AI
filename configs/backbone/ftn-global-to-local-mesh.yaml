@@ -1,0 +1,44 @@
+apiVersion: ftn.network/v1
+kind: FTNGlobalLocalMesh
+metadata:
+  name: ftn-global-local-backbone
+spec:
+  purpose: route eligible FTN global traffic to the nearest healthy FTN local service or POP
+  scope:
+    assets: ftn-owned-only
+  planes:
+    control: ftn-routed
+    forwarding: linux-fib-or-approved-router
+    service-discovery: ftn-service-registry
+  topology:
+    core: [core-a, core-b]
+    edge: multi-pop
+    transport: [ipv4, ipv6]
+    routing: [ebgp, ibgp, ospf, bfd, ecmp]
+  steering:
+    prefer: lowest-healthy-latency
+    fallback: nearest-healthy-pop
+    capacity-aware: true
+    withdraw-unhealthy-service: true
+    preserve-sessions-when-possible: true
+  local-services:
+    dns: true
+    cache: true
+    api: true
+    iptv: true
+    software-downloads: true
+  traffic-policy:
+    default: route-through-ftn-backbone
+    external-route-changes: approval-required
+    service-route-changes: approval-required
+  safety:
+    prechange-snapshot: true
+    postchange-verification: true
+    rollback-when-safe: true
+    external-targets: prohibited
+  telemetry:
+    latency: true
+    packet-loss: true
+    utilization: true
+    route-state: true
+    service-health: true
