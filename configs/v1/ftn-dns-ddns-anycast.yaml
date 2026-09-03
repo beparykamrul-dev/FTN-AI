@@ -1,0 +1,53 @@
+version: v1
+kind: FTNDNSDDNSAnycast
+metadata:
+  name: ftn-dns-ddns-anycast
+spec:
+  dns:
+    authoritative: true
+    recursive: true
+    dnssec: true
+    transports: [dns, dot, doh, doq]
+    anycast: true
+  ddns:
+    enabled: true
+    authenticated_updates: true
+    device_identity: pki-mtls
+    api_updates: true
+    ipv4: true
+    ipv6: true
+    ttl_policy: health-aware
+    stale_record_prevention: true
+    audit: true
+    rollback: true
+  anycast:
+    address_families: [ipv4, ipv6]
+    route_control: ftn-routed
+    backbone: ftn-buckboon
+    mesh: ftn-mesh
+    health_required: true
+    bfd: true
+    rpki: true
+    withdraw_on_service_failure: true
+    withdraw_on_node_failure: true
+    deterministic_selection: true
+  service_origin:
+    owner: ftn-main-server
+    third_party_local_origin: false
+  device_integration:
+    interface: ftn-interface
+    driver: ftn-device-driver
+    supported: [router, switch, server, virtual_node, olt, onu]
+    capability_detection: automatic
+    privileged_changes: approval-required
+  telemetry:
+    primary: silk
+    metrics: ftn-metrics
+    identity: [hostname, record_type, device_id, node_id, anycast_prefix]
+    raw_dns_payload: false
+    secrets: false
+  security:
+    credentials: external-secret-store
+    unauthorized_ddns_update: reject
+    unauthorized_anycast_advertisement: reject
+    security_downgrade: prohibited
