@@ -1,0 +1,38 @@
+version: v1
+kind: FTNClientCompatibility
+metadata:
+  name: ftn-client-compatibility
+spec:
+  principle: existing-mobile-and-service-compatibility
+  clients:
+    android: preserve-existing-apis-and-protocols
+    web: preserve-existing-apis-and-sessions
+    desktop: preserve-existing-apis-and-sessions
+    tv: preserve-existing-apis-and-playback-contracts
+  services:
+    billing: compatible-contract
+    dns: compatible-contract
+    iptv: compatible-contract
+    support: compatible-contract
+    monitoring: compatible-contract
+    tunnel: compatible-contract
+  gateway:
+    api_versioning: enabled
+    backward_compatibility: required
+    graceful_downgrade: true
+    protocol_capability_negotiation: true
+    session_continuity: required
+    connection_draining: enabled
+  migration:
+    dual_read: allowed
+    dual_write: only-when-idempotent
+    canary: required-for-runtime-adapters
+    rollback: required
+  performance:
+    optimize-under-contract: true
+    client_rewrite_required: false
+    payload_schema_breaking_change: prohibited
+  security:
+    authentication: preserve-and-strengthen
+    authorization: required
+    secret_material: never-in-client-logs
