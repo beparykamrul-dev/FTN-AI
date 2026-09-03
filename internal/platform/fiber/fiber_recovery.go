@@ -1,13 +1,20 @@
 package fiber
 
 import (
-    "fmt"
-    "sort"
-    "sync"
-    "time"
+	"fmt"
+	"sort"
+	"sync"
+	"time"
 )
 
-type FiberNode struct { ID, ParentID, OLTID, ONUID, ResellerID, CustomerID string; Lat, Lon float64; Status string; LastSeen time.Time }
+type FiberNode struct {
+	ID, ParentID, OLTID, ONUID, ResellerID, CustomerID string
+	Kind, Status string
+	Latitude, Longitude float64
+	Lat, Lon float64
+	LastSeen time.Time
+}
+
 type FiberMap struct { Nodes map[string]FiberNode; UpdatedAt time.Time }
 type RecoveryPlan struct { NodeID string; CandidateParentIDs []string; Reason string; Confidence float64; RequiresApproval bool; CreatedAt time.Time }
 type RecoveryEngine struct { mu sync.RWMutex; nodes map[string]FiberNode; plans map[string]RecoveryPlan }
