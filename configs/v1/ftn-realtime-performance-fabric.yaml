@@ -1,0 +1,65 @@
+version: v1
+kind: FTNRealtimePerformanceFabric
+metadata:
+  name: ftn-realtime-performance
+spec:
+  purpose: low-latency authorized FTN service and packet processing
+  zero_latency:
+    target: minimize-software-overhead
+    mechanisms:
+      - io_uring
+      - busy_poll-when-capable
+      - socket-buffer-autotune
+      - tcp-fast-open-when-policy-allows
+      - reuseport
+      - zero_copy
+      - adaptive-batching
+    guarantee: none
+  psychic_ai_prefetch:
+    mode: predictive-prefetch
+    inputs: [SiLK-flow-metadata, RTT, loss, service-demand, cache-hotness]
+    actions:
+      - rank-likely-next-service
+      - warm-authorized-ftn-main-server-cache
+      - prepare-route-and-connection-metadata
+    raw_payload_capture: false
+    autonomous_network_changes: false
+  rdma_memory_pool:
+    enabled: true
+    mode: capability-gated
+    mechanisms: [registered-memory-pool, hugepages-when-capable, pinned-buffer-pool]
+    numa_aware: true
+    zero_copy: preferred
+    fallback: userspace-pool
+    production: hardware-and-kernel-gated
+  xdp_sniper:
+    name: defensive-fast-path
+    mode: policy-classification-and-drop
+    mechanisms: [XDP, eBPF]
+    actions: [allow, drop, rate-limit, redirect-to-ftn-service]
+    target_scope: ftn-owned-interfaces-only
+    destructive_actions: false
+    packet_capture: metadata-only
+  tun_tap:
+    enabled: true
+    interfaces: [TUN, TAP]
+    role: authorized-ftn-overlay-ingress
+    route_changes: approval-required
+  cloaking:
+    enabled: false
+    reason: anti-detection-or-restriction-evasion-not-supported
+    permitted_alternative: tls-encrypted-ftn-transport
+  unknown_sun:
+    status: unresolved
+    note: "'sun' is not treated as a protocol until its intended technology is identified."
+  governance:
+    hardware_capability_check: required
+    privileged_kernel_change: approval-required
+    route_or_firewall_change: approval-required
+    pre_change_snapshot: required
+    post_change_verification: required
+    audit: required
+    rollback: required
+  telemetry:
+    primary: silk
+    flow_identity: [tenant, exporter, subscriber, service, main_server]
