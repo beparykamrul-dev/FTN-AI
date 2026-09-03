@@ -1,0 +1,78 @@
+version: v1
+kind: FTNPerformanceFabric
+metadata:
+  name: ftn-performance-fabric
+spec:
+  objective: lightweight-fast-low-latency-service-fabric
+  compatibility:
+    existing_clients: preserve
+    existing_api_contracts: preserve
+    existing_service_endpoints: preserve
+    protocol_negotiation: capability-based
+    rollout: additive-first
+  dataplane:
+    packet_path:
+      capture_mode: metadata-only
+      raw_payload_persistence: false
+      sampling: adaptive
+      packet_batching: adaptive
+      zero_copy: preferred
+      io_uring: preferred
+      reuseport: enabled
+      busy_poll: capability-gated
+      xdp_ebpf: capability-gated
+      dpdk_vpp_fdio: capability-gated
+      rdma: capability-gated
+    fallback: safe-userspace
+  latency:
+    path_selection: rtt-loss-jitter-capacity
+    connection_pooling: true
+    keepalive: adaptive
+    compression: adaptive
+    backpressure: enabled
+    queue_aware: true
+  ai_prefetch:
+    enabled: true
+    inputs: [service-demand, flow-metadata, cache-hotness, rtt, loss]
+    payload_prediction: disabled
+    cache_warming: authorized-ftn-services-only
+    speculative_network_changes: disabled
+  telemetry:
+    primary: silk
+    flow_metadata: true
+    raw_packets: false
+    correlation: service-subscriber-path
+  databases:
+    routing:
+      role: transactional-control
+      engines: [postgresql]
+    telemetry:
+      role: high-volume-flow-analytics
+      engines: [silk, clickhouse]
+    cache:
+      role: ephemeral-low-latency
+      engines: [redis]
+    time_series:
+      role: metrics-and-health
+      engines: [timescaledb]
+    distributed_state:
+      role: coordination-when-required
+      engines: [cockroachdb]
+    object:
+      role: backups-artifacts
+      engines: [s3-compatible]
+    rule: service-uses-only-the-database-role-it-needs
+  resilience:
+    target_availability: 99.99-percent
+    no_single_dependency: true
+    health_aware_failover: true
+    graceful_degradation: true
+    restore_validation: true
+    idempotency: true
+  security:
+    mTLS: true
+    secrets: secret-store-only
+    authorization: required
+    raw_packet_access: explicit-authorization
+    route_or_firewall_changes: approval-required
+    external_system_changes: prohibited-by-default
