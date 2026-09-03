@@ -1,0 +1,46 @@
+id: ftn-core-router
+version: v1
+kind: FTNCoreRouter
+metadata:
+  name: FTN Core Router
+  vendor: Family Time Network
+  product: FTN Core Router
+  branding:
+    logo: ftn
+    background: ftn-network
+spec:
+  role: native-core-routing
+  control_plane:
+    protocols:
+      bgp: enabled
+      ospf: enabled
+      isis: enabled
+      bfd: enabled
+    route_policy: explicit
+    multipath: true
+    health_aware: true
+  dataplane:
+    native: true
+    qos: true
+    dscp: true
+    flow_classification: true
+  mesh:
+    enabled: true
+    dynamic: true
+    encrypted: true
+  telemetry:
+    enabled: true
+    route_events: true
+    peer_health: true
+    path_quality: true
+  safety:
+    ft_owned_only: true
+    approval_required_for_mutation: true
+    pre_change_snapshot: true
+    post_change_verify: true
+    rollback_when_safe: true
+  integrations:
+    mikrotik:
+      mode: external-adapter
+      mutation_approval_required: true
+      isolated_from_core: true
