@@ -12,11 +12,13 @@ type TopologyNode struct {
 }
 
 type TopologyEdge struct {
-	ID string `json:"id"`
+	ID string `json:"id,omitempty"`
 	From string `json:"from"`
 	To string `json:"to"`
 	DistanceMeters float64 `json:"distance_meters,omitempty"`
-	Status string `json:"status"`
+	Status string `json:"status,omitempty"`
+	Kind string `json:"kind,omitempty"`
+	Source DiscoverySource `json:"source,omitempty"`
 }
 
 type Topology struct {
