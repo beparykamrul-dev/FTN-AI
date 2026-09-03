@@ -34,7 +34,7 @@ func TestFlowListenerReceivesNetFlowV5(t *testing.T) {
 
     deadline := time.Now().Add(2 * time.Second)
     for time.Now().Before(deadline) {
-        if l.Stats().Records == 1 && len(runtime.flows) == 1 { return }
+        if l.Stats().Records == 1 && runtime.FlowCount() == 1 { return }
         time.Sleep(10 * time.Millisecond)
     }
     t.Fatalf("listener did not process flow: stats=%+v", l.Stats())
