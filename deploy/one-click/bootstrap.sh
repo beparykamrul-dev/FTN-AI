@@ -53,49 +53,7 @@ secret_or_generate FTN_SFU_API_SECRET
 secret_or_generate FTN_TURN_PASSWORD
 ensure_secret FTN_TURN_USERNAME "ftn"
 
-COMPOSE_FILE=""
-for candidate in \
-  "services/control-plane/docker-compose.yml" \
-  "docker-compose.yml" \
-  "compose.yml"; do
-  if [ -f "$candidate" ]; then COMPOSE_FILE="$candidate"; break; fi
-done
-
-[ -n "$COMPOSE_FILE" ] || fail 'No supported Compose manifest found'
-
-log "Validating Compose: $COMPOSE_FILE"
-docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" config --quiet
-
-log 'Building and starting FTN control plane'
-docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" up -d --build --remove-orphans
-
-log 'Waiting for FTN control plane readiness'
-ready=0
-for _ in $(seq 1 60); do
-  if curl -fsS --max-time 3 http://127.0.0.1:8080/readyz >/dev/null 2>&1 || \
-     curl -fsS --max-time 3 http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
-    ready=1
-    break
-  fi
-  sleep 2
-done
-
-if [ "$ready" -ne 1 ]; then
-  docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" ps
-  docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" logs --tail=120 control-plane postgres migration-runner || true
-  fail 'FTN control plane did not become ready'
-fi
-
-SFU_COMPOSE="services/ftn-sfu/docker-compose.yml"
-if [ -f "$SFU_COMPOSE" ] && [ "${FTN_ENABLE_REALTIME_SFU:-true}" != "false" ]; then
-  log 'Validating and starting FTN realtime SFU/TURN'
-  docker compose --env-file "$ROOT_DIR/.env" -f "$SFU_COMPOSE" config --quiet
-  docker compose --env-file "$ROOT_DIR/.env" -f "$SFU_COMPOSE" up -d --remove-orphans
-  log 'FTN realtime SFU/TURN: STARTED'
-fi
-
-log 'FTN control plane: READY'
-log 'Installed at: '"$ROOT_DIR"
-log 'Local endpoint: http://127.0.0.1:8080'
-log 'Realtime SFU endpoint: http://127.0.0.1:'"${FTN_SFU_HTTP_PORT:-7880}"
-log 'Use the generated .env for runtime secrets; credentials are never printed.'
+# All production Compose manifests are discovered and started by one canonical
+# runner. This keeps bootstrap, upgrades and recovery on the same execution path.
+chmod +x deploy/one-click/live.sh
+exec bash deploy/one-click/live.sh
