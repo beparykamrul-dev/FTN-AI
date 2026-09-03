@@ -10,72 +10,138 @@ spec:
   protocols:
     - id: wireguard
       family: vpn
-      transport: udp
+      transports: [udp]
       production: true
+      role: primary
     - id: amneziawg
       family: vpn
-      transport: udp
+      transports: [udp]
       production: true
+      role: secondary
     - id: openvpn
       family: vpn
       transports: [tcp, udp]
       production: true
+      role: secondary
     - id: hysteria2
       family: quic
-      transport: udp
+      transports: [udp]
       production: true
+      role: quic-secondary
     - id: shadowsocks
       family: proxy
       transports: [tcp, udp]
       production: true
+      role: application-transport
     - id: xray
       family: transport-framework
       transports: [tcp, udp, quic]
       production: true
+      role: application-transport
     - id: gre
       family: tunnel
-      transport: ip
+      transports: [ip]
       production: true
+      role: site-to-site
     - id: sslh
       family: multiplexer
-      transport: tcp
+      transports: [tcp]
       production: true
+      role: multiplexer
     - id: websocket
       family: application-transport
-      transport: tcp
+      transports: [tcp]
       production: true
     - id: grpc
       family: application-transport
-      transport: tcp
+      transports: [tcp]
       production: true
     - id: quic
       family: transport
-      transport: udp
+      transports: [udp]
       production: true
     - id: tls
       family: security
-      transport: tcp
+      transports: [tcp]
       production: true
     - id: dot
       family: dns
-      transport: tcp
+      transports: [tcp]
       port: 853
       production: true
     - id: doh
       family: dns
-      transport: tcp
+      transports: [tcp]
       port: 443
       production: true
     - id: doq
       family: dns
-      transport: udp
+      transports: [udp]
       port: 853
       production: true
+    - id: ssh
+      family: management
+      transports: [tcp]
+      production: true
+      role: authorized-management
+    - id: ssh-reverse
+      family: management
+      transports: [tcp]
+      production: true
+      role: authorized-reverse-management
+    - id: frp
+      family: reverse-tunnel
+      transports: [tcp, udp]
+      production: true
+      role: authorized-service-ingress
+    - id: rtunnel
+      family: reverse-tunnel
+      transports: [tcp]
+      production: true
+      role: authorized-service-ingress
+    - id: cloudflare-tunnel
+      family: external-ingress
+      transports: [https]
+      production: true
+      role: provider-adapter
+      ownership: external-provider
+    - id: ngrok
+      family: external-ingress
+      transports: [https]
+      production: true
+      role: provider-adapter
+      ownership: external-provider
+    - id: aether-core
+      family: ftn-transport-abstraction
+      transports: [provider-selected]
+      production: true
+      role: path-orchestration
+    - id: split-tunneling
+      family: routing-policy
+      transports: [policy]
+      production: true
+      role: include-exclude-routing
+    - id: sandbox
+      family: execution-isolation
+      transports: [local]
+      production: true
+      role: policy-runtime-isolation
     - id: pptp
       family: legacy-vpn
-      transport: tcp
+      transports: [tcp]
       production: false
       status: legacy-only
+  compatibility_only:
+    - id: ssr
+      family: legacy-proxy
+      enabled: false
+      status: restricted-compatibility
+      note: no bypass-oriented deployment or configuration
+    - id: obfs-local
+      family: traffic-obfuscation
+      enabled: false
+      status: restricted-compatibility
+      note: no restriction-bypass deployment or configuration
   policy:
     default_action: deny-unregistered
     protocol_allowlist_required: true
@@ -84,8 +150,13 @@ spec:
     qos_and_rate_limits: policy-controlled
     audit_selection: true
     credentials: secret-store-only
+    provider_adapters: explicit-allowlist-only
+    external_ingress: approval-required
+    management_tunnels: approval-required
+    split_tunnel_changes: approval-required
   safety:
     external_restriction_bypass: prohibited
     unauthorized_access: prohibited
     credential_theft: prohibited
     traffic_retaliation: prohibited
+    untrusted_provider_auto_activation: prohibited
