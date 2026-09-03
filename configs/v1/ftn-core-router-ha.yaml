@@ -1,0 +1,25 @@
+id: ftn-core-router-ha
+version: v1
+kind: FTNCoreRouterHA
+metadata:
+  name: ftn-core-router-ha
+spec:
+  active_standby: true
+  selection:
+    require_enabled: true
+    require_healthy: true
+    require_bgp_ready: true
+    reject_bfd_down: true
+    prefer_current_healthy: true
+  failover:
+    automatic_state_selection: true
+    route_changes: approval-gated
+    pre_change_snapshot: true
+    post_change_verify: true
+    rollback_when_safe: true
+  anti_flap:
+    delegated_to: exrouter-hysteresis
+  telemetry:
+    active_node: true
+    standby_node: true
+    failover_events: true
