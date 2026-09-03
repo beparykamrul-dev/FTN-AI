@@ -35,14 +35,14 @@ func TestDispatchNetFlowV9TemplateAndData(t *testing.T) {
 
 func TestDispatchIPFIXEnterpriseTemplate(t *testing.T) {
 	cache := NewFlowTemplateCache()
-	packet := make([]byte, 16+4+12+4+12)
+	packet := make([]byte, 16+24+16)
 	binary.BigEndian.PutUint16(packet[0:2], 10)
 	binary.BigEndian.PutUint16(packet[2:4], uint16(len(packet)))
 	binary.BigEndian.PutUint32(packet[8:12], 9)
 	binary.BigEndian.PutUint32(packet[12:16], 77)
 	off := 16
 	binary.BigEndian.PutUint16(packet[off:off+2], 2)
-	binary.BigEndian.PutUint16(packet[off+2:off+4], 16)
+	binary.BigEndian.PutUint16(packet[off+2:off+4], 24)
 	binary.BigEndian.PutUint16(packet[off+4:off+6], 300)
 	binary.BigEndian.PutUint16(packet[off+6:off+8], 2)
 	binary.BigEndian.PutUint16(packet[off+8:off+10], 8)
@@ -50,12 +50,26 @@ func TestDispatchIPFIXEnterpriseTemplate(t *testing.T) {
 	binary.BigEndian.PutUint16(packet[off+12:off+14], 0x8001)
 	binary.BigEndian.PutUint16(packet[off+14:off+16], 4)
 	binary.BigEndian.PutUint32(packet[off+16:off+20], 123)
-	// data set
-	off = 32
+	// Template-set padding.
+	off = 40
 	binary.BigEndian.PutUint16(packet[off:off+2], 300)
 	binary.BigEndian.PutUint16(packet[off+2:off+4], 12)
 	binary.BigEndian.PutUint32(packet[off+4:off+8], 0x0a000002)
 	binary.BigEndian.PutUint32(packet[off+8:off+12], 0x0a000003)
+	// Remaining four bytes are set padding and are intentionally not a record.
+	binary.BigEndian.PutUint32(packet[off+12:off+16], 0)
+
+	// Correct the template length: header 4 + template header 4 + two fields
+	// (4 + enterprise field 8) = 20 bytes. The extra four bytes are padding.
+	binary.BigEndian.PutUint16(packet[18:20], 20)
+	// Move data set to immediately after the 20-byte template set.
+	copy(packet[36:52], packet[40:56])
+	binary.BigEndian.PutUint16(packet[36:38], 300)
+	binary.BigEndian.PutUint16(packet[38:40], 12)
+	binary.BigEndian.PutUint32(packet[40:44], 0x0a000002)
+	binary.BigEndian.PutUint32(packet[44:48], 0x0a000003)
+	packet = packet[:48]
+	binary.BigEndian.PutUint16(packet[2:4], uint16(len(packet)))
 
 	got, err := DispatchFlowPacket(packet, "192.0.2.2", cache)
 	if err != nil { t.Fatalf("dispatch: %v", err) }
