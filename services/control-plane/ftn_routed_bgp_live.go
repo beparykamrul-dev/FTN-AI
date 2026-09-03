@@ -91,13 +91,14 @@ func (g *FTNGoBGPServer) AdvertiseIPv4Prefix(ctx context.Context, prefix string,
 	if err != nil {
 		return err
 	}
+	_ = nlri
 	attrs, err := anypb.New(&api.NextHopAttribute{NextHop: nh.String()})
 	if err != nil {
 		return err
 	}
 	_, err = g.server.AddPath(ctx, &api.AddPathRequest{Path: &api.Path{
 		Nlri: &api.NLRI{Nlri: &api.NLRI_Prefix{Prefix: &api.IPAddressPrefix{PrefixLen: uint32(p.Bits()), Prefix: p.Addr().String()}}},
-		Pattrs: []*anypb.Any{attrs, nlri},
+		Pattrs: []*anypb.Any{attrs},
 		Family: &api.Family{Afi: api.Family_AFI_IP, Safi: api.Family_SAFI_UNICAST},
 	}})
 	return err
