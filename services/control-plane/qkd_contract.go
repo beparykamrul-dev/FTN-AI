@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+const (
+	qkdReadPermission = "qkd.read"
+	qkdChangePermission = "qkd.change"
+)
+
 // QKDNode describes QKD/KMS inventory metadata only. Raw key material is never
 // represented by this contract.
 type QKDNode struct {
@@ -49,27 +54,27 @@ type QKDIntent struct {
 }
 
 func (a *App) qkdNodes(w http.ResponseWriter, r *http.Request) {
-	if !method(w, r, http.MethodGet) || !requirePermission(a, "qkd.read", w, r) { return }
+	if !method(w, r, http.MethodGet) || !requirePermission(a, qkdReadPermission, w, r) { return }
 	jsonResponse(w, http.StatusOK, map[string]any{"nodes": []QKDNode{}})
 }
 
 func (a *App) qkdLinks(w http.ResponseWriter, r *http.Request) {
-	if !method(w, r, http.MethodGet) || !requirePermission(a, "qkd.read", w, r) { return }
+	if !method(w, r, http.MethodGet) || !requirePermission(a, qkdReadPermission, w, r) { return }
 	jsonResponse(w, http.StatusOK, map[string]any{"links": []QKDLink{}})
 }
 
 func (a *App) qkdStatus(w http.ResponseWriter, r *http.Request) {
-	if !method(w, r, http.MethodGet) || !requirePermission(a, "qkd.read", w, r) { return }
+	if !method(w, r, http.MethodGet) || !requirePermission(a, qkdReadPermission, w, r) { return }
 	jsonResponse(w, http.StatusOK, map[string]any{"status": []QKDStatus{}})
 }
 
 func (a *App) qkdKMS(w http.ResponseWriter, r *http.Request) {
-	if !method(w, r, http.MethodGet) || !requirePermission(a, "qkd.read", w, r) { return }
+	if !method(w, r, http.MethodGet) || !requirePermission(a, qkdReadPermission, w, r) { return }
 	jsonResponse(w, http.StatusOK, map[string]any{"kms": []map[string]any{}})
 }
 
 func (a *App) qkdIntent(w http.ResponseWriter, r *http.Request) {
-	if !method(w, r, http.MethodPost) || !requirePermission(a, "qkd.change", w, r) { return }
+	if !method(w, r, http.MethodPost) || !requirePermission(a, qkdChangePermission, w, r) { return }
 	var req QKDIntent
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid_json"}); return
