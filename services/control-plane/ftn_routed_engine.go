@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -67,14 +68,37 @@ func (e *FTNRoutedEngine) SetCoreNodes(nodes []FTNCoreNode) {
 	e.core = append([]FTNCoreNode(nil), nodes...)
 }
 
+func (e *FTNRoutedEngine) adapters() []FTNBGPAdapter {
+	e.mu.RLock(); defer e.mu.RUnlock()
+	return append([]FTNBGPAdapter(nil), e.bgp...)
+}
+
 func (e *FTNRoutedEngine) ApplyApprovedRoute(in FTNRouteIntent, approved bool) error {
 	if !approved { return errors.New("route approval required") }
 	r, err := NormalizeFTNRoute(in.Route); if err != nil { return err }
 	if e.rib == nil || e.fib == nil { return errors.New("RIB and FIB implementations are required") }
+
 	if err := e.rib.Install(r); err != nil { return err }
-	if err := e.fib.Program(r); err != nil { _ = e.rib.Withdraw(r); return err }
-	for _, a := range e.bgp {
-		if a.Established() { if err := a.ApplyRoute(r); err != nil { return err } }
+	if err := e.fib.Program(r); err != nil {
+		_ = e.rib.Withdraw(r)
+		return err
+	}
+
+	appliedBGP := make([]FTNBGPAdapter, 0)
+	rollback := func() {
+		for i := len(appliedBGP)-1; i >= 0; i-- {
+			_ = appliedBGP[i].WithdrawRoute(r)
+		}
+		_ = e.fib.Remove(r)
+		_ = e.rib.Withdraw(r)
+	}
+	for _, a := range e.adapters() {
+		if !a.Established() { continue }
+		if err := a.ApplyRoute(r); err != nil {
+			rollback()
+			return fmt.Errorf("bgp adapter %s: %w", a.Name(), err)
+		}
+		appliedBGP = append(appliedBGP, a)
 	}
 	return nil
 }
@@ -83,9 +107,30 @@ func (e *FTNRoutedEngine) WithdrawApprovedRoute(in FTNRouteIntent, approved bool
 	if !approved { return errors.New("route approval required") }
 	r, err := NormalizeFTNRoute(in.Route); if err != nil { return err }
 	if e.rib == nil || e.fib == nil { return errors.New("RIB and FIB implementations are required") }
-	if err := e.fib.Remove(r); err != nil { return err }
-	if err := e.rib.Withdraw(r); err != nil { return err }
-	for _, a := range e.bgp { if a.Established() { _ = a.WithdrawRoute(r) } }
+
+	adapters := e.adapters()
+	removedBGP := make([]FTNBGPAdapter, 0)
+	rollback := func() {
+		_ = e.rib.Install(r)
+		_ = e.fib.Program(r)
+		for _, a := range removedBGP { _ = a.ApplyRoute(r) }
+	}
+	for _, a := range adapters {
+		if !a.Established() { continue }
+		if err := a.WithdrawRoute(r); err != nil {
+			rollback()
+			return fmt.Errorf("bgp adapter %s withdraw: %w", a.Name(), err)
+		}
+		removedBGP = append(removedBGP, a)
+	}
+	if err := e.fib.Remove(r); err != nil {
+		rollback()
+		return err
+	}
+	if err := e.rib.Withdraw(r); err != nil {
+		rollback()
+		return err
+	}
 	return nil
 }
 
