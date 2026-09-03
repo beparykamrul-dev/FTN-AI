@@ -9,7 +9,7 @@ registry="configs/transport/ftn-protocol-registry.yaml"
 [[ -s "$contract" ]] || { echo "missing native multi-protocol contract" >&2; exit 1; }
 [[ -s "$registry" ]] || { echo "missing protocol registry" >&2; exit 1; }
 
-for service in control api web dns ddns proxy socket websocket mesh buckboon routed metrics monitoring telemetry silk ai billing payment iptv support notification device_driver; do
+for service in control api web dns ddns proxy socket websocket mesh buckboon routed metrics monitoring telemetry silk ai billing payment iptv support notification device_driver sfu; do
   grep -Eq "^    ${service}: \[" "$contract" || { echo "missing protocol matrix for ${service}" >&2; exit 1; }
 done
 
@@ -19,6 +19,9 @@ grep -q 'capability_advertisement: true' "$contract"
 grep -q 'health_selection: true' "$contract"
 grep -q 'security_downgrade: prohibited' "$contract"
 grep -q 'primary: silk' "$contract"
+grep -q 'sfu: \[webrtc, websocket, http1, udp\]' "$contract"
 grep -q 'default_action: deny-unregistered' "$registry"
+grep -q 'id: livekit-sfu' "$registry"
+grep -q 'id: turn' "$registry"
 
 echo 'FTN native multi-protocol gate: PASS'
