@@ -1,0 +1,19 @@
+id: ftn-core-router-branding
+version: v1
+kind: FTNBranding
+metadata:
+  product: FTN Core Router
+  company: Family Time Network
+spec:
+  logo_key: ftn
+  background_key: ftn-network
+  title: FTN Core Router
+  subtitle: Family Time Network
+  theme: dark-network
+  surfaces:
+    control_plane: true
+    router_status: true
+    peer_status: true
+    route_policy: true
+    telemetry: true
+  rule: branding_only
