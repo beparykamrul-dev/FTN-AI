@@ -14,21 +14,7 @@ const (
 	LinkDegraded LinkState = "degraded"
 )
 
-type Link struct {
-	ID string `json:"id"`
-	From string `json:"from"`
-	To string `json:"to"`
-	State LinkState `json:"state"`
-	LatencyMS float64 `json:"latency_ms"`
-	LossPercent float64 `json:"loss_percent"`
-	Metric uint32 `json:"metric"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type LinkStateStore struct {
-	mu sync.RWMutex
-	links map[string]Link
-}
+type LinkStateStore struct { mu sync.RWMutex; links map[string]Link }
 
 func NewLinkStateStore() *LinkStateStore { return &LinkStateStore{links: make(map[string]Link)} }
 
@@ -36,6 +22,8 @@ func (s *LinkStateStore) Upsert(l Link) {
 	if l.ID == "" || l.From == "" || l.To == "" || l.From == l.To { return }
 	if l.UpdatedAt.IsZero() { l.UpdatedAt = time.Now().UTC() }
 	if l.Metric == 0 { l.Metric = healthMetric(l.LatencyMS, l.LossPercent) }
+	l.Healthy = l.State == LinkUp
+	l.Up = l.State == LinkUp
 	s.mu.Lock(); s.links[l.ID] = l; s.mu.Unlock()
 }
 
@@ -47,23 +35,7 @@ func healthMetric(latencyMS, lossPercent float64) uint32 {
 	return uint32(v)
 }
 
-func (s *LinkStateStore) Get(id string) (Link, bool) {
-	s.mu.RLock(); defer s.mu.RUnlock()
-	l, ok := s.links[id]
-	return l, ok
-}
-
-func (s *LinkStateStore) Snapshot() []Link {
-	s.mu.RLock(); out := make([]Link, 0, len(s.links)); for _, l := range s.links { out = append(out, l) }; s.mu.RUnlock()
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
-	return out
-}
-
+func (s *LinkStateStore) Get(id string) (Link, bool) { s.mu.RLock(); defer s.mu.RUnlock(); l, ok := s.links[id]; return l, ok }
+func (s *LinkStateStore) Snapshot() []Link { s.mu.RLock(); out := make([]Link, 0, len(s.links)); for _, l := range s.links { out = append(out, l) }; s.mu.RUnlock(); sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID }); return out }
 func (s *LinkStateStore) Healthy(id string) bool { l, ok := s.Get(id); return ok && l.State == LinkUp }
-
-// HealthyLinks returns recently observed links suitable for route calculation.
-func (s *LinkStateStore) HealthyLinks(now time.Time, maxAge time.Duration) []Link {
-	out := make([]Link, 0)
-	for _, l := range s.Snapshot() { if l.State == LinkUp && !l.UpdatedAt.IsZero() && now.Sub(l.UpdatedAt) <= maxAge { out = append(out, l) } }
-	return out
-}
+func (s *LinkStateStore) HealthyLinks(now time.Time, maxAge time.Duration) []Link { out := make([]Link, 0); for _, l := range s.Snapshot() { if l.State == LinkUp && !l.UpdatedAt.IsZero() && now.Sub(l.UpdatedAt) <= maxAge { out = append(out, l) } }; return out }

@@ -2,15 +2,18 @@ package mesh
 
 import "math"
 
-// PathCandidate represents a route produced from the current mesh state.
+// PathCandidate is the shared route candidate model used by mesh ranking and
+// cost-based optimization.
 type PathCandidate struct {
-	Nodes []string `json:"nodes"`
-	Cost uint64 `json:"cost"`
+	Nodes []string `json:"nodes,omitempty"`
+	Cost uint64 `json:"cost,omitempty"`
+	PeerID string `json:"peer_id,omitempty"`
+	LatencyMS float64 `json:"latency_ms,omitempty"`
+	LossPct float64 `json:"loss_pct,omitempty"`
+	CapacityMbps float64 `json:"capacity_mbps,omitempty"`
+	HealthScore uint8 `json:"health_score,omitempty"`
 }
 
-// ScoreLink combines routing metric with observed latency and packet loss.
-// Lower scores are preferred. The caller decides policy/approval before
-// applying any resulting route to a dataplane.
 func ScoreLink(metric uint32, latencyMS, lossPercent float64) uint64 {
 	if latencyMS < 0 { latencyMS = 0 }
 	if lossPercent < 0 { lossPercent = 0 }

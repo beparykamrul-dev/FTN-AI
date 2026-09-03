@@ -28,68 +28,62 @@ docker compose version >/dev/null 2>&1 || fail 'Docker Compose v2 is required'
 mkdir -p data logs backups secrets
 chmod 700 secrets
 
-# Runtime credentials are generated locally and never committed.
-# Repair an incomplete/malformed .env automatically so a previous bad value
-# cannot block the one-click deployment.
 touch .env
 chmod 600 .env
 
-DB_PASSWORD=''
-if grep -q '^FTN_DB_PASSWORD=' .env; then
-  DB_PASSWORD="$(sed -n 's/^FTN_DB_PASSWORD=//p' .env | tail -n 1)"
-fi
-
-if [ -z "$DB_PASSWORD" ]; then
-  DB_PASSWORD="$(openssl rand -hex 32)"
-  tmp_env="$(mktemp)"
-  awk -v p="$DB_PASSWORD" '
-    BEGIN{done=0}
-    /^FTN_DB_PASSWORD=/{if(!done){print "FTN_DB_PASSWORD=" p; done=1}; next}
-    {print}
-    END{if(!done) print "FTN_DB_PASSWORD=" p}
-  ' .env > "$tmp_env"
-  chmod 600 "$tmp_env"
-  mv "$tmp_env" .env
-  log 'Generated/ repaired FTN_DB_PASSWORD in local runtime .env'
-fi
-
-# Never print the credential. Verify only that a non-empty value exists.
-grep -q '^FTN_DB_PASSWORD=.' .env || fail 'Unable to create FTN_DB_PASSWORD'
-
-COMPOSE_FILE=''
-if [ -f docker-compose.yml ]; then
-  COMPOSE_FILE='docker-compose.yml'
-elif [ -f compose.yml ]; then
-  COMPOSE_FILE='compose.yml'
-elif [ -f services/control-plane/docker-compose.yml ]; then
-  COMPOSE_FILE='services/control-plane/docker-compose.yml'
-fi
-
-if [ -n "$COMPOSE_FILE" ]; then
-  log "Validating Compose: $COMPOSE_FILE"
-  docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" config >/dev/null
-  log 'Starting FTN stack'
-  docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" up -d --build --remove-orphans
-
-  log 'Waiting for control-plane health'
-  healthy=0
-  for _ in $(seq 1 30); do
-    if curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
-      healthy=1
-      break
-    fi
-    sleep 2
-  done
-
-  if [ "$healthy" -eq 1 ]; then
-    log 'Control-plane health: OK'
-  else
-    log 'Control-plane health check did not become ready; showing service state'
-    docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" ps
-    exit 1
+ensure_secret(){
+  local key="$1" value="$2" tmp
+  if ! grep -q "^${key}=" .env; then
+    printf '%s=%s\n' "$key" "$value" >> .env
   fi
-else
-  fail 'No Compose manifest found; cannot start the FTN stack'
+  tmp="$(mktemp)"
+  awk -v k="$key" -v v="$value" 'BEGIN{done=0} $0 ~ "^"k"=" {if(!done){print k"="v;done=1};next} {print} END{if(!done)print k"="v}' .env > "$tmp"
+  chmod 600 "$tmp"
+  mv "$tmp" .env
+}
+
+DB_PASSWORD="$(sed -n 's/^FTN_DB_PASSWORD=//p' .env | tail -n 1)"
+[ -n "$DB_PASSWORD" ] || DB_PASSWORD="$(openssl rand -hex 32)"
+ensure_secret FTN_DB_PASSWORD "$DB_PASSWORD"
+
+API_TOKEN="$(sed -n 's/^FTN_API_AUTH_TOKEN=//p' .env | tail -n 1)"
+[ -n "$API_TOKEN" ] || API_TOKEN="$(openssl rand -hex 32)"
+ensure_secret FTN_API_AUTH_TOKEN "$API_TOKEN"
+
+COMPOSE_FILE=""
+for candidate in \
+  "services/control-plane/docker-compose.yml" \
+  "docker-compose.yml" \
+  "compose.yml"; do
+  if [ -f "$candidate" ]; then COMPOSE_FILE="$candidate"; break; fi
+done
+
+[ -n "$COMPOSE_FILE" ] || fail 'No supported Compose manifest found'
+
+log "Validating Compose: $COMPOSE_FILE"
+docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" config --quiet
+
+log 'Building and starting FTN control plane'
+docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" up -d --build --remove-orphans
+
+log 'Waiting for FTN control plane readiness'
+ready=0
+for _ in $(seq 1 60); do
+  if curl -fsS --max-time 3 http://127.0.0.1:8080/readyz >/dev/null 2>&1 || \
+     curl -fsS --max-time 3 http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
+    ready=1
+    break
+  fi
+  sleep 2
+done
+
+if [ "$ready" -ne 1 ]; then
+  docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" ps
+  docker compose --env-file "$ROOT_DIR/.env" -f "$COMPOSE_FILE" logs --tail=120 control-plane postgres migration-runner || true
+  fail 'FTN control plane did not become ready'
 fi
 
-log 'FTN one-click bootstrap completed successfully'
+log 'FTN control plane: READY'
+log 'Installed at: '"$ROOT_DIR"
+log 'Local endpoint: http://127.0.0.1:8080'
+log 'Use the generated .env for runtime secrets; credentials are never printed.'

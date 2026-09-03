@@ -9,29 +9,12 @@ import (
 type Scope string
 
 const (
-	Local  Scope = "local"
+	Local Scope = "local"
 	Global Scope = "global"
 )
 
-type Node struct {
-	ID       string `json:"id"`
-	Region   string `json:"region"`
-	Endpoint string `json:"endpoint"`
-	Scope    Scope  `json:"scope"`
-	Enabled  bool   `json:"enabled"`
-}
-
-type Link struct {
-	From      string  `json:"from"`
-	To        string  `json:"to"`
-	RTTMillis float64 `json:"rttMillis"`
-	Loss      float64 `json:"loss"`
-	JitterMs  float64 `json:"jitterMs"`
-	Healthy   bool    `json:"healthy"`
-}
-
 type FullMesh struct {
-	mu    sync.RWMutex
+	mu sync.RWMutex
 	nodes map[string]Node
 	links map[string]Link
 }
@@ -52,7 +35,7 @@ func (m *FullMesh) UpsertNode(n Node) bool {
 }
 
 func (m *FullMesh) ObserveLink(l Link) bool {
-	if l.From == "" || l.To == "" || l.From == l.To || l.RTTMillis < 0 || l.Loss < 0 || l.Loss > 1 || l.JitterMs < 0 { return false }
+	if l.From == "" || l.To == "" || l.From == l.To || l.LatencyMS < 0 || l.LossPercent < 0 || l.LossPercent > 100 || l.JitterMs < 0 { return false }
 	m.mu.Lock(); m.links[linkKey(l.From, l.To)] = l; m.mu.Unlock()
 	return true
 }

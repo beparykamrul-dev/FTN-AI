@@ -1,23 +1,9 @@
 package ftnftp
 
 import (
-    "fmt"
-    "sync"
+	"fmt"
+	"sync"
 )
-
-type Object struct {
-    ID string `json:"id"`
-    TenantID string `json:"tenant_id"`
-    Bucket string `json:"bucket"`
-    Key string `json:"key"`
-    Size int64 `json:"size"`
-    ContentType string `json:"content_type,omitempty"`
-    Checksum string `json:"checksum,omitempty"`
-    OriginNode string `json:"origin_node,omitempty"`
-    StorageClass string `json:"storage_class"`
-    ReplicationClass string `json:"replication_class"`
-    Status string `json:"status"`
-}
 
 type Manager struct { mu sync.RWMutex; objects map[string]Object }
 func NewManager()*Manager{return &Manager{objects:map[string]Object{}}}

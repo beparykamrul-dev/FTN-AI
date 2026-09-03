@@ -18,7 +18,7 @@ grep -q 'services_are_protocol_endpoints: true' "$contract"
 grep -q 'capability_advertisement: true' "$contract"
 grep -q 'health_selection: true' "$contract"
 grep -q 'security_downgrade: prohibited' "$contract"
-grep -q 'silk_primary: true' "$contract"
+grep -q 'primary: silk' "$contract"
 grep -q 'default_action: deny-unregistered' "$registry"
 
 echo 'FTN native multi-protocol gate: PASS'

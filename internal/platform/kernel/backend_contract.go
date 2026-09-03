@@ -2,17 +2,20 @@ package kernel
 
 import "context"
 
-// Request is the provider-neutral boundary between a kernel client and the
-// FTN backend. Payloads are structured data; they are never shell commands.
+// Request is the shared structured operation boundary for backend execution
+// and registered kernel tools. It never carries arbitrary shell/code text.
 type Request struct {
-	ID           string
-	ServerID     string
-	Tool         string
-	Capability   string
-	Arguments    map[string]string
-	Mutating     bool
-	ApprovalID   string
-	Idempotency  string
+	ID          string
+	ServerID    string
+	Tool        string
+	Operation   string
+	Target      string
+	Capability  string
+	Arguments   map[string]string
+	Parameters  map[string]string
+	Mutating    bool
+	ApprovalID  string
+	Idempotency string
 }
 
 type Result struct {
@@ -23,12 +26,10 @@ type Result struct {
 	Verified  bool
 }
 
-// Backend is the minimal contract implemented by the FTN control plane.
 type Backend interface {
 	Execute(context.Context, Request) (Result, error)
 }
 
-// Policy is intentionally evaluated before a backend adapter executes.
 type Policy interface {
 	Authorize(context.Context, Request) error
 }
