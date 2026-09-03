@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -22,10 +25,10 @@ type RouterOSSecret struct {
 }
 
 type RouterOSAdapter struct {
-	client       *http.Client
-	baseURL      string
+	client        *http.Client
+	baseURL       string
 	credentialRef RouterOSCredentialRef
-	serverName   string
+	serverName    string
 	resolveSecret func(context.Context, RouterOSCredentialRef) (RouterOSSecret, error)
 }
 
@@ -66,7 +69,7 @@ func (a *RouterOSAdapter) doJSON(ctx context.Context, path string) ([]map[string
 func (a *RouterOSAdapter) Capabilities(ctx context.Context, device NetworkDevice) ([]string, error) {
 	if err := validateRouterOSDevice(device); err != nil { return nil, err }
 	if _, err := a.doJSON(ctx, "system/resource"); err != nil { return nil, err }
-	return []string{"health.read", "interface.read", "routing.read"}, nil
+	return []string{"health.read", "interface.read", "routing.read", "qos.snapshot"}, nil
 }
 
 func (a *RouterOSAdapter) CollectInterfaceState(ctx context.Context, device NetworkDevice) ([]InterfaceState, error) {
@@ -93,8 +96,45 @@ func (a *RouterOSAdapter) CollectRoutingState(ctx context.Context, device Networ
 	return out, nil
 }
 
+// ReadQoSSnapshot is read-only. It requires the control-plane ownership record
+// and the common execution guard, and only accepts FTN-QOS managed comments.
+// It never invokes an apply/configuration endpoint.
+func (a *RouterOSAdapter) ReadQoSSnapshot(ctx context.Context, device NetworkDevice, owned bool) (RouterOSSnapshot, error) {
+	if err := ValidateFTNOwnership(device, owned); err != nil { return RouterOSSnapshot{}, err }
+	intent := NetworkExecutionIntent{Device: device, Action: NetworkRead}
+	if err := ValidateNetworkExecutionIntent(intent); err != nil { return RouterOSSnapshot{}, err }
+	decision := EvaluateNetworkExecution(intent)
+	if !decision.Allowed { return RouterOSSnapshot{}, errors.New(decision.Reason) }
+
+	rows, err := a.doJSON(ctx, "queue/simple")
+	if err != nil { return RouterOSSnapshot{}, err }
+	rules, err := parseRouterOSQoSComments(rows)
+	if err != nil { return RouterOSSnapshot{}, err }
+	snapshot, err := NormalizeRouterOSSnapshot(RouterOSSnapshot{DeviceID: device.ID, Rules: rules, CapturedAt: time.Now().UTC()})
+	if err != nil { return RouterOSSnapshot{}, err }
+	return snapshot, nil
+}
+
+var routerOSQoSCommentRE = regexp.MustCompile(`^FTN-QOS service=([^ ]+) class=([^ ]+) path=([^ ]+) dscp=([0-9]+) priority=([0-9]+)$`)
+
+func parseRouterOSQoSComments(rows []map[string]any) ([]RouterOSQoSState, error) {
+	out := make([]RouterOSQoSState, 0, len(rows))
+	for _, row := range rows {
+		comment := strings.TrimSpace(stringValue(row["comment"]))
+		if !strings.HasPrefix(comment, "FTN-QOS ") { continue }
+		match := routerOSQoSCommentRE.FindStringSubmatch(comment)
+		if len(match) != 6 { return nil, errors.New("routeros_qos_malformed_ftn_comment") }
+		dscp, err := strconv.ParseUint(match[4], 10, 8); if err != nil || dscp > 63 { return nil, errors.New("routeros_qos_invalid_dscp") }
+		priority, err := strconv.ParseUint(match[5], 10, 8); if err != nil || priority > 255 { return nil, errors.New("routeros_qos_invalid_priority") }
+		out = append(out, RouterOSQoSState{ServiceID: match[1], Class: TrafficClass(match[2]), PathID: match[3], DSCP: uint8(dscp), Priority: uint8(priority)})
+	}
+	return normalizeRouterOSQoSState(out)
+}
+
 func validateRouterOSDevice(d NetworkDevice) error {
 	if strings.TrimSpace(d.ID) == "" || strings.TrimSpace(d.Address) == "" { return errors.New("routeros device id and address are required") }
+	if strings.TrimSpace(d.Protocol) == "" { return errors.New("routeros protocol is required") }
+	if normalizeProtocol(d.Protocol) != "routeros-api" { return errors.New("routeros protocol mismatch") }
 	if !isFTNDeviceKind(d.Kind) { return errors.New("routeros target ownership is not verified") }
 	return nil
 }
@@ -110,3 +150,5 @@ func uint64Value(v any) uint64 {
 	return 0
 }
 func uint32Value(v any) uint32 { value := uint64Value(v); if value > ^uint32(0) { return ^uint32(0) }; return uint32(value) }
+
+var _ = sort.Slice
