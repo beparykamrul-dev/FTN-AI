@@ -48,9 +48,12 @@ services:
       FTN_CONTROL_ADDR: ":8080"
       FTN_HEALTH_URL: "http://127.0.0.1:8080/healthz"
       FTN_API_AUTH_TOKEN: "${FTN_API_AUTH_TOKEN:-}"
+      FTN_FLOW_LISTEN_ADDR: "${FTN_FLOW_LISTEN_ADDR:-}"
+      FTN_FLOW_EXPORTERS: "${FTN_FLOW_EXPORTERS:-}"
       DATABASE_URL: postgres://ftn:${FTN_DB_PASSWORD}@postgres:5432/ftn?sslmode=disable
     ports:
       - "8080:8080"
+      - "${FTN_FLOW_PORT:-2055}:2055/udp"
     depends_on:
       postgres:
         condition: service_healthy
