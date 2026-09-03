@@ -33,22 +33,25 @@ chmod 600 .env
 
 ensure_secret(){
   local key="$1" value="$2" tmp
-  if ! grep -q "^${key}=" .env; then
-    printf '%s=%s\n' "$key" "$value" >> .env
-  fi
   tmp="$(mktemp)"
   awk -v k="$key" -v v="$value" 'BEGIN{done=0} $0 ~ "^"k"=" {if(!done){print k"="v;done=1};next} {print} END{if(!done)print k"="v}' .env > "$tmp"
   chmod 600 "$tmp"
   mv "$tmp" .env
 }
 
-DB_PASSWORD="$(sed -n 's/^FTN_DB_PASSWORD=//p' .env | tail -n 1)"
-[ -n "$DB_PASSWORD" ] || DB_PASSWORD="$(openssl rand -hex 32)"
-ensure_secret FTN_DB_PASSWORD "$DB_PASSWORD"
+secret_or_generate(){
+  local key="$1" value
+  value="$(sed -n "s/^${key}=//p" .env | tail -n 1)"
+  [ -n "$value" ] || value="$(openssl rand -hex 32)"
+  ensure_secret "$key" "$value"
+}
 
-API_TOKEN="$(sed -n 's/^FTN_API_AUTH_TOKEN=//p' .env | tail -n 1)"
-[ -n "$API_TOKEN" ] || API_TOKEN="$(openssl rand -hex 32)"
-ensure_secret FTN_API_AUTH_TOKEN "$API_TOKEN"
+secret_or_generate FTN_DB_PASSWORD
+secret_or_generate FTN_API_AUTH_TOKEN
+secret_or_generate FTN_SFU_API_KEY
+secret_or_generate FTN_SFU_API_SECRET
+secret_or_generate FTN_TURN_PASSWORD
+ensure_secret FTN_TURN_USERNAME "ftn"
 
 COMPOSE_FILE=""
 for candidate in \
@@ -83,7 +86,16 @@ if [ "$ready" -ne 1 ]; then
   fail 'FTN control plane did not become ready'
 fi
 
+SFU_COMPOSE="services/ftn-sfu/docker-compose.yml"
+if [ -f "$SFU_COMPOSE" ] && [ "${FTN_ENABLE_REALTIME_SFU:-true}" != "false" ]; then
+  log 'Validating and starting FTN realtime SFU/TURN'
+  docker compose --env-file "$ROOT_DIR/.env" -f "$SFU_COMPOSE" config --quiet
+  docker compose --env-file "$ROOT_DIR/.env" -f "$SFU_COMPOSE" up -d --remove-orphans
+  log 'FTN realtime SFU/TURN: STARTED'
+fi
+
 log 'FTN control plane: READY'
 log 'Installed at: '"$ROOT_DIR"
 log 'Local endpoint: http://127.0.0.1:8080'
+log 'Realtime SFU endpoint: http://127.0.0.1:'"${FTN_SFU_HTTP_PORT:-7880}"
 log 'Use the generated .env for runtime secrets; credentials are never printed.'
