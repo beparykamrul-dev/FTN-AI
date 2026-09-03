@@ -40,7 +40,7 @@ func trafficQualityKey(serviceID, pathID string) string {
 func validateTrafficQualityObservation(o TrafficQualityObservation, now time.Time) error {
     o.PathID = strings.TrimSpace(o.PathID)
     o.ServiceID = strings.TrimSpace(o.ServiceID)
-    if o.PathID == "" || o.ServiceID == "" || !o.Healthy {
+    if o.PathID == "" || o.ServiceID == "" {
         return errors.New("invalid_traffic_quality_identity")
     }
     if _, ok := trafficPolicyByID(o.ServiceID); !ok {
