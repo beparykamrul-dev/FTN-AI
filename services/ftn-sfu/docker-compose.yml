@@ -1,0 +1,39 @@
+services:
+  ftn-sfu:
+    image: livekit/livekit-server:v1.9.2
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["/bin/sh", "/etc/ftn-sfu/entrypoint.sh"]
+    ports:
+      - "${FTN_SFU_HTTP_PORT:-7880}:7880/tcp"
+      - "${FTN_SFU_RTC_TCP_PORT:-7881}:7881/tcp"
+      - "${FTN_SFU_RTC_UDP_PORT:-7882}:7882/udp"
+    volumes:
+      - ./entrypoint.sh:/etc/ftn-sfu/entrypoint.sh:ro
+      - ./livekit.yaml.template:/etc/ftn-sfu/livekit.yaml.template:ro
+      - ftn-sfu-config:/run/ftn-sfu
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:7880/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  ftn-turn:
+    image: coturn/coturn:4.6.3
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+    ports:
+      - "${FTN_TURN_PORT:-3478}:3478/tcp"
+      - "${FTN_TURN_PORT:-3478}:3478/udp"
+      - "${FTN_TURN_TLS_PORT:-5349}:5349/tcp"
+      - "${FTN_TURN_TLS_PORT:-5349}:5349/udp"
+      - "${FTN_TURN_MIN_PORT:-49152}-${FTN_TURN_MAX_PORT:-49252}:${FTN_TURN_MIN_PORT:-49152}-${FTN_TURN_MAX_PORT:-49252}/udp"
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+
+volumes:
+  ftn-sfu-config:
