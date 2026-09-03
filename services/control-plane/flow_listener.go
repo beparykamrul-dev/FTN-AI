@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"net"
 	"sync"
@@ -21,6 +20,7 @@ type FlowIngestStats struct {
 	Accepted uint64
 	Rejected uint64
 	Records uint64
+	Templates uint64
 	QueueDrops uint64
 }
 
@@ -93,17 +93,10 @@ func (l *FlowListener) processLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done(): return
 		case in := <-l.queue:
-			version := binary.BigEndian.Uint16(in.packet[:2])
-			var records []FlowRecord
-			var err error
-		switch version {
-			case 5:
-				records, err = DecodeNetFlowV5(in.packet, in.exporter)
-			default:
-				err = errors.New("template-aware v9/ipfix ingest requires protocol-specific set handling")
-			}
+			result, err := DispatchFlowPacket(in.packet, in.exporter, l.collector.Templates)
 			if err != nil { atomic.AddUint64(&l.stats.Rejected, 1); continue }
-			atomic.AddUint64(&l.stats.Records, uint64(len(records)))
+			atomic.AddUint64(&l.stats.Records, uint64(len(result.Records)))
+			atomic.AddUint64(&l.stats.Templates, uint64(result.Templates))
 		}
 	}
 }
@@ -111,6 +104,7 @@ func (l *FlowListener) processLoop(ctx context.Context) {
 func (l *FlowListener) Stats() FlowIngestStats {
 	return FlowIngestStats{
 		Packets: atomic.LoadUint64(&l.stats.Packets), Accepted: atomic.LoadUint64(&l.stats.Accepted),
-		Rejected: atomic.LoadUint64(&l.stats.Rejected), Records: atomic.LoadUint64(&l.stats.Records), QueueDrops: atomic.LoadUint64(&l.stats.QueueDrops),
+		Rejected: atomic.LoadUint64(&l.stats.Rejected), Records: atomic.LoadUint64(&l.stats.Records),
+		Templates: atomic.LoadUint64(&l.stats.Templates), QueueDrops: atomic.LoadUint64(&l.stats.QueueDrops),
 	}
 }
