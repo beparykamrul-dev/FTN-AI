@@ -1,0 +1,83 @@
+version: v1
+kind: FTNUniversalInterfaceFabric
+metadata:
+  name: ftn-universal-interface-fabric
+spec:
+  objective: any-authorized-device-can-offer-ftn-services-through-a-unified-interface
+  model:
+    interface: ftn-interface
+    service_plane: ftn-services
+    transport_plane: ftn-network-transport
+    backbone: ftn-buckboon
+    mesh: ftn-mesh
+    telemetry: silk-primary
+    control_plane: ftn-api
+  device_classes:
+    router: true
+    switch: true
+    olt: true
+    onu: true
+    server: true
+    storage: true
+    camera: true
+    tv: true
+    mobile: true
+    embedded: true
+    virtual_node: true
+  capability_layers:
+    - device-driver
+    - service-adapter
+    - protocol-adapter
+    - transport-adapter
+    - telemetry-adapter
+    - identity-adapter
+  service_exposure:
+    ftn_api: true
+    ftn_proxy: true
+    ftn_metrics: true
+    ftn_dns: true
+    ftn_socket: true
+    ftn_websocket: true
+    ftn_mesh: true
+    ftn_buckboon: true
+    ftn_silk: true
+    service_catalog: true
+  transport:
+    multi_protocol: true
+    multi_transport: true
+    capability_negotiation: true
+    health_selection: true
+    latency_loss_jitter_capacity_scoring: true
+    automatic_non_destructive_failover: true
+    security_downgrade: prohibited
+  backbone:
+    provider: ftn-buckboon
+    mesh_routing: ftn-mesh
+    route_control: ftn-routed
+    service_origin: ftn-main-server
+    third_party_local_service_origin: false
+  telemetry:
+    primary: silk
+    flow_identity: [device_id, service_id, path_id, subscriber_id, exporter_id]
+    raw_payload_persistence: false
+    secret_logging: false
+  device_policy:
+    ownership: ftn-owned-or-authorized
+    automatic_discovery: true
+    read_only_probe: automatic
+    capability_detection: automatic
+    service_enablement: approval-required
+    privileged_configuration: approval-required
+    firmware_change: explicit-approval
+  resilience:
+    adapter_failure_isolated: true
+    service_failure_isolated: true
+    transport_failover: true
+    telemetry_failure_never_blocks_service: true
+    rollback_when_safe: true
+  security:
+    identity: pki-mtls
+    credentials: external-secret-store
+    external_target_control: prohibited
+    unauthorized_access: prohibited
+    restriction_bypass: prohibited
