@@ -1,0 +1,34 @@
+apiVersion: ftn.network/v1
+kind: FlowCollector
+metadata:
+  name: ftn-flow-collector
+spec:
+  protocols:
+    - netflow-v5
+    - netflow-v9
+    - ipfix
+    - sflow
+  limits:
+    max_packet_bytes: 65535
+    max_records_per_packet: 4096
+    max_templates_per_exporter: 4096
+  normalization:
+    sampling_correction: enabled
+    ipv4: true
+    ipv6: true
+  state:
+    template_cache_scope: exporter-and-protocol
+    sequence_gap_detection: required
+    deduplication: fingerprint
+  privacy:
+    raw_packet_persistence: false
+    raw_dns_persistence: false
+  integrations:
+    geoflow2: true
+    bgp_bmp_correlation: true
+    prometheus: true
+    event_journal: true
+  high_speed:
+    ebpf_xdp: boundary
+    dpdk: boundary
+    vpp: boundary
