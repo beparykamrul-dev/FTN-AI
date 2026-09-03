@@ -1,0 +1,68 @@
+version: v1
+kind: FTNAnycastFabric
+metadata:
+  name: ftn-anycast-fabric
+spec:
+  objective: anycast-ftn-services-across-authorized-pops-and-nodes
+  control:
+    owner: ftn-control-plane
+    route_control: ftn-routed
+    policy: approval-required-for-route-publication
+    health_gate: required
+    withdraw_on_unhealthy: true
+    restore_verification: required
+  address_families:
+    ipv4: true
+    ipv6: true
+    service_prefixes: true
+  service_targets:
+    origin: ftn-main-server
+    services: [ftn-api, ftn-proxy, ftn-metrics, ftn-dns, ftn-socket, ftn-websocket, ftn-mesh, ftn-silk]
+    third_party_local_origin: false
+  topology:
+    core: [core-a, core-b]
+    backbone: ftn-buckboon
+    mesh: ftn-mesh
+    pop_nodes: authorized-ftn-pop-nodes
+    device_interface: ftn-interface
+  selection:
+    inputs: [reachability, health, latency, loss, jitter, capacity, policy]
+    deterministic_tiebreak: true
+    unhealthy_node_exclusion: true
+    capacity_aware: true
+    automatic_non_destructive_failover: true
+    security_downgrade: prohibited
+  routing:
+    protocols: [bgp]
+    multipath: true
+    graceful_restart: true
+    bfd: true
+    rpki: true
+    route_snapshot: true
+    pre_change_validation: true
+    post_change_verification: true
+    rollback_when_safe: true
+  device_support:
+    anycast_capable: true
+    capability_detection: automatic
+    driver_boundary: ftn-device-driver
+    supported_classes: [router, switch, server, virtual_node]
+    privileged_configuration: approval-required
+  telemetry:
+    primary: silk
+    flow_identity: [service_id, anycast_prefix, node_id, path_id, subscriber_id, exporter_id]
+    raw_payload_persistence: false
+    metrics: ftn-metrics
+  security:
+    identity: pki-mtls
+    credentials: external-secret-store
+    unauthorized_node_advertisement: prohibited
+    external_target_control: prohibited
+    route_policy_bypass: prohibited
+  resilience:
+    no_single_pop_dependency: true
+    no_single_core_dependency: true
+    node_failure: withdraw-and-reselect
+    link_failure: withdraw-and-reselect
+    service_failure: withdraw-and-reselect
+    telemetry_failure: degrade-without-service-interruption
