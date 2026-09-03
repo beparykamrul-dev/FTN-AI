@@ -2,14 +2,6 @@ package fiber
 
 import "time"
 
-type FiberNode struct {
-	ID string `json:"id"`
-	Kind string `json:"kind"`
-	Latitude float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Status string `json:"status"`
-}
-
 type FiberLink struct {
 	ID string `json:"id"`
 	From string `json:"from"`
@@ -25,9 +17,6 @@ type RecoveryCandidate struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// AnalyzeFailure creates a recovery recommendation from observed fiber state.
-// It does not execute physical or network changes; execution remains behind
-// the FTN approval workflow.
 func AnalyzeFailure(link FiberLink, evidence []string) RecoveryCandidate {
 	confidence := 0.50
 	if link.Status == "cut" || link.Status == "down" { confidence += 0.25 }
