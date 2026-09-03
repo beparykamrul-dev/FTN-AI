@@ -1,0 +1,54 @@
+version: v1
+kind: FTNServiceNativeMultiProtocol
+metadata:
+  name: ftn-service-native-multiprotocol
+spec:
+  architecture:
+    implementation: original-ftn
+    protocol_identity: ftn-native
+    services_are_protocol_endpoints: true
+    shared_negotiation: true
+    capability_advertisement: true
+    health_selection: true
+    deterministic_failover: true
+    security_downgrade: prohibited
+  services:
+    control: [http1, http2, http3, grpc, websocket]
+    api: [http1, http2, http3, grpc, websocket]
+    web: [http1, http2, http3]
+    dns: [dns, dot, doh, doq]
+    ddns: [https, grpc, websocket]
+    proxy: [tcp, udp, quic, websocket, grpc]
+    socket: [tcp, udp, quic]
+    websocket: [websocket, http2, http3]
+    mesh: [quic, udp, tcp]
+    buckboon: [quic, udp, tcp, gre, vxlan]
+    routed: [bgp, bfd, bmp]
+    metrics: [http1, http2, grpc, otlp]
+    monitoring: [http1, grpc, websocket]
+    telemetry: [netflow, ipfix, syslog, grpc, otlp]
+    silk: [netflow, ipfix, tcp]
+    ai: [http2, http3, grpc, websocket]
+    billing: [http2, http3, grpc]
+    payment: [https, grpc]
+    iptv: [http1, http2, http3, websocket]
+    support: [http2, http3, websocket, grpc]
+    notification: [https, websocket, grpc]
+    device_driver: [snmp, ssh, netconf, restconf, gnmi, routeros-api, omci, redfish, ipmi, onvif]
+  ftn_protocol:
+    framing: negotiated
+    session: authenticated
+    identity: pki-mtls
+    transport_selection: capability-and-health
+    path_selection: latency-loss-jitter-capacity
+    failover: automatic-non-destructive
+    route_changes: approval-required
+    firewall_changes: approval-required
+  telemetry:
+    primary: silk
+    raw_payload_persistence: false
+    secret_logging: false
+  security:
+    credentials: external-secret-store
+    unauthorized_access: prohibited
+    external_target_control: prohibited
