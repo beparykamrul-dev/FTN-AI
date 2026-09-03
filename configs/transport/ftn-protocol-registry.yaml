@@ -64,6 +64,26 @@ spec:
       family: security
       transports: [tcp]
       production: true
+    - id: webrtc
+      family: realtime-media
+      transports: [udp, tcp]
+      production: true
+      role: realtime-sfu
+    - id: livekit-sfu
+      family: realtime-media
+      transports: [webrtc, websocket, http1, udp]
+      production: true
+      role: primary-sfu-adapter
+    - id: turn
+      family: realtime-media
+      transports: [udp, tcp, tls]
+      production: true
+      role: nat-traversal-relay
+    - id: mediasoup
+      family: realtime-media
+      transports: [webrtc, udp, tcp]
+      production: true
+      role: secondary-sfu-adapter
     - id: dot
       family: dns
       transports: [tcp]
