@@ -1,0 +1,74 @@
+version: v1
+kind: FTNServiceMultiProtocolFabric
+metadata:
+  name: ftn-service-multiprotocol-fabric
+spec:
+  principle: every-ftn-service-is-native-ftn-multiprotocol
+  architecture:
+    control_plane: ftn
+    service_plane: ftn
+    transport_plane: ftn-multi-protocol
+    backbone: ftn-buckboon
+    routing: ftn-routed
+    interface: ftn-interface
+    device_driver: ftn-device-driver
+    telemetry: silk-primary
+  service_matrix:
+    ftn-api: [http1, http2, http3, grpc, websocket]
+    ftn-web: [http1, http2, http3, websocket]
+    ftn-control-plane: [http2, http3, grpc, websocket]
+    ftn-dns: [dns, dot, doh, doq]
+    ftn-ddns: [https, http2, http3, grpc]
+    ftn-proxy: [tcp, udp, quic, websocket, grpc]
+    ftn-socket: [tcp, udp, quic]
+    ftn-websocket: [websocket, http2, http3]
+    ftn-metrics: [http1, http2, http3, grpc, otlp]
+    ftn-monitoring: [http1, http2, grpc, websocket]
+    ftn-alerting: [http1, http2, grpc, websocket]
+    ftn-mesh: [wireguard, gre, vxlan, quic]
+    ftn-buckboon: [wireguard, gre, vxlan, quic, grpc]
+    ftn-routed: [bgp, grpc, netconf, gnmi]
+    ftn-silk: [netflow5, netflow9, ipfix, sflow, tcp, udp]
+    ftn-ai: [http2, http3, grpc, websocket]
+    ftn-billing: [http2, http3, grpc, websocket]
+    ftn-payment: [https, http2, http3, grpc]
+    ftn-iptv: [http1, http2, http3, hls, dash, websocket]
+    ftn-support: [http1, http2, http3, grpc, websocket]
+    ftn-device-driver: [snmp, ssh, netconf, restconf, gnmi, routeros-api, omci, redfish, ipmi, onvif]
+    ftn-pki: [tls, mtls, acme]
+  negotiation:
+    capability_exchange: true
+    service_capability_registry: ftn-service-catalog
+    protocol_allowlist: ftn-transport-registry
+    health_required: true
+    latency_loss_jitter_capacity_scoring: true
+    deterministic_selection: true
+    automatic_non_destructive_failover: true
+    graceful_downgrade: false
+    security_downgrade: prohibited
+  common_transport:
+    tcp: true
+    udp: true
+    quic: true
+    tls: true
+    mtls: true
+    http1: true
+    http2: true
+    http3: true
+    grpc: true
+    websocket: true
+  ftn_native_rule:
+    third_party_protocol_engine_must_be_wrapped_by_ftn_adapter: true
+    external_provider_is_never_the_service_identity: true
+    service_identity: ftn
+    origin: ftn-main-server
+  telemetry:
+    primary: silk
+    raw_payload: false
+    identity: [service_id, protocol, transport, node_id, path_id, subscriber_id, exporter_id]
+  security:
+    credentials: external-secret-store
+    pki_mtls: true
+    unauthorized_protocol_activation: reject
+    unauthorized_service_exposure: reject
+    route_firewall_changes: approval-required
