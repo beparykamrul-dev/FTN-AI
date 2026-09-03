@@ -39,6 +39,7 @@ type TrafficRuntime struct {
     flows       []TrafficFlowObservation
     decisions   map[string]TrafficDecision
     controllers map[string]*TrafficPathController
+    quality     *TrafficQualityStore
     listener    *FlowListener
 }
 
@@ -46,6 +47,7 @@ func NewTrafficRuntime() *TrafficRuntime {
     runtime := &TrafficRuntime{
         decisions:   make(map[string]TrafficDecision),
         controllers: make(map[string]*TrafficPathController),
+        quality:     NewTrafficQualityStore(),
     }
     if cfg, enabled := flowListenerConfigFromEnv(); enabled {
         listener, err := NewFlowListener(cfg, NewFlowTelemetryCollector(), runtime)
@@ -69,6 +71,20 @@ func (t *TrafficRuntime) Close() error {
         return nil
     }
     return listener.Close()
+}
+
+func (t *TrafficRuntime) UpsertQuality(o TrafficQualityObservation, now time.Time) error {
+    if t.quality == nil {
+        return errors.New("traffic_quality_store_required")
+    }
+    return t.quality.Upsert(o, now)
+}
+
+func (t *TrafficRuntime) QualitySnapshot(serviceID string, now time.Time) []TrafficQualityObservation {
+    if t.quality == nil {
+        return nil
+    }
+    return t.quality.Snapshot(serviceID, now)
 }
 
 func (t *TrafficRuntime) UpsertEndpoint(e ManagedEndpoint) error {
@@ -193,11 +209,24 @@ func (t *TrafficRuntime) Decisions(now time.Time, nodes []Node) []TrafficDecisio
         if !ok {
             continue
         }
+        qualityByPath := make(map[string]TrafficQualityObservation)
+        for _, q := range t.QualitySnapshot(serviceID, now) {
+            qualityByPath[q.PathID] = q
+        }
         for _, n := range nodes {
             if !n.Healthy || !nodeHasService(n, serviceID) {
                 continue
             }
-            byService[serviceID] = append(byService[serviceID], TrafficPathObservation{PathID: n.ID, ServiceID: serviceID, Class: p.Class, LatencyMs: n.LatencyMs, PacketLoss: n.PacketLoss, Healthy: n.Healthy, ObservedAt: now})
+            o := TrafficPathObservation{PathID: n.ID, ServiceID: serviceID, Class: p.Class, LatencyMs: n.LatencyMs, PacketLoss: n.PacketLoss, Healthy: n.Healthy, ObservedAt: now}
+            if q, ok := qualityByPath[n.ID]; ok {
+                o.LatencyMs = q.LatencyMs
+                o.JitterMs = q.JitterMs
+                o.PacketLoss = q.PacketLoss
+                o.Congestion = q.Congestion
+                o.Healthy = q.Healthy
+                o.ObservedAt = q.ObservedAt
+            }
+            byService[serviceID] = append(byService[serviceID], o)
         }
     }
 
