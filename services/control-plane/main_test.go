@@ -7,13 +7,13 @@ import (
 	"testing"
 )
 
-func TestServicesCatalogUnitMode(t *testing.T) {
+func TestServicesCatalogRequiresAuthorization(t *testing.T) {
 	a := &App{catalog: catalog}
 	r := httptest.NewRequest(http.MethodGet, "/api/v1/services", nil)
 	w := httptest.NewRecorder()
 	a.serviceCatalog(w, r)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected unit-mode catalog success, status=%d", w.Code)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected protected catalog to reject missing authorization context, status=%d", w.Code)
 	}
 }
 
@@ -23,22 +23,22 @@ func TestEntitlementsIgnoreClientSuppliedServices(t *testing.T) {
 	r.Header.Set("X-FTN-Services", "drive,ai,codec")
 	w := httptest.NewRecorder()
 	a.entitlements(w, r)
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected unit-mode entitlement response, status=%d", w.Code)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected protected entitlement endpoint to reject missing authorization context, status=%d", w.Code)
 	}
 	if strings.Contains(w.Body.String(), `"active":true`) {
 		t.Fatal("client supplied service header must never grant entitlements")
 	}
 }
 
-func TestServiceRequestValidation(t *testing.T) {
+func TestServiceRequestValidationRequiresAuthorization(t *testing.T) {
 	a := &App{catalog: catalog}
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/service-requests", strings.NewReader(`{"service_id":"not-a-service"}`))
 	r.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	a.requests(w, r)
-	if w.Code != http.StatusNotFound {
-		t.Fatalf("expected service validation to reject unknown service, status=%d", w.Code)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected protected service request endpoint to reject missing authorization context, status=%d", w.Code)
 	}
 }
 
