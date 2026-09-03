@@ -53,16 +53,50 @@ spec:
     - protocol: doq
       transports: [udp]
       role: dns
+    - protocol: ssh
+      transports: [tcp]
+      role: authorized-management
+    - protocol: ssh-reverse
+      transports: [tcp]
+      role: authorized-reverse-management
+    - protocol: frp
+      transports: [tcp, udp]
+      role: authorized-service-ingress
+    - protocol: rtunnel
+      transports: [tcp]
+      role: authorized-service-ingress
+    - protocol: cloudflare-tunnel
+      transports: [https]
+      role: provider-ingress
+    - protocol: ngrok
+      transports: [https]
+      role: provider-ingress
+    - protocol: aether-core
+      transports: [provider-selected]
+      role: path-orchestration
+  routing_policy:
+    split_tunnel:
+      enabled: true
+      selectors: [cidr, destination, service, vlan, subscriber]
+      modes: [include, exclude]
+      change_control: approval-required
   selection:
     max_active_paths: 4
     health_required: true
     latency_weighted: true
     automatic_failover: true
     deterministic_order: true
+    security_downgrade: prohibited
+  telemetry:
+    enabled: true
+    flow_metadata: true
+    silk_primary: true
+    raw_payload_capture: false
   safety:
     ownership_verification: required
     credentials: secret-store-only
     route_or_firewall_change: approval-required
+    external_provider_activation: approval-required
     external_restriction_bypass: prohibited
     unauthorized_access: prohibited
     retaliation: prohibited
