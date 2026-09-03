@@ -1,6 +1,6 @@
 -- FTN approval execution race boundary. Additive/idempotent.
--- Prevents a queued privileged job from being claimed after its approval is
--- revoked/expired, and prevents approval mutation once execution has begun.
+-- A shared transaction advisory lock serializes approval mutation and execution
+-- claim without introducing row-lock inversion/deadlock between the two paths.
 
 CREATE OR REPLACE FUNCTION ftn_lock_approval_for_running_job()
 RETURNS trigger
@@ -16,12 +16,13 @@ BEGIN
         RETURN NEW;
     END IF;
 
+    PERFORM pg_advisory_xact_lock(hashtextextended(NEW.approval_id::text, 0));
+
     SELECT status, expires_at, request_hash, approval_payload
       INTO approval_status, approval_expires, approval_hash, approval_payload
       FROM change_approvals
      WHERE id = NEW.approval_id
-       AND tenant_id IS NOT DISTINCT FROM NEW.tenant_id
-     FOR UPDATE;
+       AND tenant_id IS NOT DISTINCT FROM NEW.tenant_id;
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'approval_not_found_or_tenant_mismatch';
@@ -47,8 +48,9 @@ BEFORE UPDATE OF status ON durable_jobs
 FOR EACH ROW
 EXECUTE FUNCTION ftn_lock_approval_for_running_job();
 
--- Once a privileged job has started, its approval cannot be revoked or edited
--- through the approval state machine. This is intentionally fail-closed.
+-- Once a privileged job has started, its approval cannot be revoked or edited.
+-- The same advisory lock is acquired here so claim and approval mutation are
+-- serialized on the approval identity.
 CREATE OR REPLACE FUNCTION ftn_freeze_approval_while_job_running()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -56,6 +58,8 @@ AS $$
 DECLARE
     active_jobs INTEGER;
 BEGIN
+    PERFORM pg_advisory_xact_lock(hashtextextended(OLD.id::text, 0));
+
     SELECT COUNT(*)
       INTO active_jobs
       FROM durable_jobs j
