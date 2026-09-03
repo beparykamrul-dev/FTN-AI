@@ -15,7 +15,6 @@ DECLARE
   attempt UUID;
   payload JSONB := '{"target":"router-01","operation":"reload"}'::jsonb;
   worker TEXT := 'semantic-test-worker';
-  resource TEXT;
   got TEXT;
 BEGIN
   SELECT id INTO t FROM tenants ORDER BY created_at LIMIT 1;
@@ -31,7 +30,7 @@ BEGIN
   END IF;
 
   INSERT INTO change_approvals(tenant_id,requested_by,action,resource,request_hash,status,expires_at,approval_payload)
-  VALUES (t,p,'router.reload','durable-job-test','semantic-request-001','approved',now()+interval '10 minutes',payload)
+  VALUES (t,p,'router.reload','placeholder','semantic-request-001','approved',now()+interval '10 minutes',payload)
   RETURNING id INTO approval;
 
   -- Valid approved durable job must bind action/hash/payload to the approval.
@@ -57,7 +56,7 @@ BEGIN
   VALUES(job,1,worker,'running')
   RETURNING id INTO attempt;
 
-  -- Duplicate active attempt is rejected.
+  -- Duplicate active attempt is rejected by the partial unique index.
   SAVEPOINT duplicate_active_attempt;
   BEGIN
     INSERT INTO execution_attempts(job_id,attempt_no,worker_id,status)
@@ -67,7 +66,7 @@ BEGIN
     ROLLBACK TO SAVEPOINT duplicate_active_attempt;
   END;
 
-  -- Identity must remain immutable.
+  -- Attempt identity must remain immutable.
   SAVEPOINT attempt_identity;
   BEGIN
     UPDATE execution_attempts SET worker_id='different-worker' WHERE id=attempt;
@@ -78,14 +77,14 @@ BEGIN
     IF got NOT LIKE '%immutable%' THEN RAISE; END IF;
   END;
 
-  -- running -> queued is not a legal execution-attempt transition.
-  SAVEPOINT attempt_bad_transition;
+  -- Terminalization without finished_at is rejected.
+  SAVEPOINT attempt_finished_at;
   BEGIN
     UPDATE execution_attempts SET status='failed', finished_at=NULL WHERE id=attempt;
     RAISE EXCEPTION 'expected finished_at rejection did not occur';
   EXCEPTION WHEN OTHERS THEN
     GET STACKED DIAGNOSTICS got = MESSAGE_TEXT;
-    ROLLBACK TO SAVEPOINT attempt_bad_transition;
+    ROLLBACK TO SAVEPOINT attempt_finished_at;
     IF got NOT LIKE '%finished_at%' THEN RAISE; END IF;
   END;
 
@@ -106,12 +105,11 @@ BEGIN
     IF got NOT LIKE '%immutable%' THEN RAISE; END IF;
   END;
 
-  -- Approval cannot execute until its durable job has succeeded.
-  resource := 'durable_job:' || job::text;
-  UPDATE change_approvals SET resource=resource WHERE id=approval;
+  -- Approval execution is serialized against the durable job and requires success.
+  UPDATE change_approvals SET resource='durable_job:' || job::text WHERE id=approval;
   UPDATE change_approvals SET status='executed', executed_at=now() WHERE id=approval;
 
-  -- Executed -> rolled_back is permitted only while the referenced job is terminal.
+  -- Executed -> rolled_back is permitted because the referenced job is terminal.
   UPDATE change_approvals SET status='rolled_back' WHERE id=approval;
 
   -- Invalid approval mutation after approval must be rejected.
@@ -138,7 +136,7 @@ BEGIN
 
   -- A new approved job with no matching successful attempt cannot be marked succeeded.
   INSERT INTO change_approvals(tenant_id,requested_by,action,resource,request_hash,status,expires_at,approval_payload)
-  VALUES (t,p,'router.reload','durable-job-test-2','semantic-request-002','approved',now()+interval '10 minutes',payload)
+  VALUES (t,p,'router.reload','placeholder-2','semantic-request-002','approved',now()+interval '10 minutes',payload)
   RETURNING id INTO approval;
 
   INSERT INTO durable_jobs(tenant_id,idempotency_key,job_type,payload,status,max_attempts,correlation_id,approval_id,execution_action,attempts)
@@ -177,7 +175,7 @@ BEGIN
 
   -- Approval expiration blocks a fresh privileged claim.
   INSERT INTO change_approvals(tenant_id,requested_by,action,resource,request_hash,status,expires_at,approval_payload)
-  VALUES (t,p,'router.reload','durable-job-expired','semantic-request-003','approved',now()-interval '1 minute',payload)
+  VALUES (t,p,'router.reload','placeholder-3','semantic-request-003','approved',now()-interval '1 minute',payload)
   RETURNING id INTO approval;
 
   INSERT INTO durable_jobs(tenant_id,idempotency_key,job_type,payload,status,max_attempts,correlation_id,approval_id,execution_action)
