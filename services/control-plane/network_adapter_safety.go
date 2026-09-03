@@ -6,6 +6,15 @@ import (
 	"time"
 )
 
+const (
+	NetworkRead          = "read"
+	NetworkHealth        = "health"
+	NetworkPlan          = "plan"
+	NetworkApply         = "apply"
+	NetworkRollback      = "rollback"
+	NetworkConfiguration = "configuration"
+)
+
 // ValidateNetworkExecutionIntent validates the common execution contract used
 // by all FTN network adapters. It performs no network side effects.
 func ValidateNetworkExecutionIntent(i NetworkExecutionIntent) error {
@@ -19,10 +28,10 @@ func ValidateNetworkExecutionIntent(i NetworkExecutionIntent) error {
 		return errors.New("unhealthy_device_requires_read_or_health")
 	}
 	if isMutationNetworkAction(i.Action) {
-		if !i.Approved {
+		if !i.Approved || strings.TrimSpace(i.ApprovalID) == "" || !i.Explicit {
 			return errors.New("approval_required")
 		}
-		if !i.PrechangeSnapshot || !i.VerificationRequired || !i.RollbackSafe {
+		if !(i.PreSnapshot || i.PrechangeSnapshot) || !(i.PostVerify || i.VerificationRequired) || !i.RollbackSafe {
 			return errors.New("snapshot_verification_and_rollback_required")
 		}
 		if i.Timeout <= 0 || i.Timeout > 2*time.Minute {
@@ -34,12 +43,12 @@ func ValidateNetworkExecutionIntent(i NetworkExecutionIntent) error {
 
 func isReadOnlyNetworkAction(action string) bool {
 	a := strings.ToLower(strings.TrimSpace(action))
-	return a == "read" || a == "health" || a == "plan" || strings.HasSuffix(a, ".read")
+	return a == NetworkRead || a == NetworkHealth || a == NetworkPlan || a == "read" || a == "health" || a == "plan" || strings.HasSuffix(a, ".read")
 }
 
 func isMutationNetworkAction(action string) bool {
 	a := strings.ToLower(strings.TrimSpace(action))
-	return a == "apply" || a == "configuration" || strings.HasPrefix(a, "configure") || strings.HasPrefix(a, "route") || strings.HasPrefix(a, "firewall") || strings.HasPrefix(a, "vlan") || strings.HasPrefix(a, "pppoe") || strings.HasPrefix(a, "bgp") || strings.HasPrefix(a, "ospf") || strings.HasPrefix(a, "bfd") || strings.HasPrefix(a, "service")
+	return a == NetworkApply || a == NetworkConfiguration || strings.HasPrefix(a, "configure") || strings.HasPrefix(a, "route") || strings.HasPrefix(a, "firewall") || strings.HasPrefix(a, "vlan") || strings.HasPrefix(a, "pppoe") || strings.HasPrefix(a, "bgp") || strings.HasPrefix(a, "ospf") || strings.HasPrefix(a, "bfd") || strings.HasPrefix(a, "service")
 }
 
 // ValidateFTNOwnership prevents an adapter from acting on an unverified target.
