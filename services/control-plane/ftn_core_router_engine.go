@@ -61,18 +61,20 @@ func (e *FTNCoreRouterEngine) UpsertPeer(p CoreRouterPeer) error {
 }
 
 func (e *FTNCoreRouterEngine) AnnounceRoute(r FTNRoute) error {
-    if err := validateCoreRoute(r.Prefix, r.NextHop); err != nil { return err }
+    normalized, err := NormalizeFTNRoute(r)
+    if err != nil { return err }
     if !e.bgp.Established() { return errors.New("core_bgp_session_not_established") }
-    if err := e.bgp.ApplyRoute(r); err != nil { return err }
+    if err := e.bgp.ApplyRoute(normalized); err != nil { return err }
     e.mu.Lock(); defer e.mu.Unlock()
-    e.routes[routeKey(r.VRF, r.Prefix)] = FTNCoreRouteState{VRF:r.VRF, Prefix:r.Prefix, NextHop:r.NextHop, Installed:true, UpdatedAt:time.Now().UTC()}
+    e.routes[routeKey(normalized.VRF, normalized.Prefix)] = FTNCoreRouteState{VRF:normalized.VRF, Prefix:normalized.Prefix, NextHop:normalized.NextHop, Installed:true, UpdatedAt:time.Now().UTC()}
     return nil
 }
 
 func (e *FTNCoreRouterEngine) WithdrawRoute(r FTNRoute) error {
-    if err := validateCoreRoute(r.Prefix, r.NextHop); err != nil { return err }
-    if err := e.bgp.WithdrawRoute(r); err != nil { return err }
-    e.mu.Lock(); defer e.mu.Unlock(); delete(e.routes, routeKey(r.VRF, r.Prefix)); return nil
+    normalized, err := NormalizeFTNRoute(r)
+    if err != nil { return err }
+    if err := e.bgp.WithdrawRoute(normalized); err != nil { return err }
+    e.mu.Lock(); defer e.mu.Unlock(); delete(e.routes, routeKey(normalized.VRF, normalized.Prefix)); return nil
 }
 
 func (e *FTNCoreRouterEngine) Snapshot() FTNCoreRouterSnapshot {
