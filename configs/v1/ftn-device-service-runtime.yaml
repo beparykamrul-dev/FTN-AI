@@ -1,0 +1,71 @@
+version: v1
+kind: FTNDeviceServiceRuntime
+metadata:
+  name: ftn-device-service-runtime
+spec:
+  objective: make-authorized-devices-ftn-service-capable-through-one-runtime-contract
+  pipeline:
+    - device-driver
+    - ftn-interface
+    - service-capability
+    - protocol-capability
+    - transport-selection
+    - ftn-routed
+    - ftn-buckboon
+    - ftn-mesh
+    - service-origin
+    - silk-telemetry
+  service_capability:
+    discovery: automatic
+    negotiation: capability-driven
+    service_catalog: ftn-service-catalog
+    isolation: per-service
+    failure_domain: per-adapter
+  protocol_transport:
+    multi_protocol: true
+    multi_transport: true
+    service_specific_profiles: true
+    health_required: true
+    latency_loss_jitter_capacity_aware: true
+    deterministic_selection: true
+    automatic_non_destructive_failover: true
+    security_downgrade: prohibited
+  device_enablement:
+    classes: [router, switch, olt, onu, server, storage, camera, tv, mobile, embedded, virtual_node]
+    read_only_discovery: automatic
+    capability_probe: automatic
+    privileged_service_configuration: approval-required
+    configuration_snapshot: required
+    post_change_verification: required
+    rollback_when_safe: required
+  ftn_interface:
+    identity: device-driver
+    api: ftn-api
+    proxy: ftn-proxy
+    metrics: ftn-metrics
+    dns: ftn-dns
+    socket: ftn-socket
+    websocket: ftn-websocket
+  backbone:
+    transport: ftn-buckboon
+    mesh: ftn-mesh
+    route_control: ftn-routed
+    service_origin: ftn-main-server
+    third_party_local_origin: false
+  telemetry:
+    primary: silk
+    flow_metadata: true
+    identity: [device_id, driver_id, service_id, protocol, transport, path_id, subscriber_id, exporter_id]
+    raw_payload: false
+    secrets: false
+    observer_failure_blocks_service: false
+  security:
+    device_identity: pki-mtls
+    credentials: external-secret-store
+    unauthorized_devices: reject
+    external_target_control: prohibited
+  resilience:
+    driver_failure: isolate-and-failover
+    transport_failure: health-based-failover
+    mesh_failure: alternate-path-selection
+    telemetry_failure: degrade-without-service-interruption
