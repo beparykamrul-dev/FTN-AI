@@ -1,0 +1,41 @@
+version: v1
+kind: FTNPacketObservability
+metadata:
+  name: ftn-packet-observability
+spec:
+  purpose: low-overhead-network-observability
+  capture:
+    mode: flow-and-metadata
+    raw_payload: disabled
+    full_packet_storage: disabled
+    sampling: adaptive
+    max_capture_rate: bounded
+  fast_path:
+    xdp: capability-gated
+    ebpf: capability-gated
+    socket: capability-gated
+    io_uring: capability-gated
+    zero_copy: preferred
+  processing:
+    batching: adaptive
+    lock_contention: minimize
+    bounded_queues: true
+    backpressure: true
+  identity:
+    subscriber: true
+    service: true
+    tunnel: true
+    path: true
+    exporter: true
+  telemetry:
+    primary: silk
+    secondary: metrics-and-time-series
+    high_volume_analytics: clickhouse
+  privacy:
+    payload_persistence: false
+    credential_capture: false
+    secret_logging: false
+  failure:
+    observer_failure_must_not_block_service: true
+    overload_action: sample-more
+    recovery: automatic
