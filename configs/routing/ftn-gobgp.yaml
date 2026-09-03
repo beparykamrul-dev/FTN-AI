@@ -4,7 +4,7 @@ metadata:
   name: ftn-core-routing
 spec:
   implementation: github.com/osrg/gobgp/v4
-  version: v4.8.0
+  version: v4.7.0
   mode: controller-managed
   safety:
     default_action: reject
