@@ -31,7 +31,10 @@ docker run -d --name "$NAME" \
   -e POSTGRES_PASSWORD=ci-only-password \
   "$POSTGRES_IMAGE" >/dev/null
 
-until docker exec "$NAME" pg_isready -U ftn -d ftn >/dev/null 2>&1; do
+# pg_isready can report a server as accepting connections before initdb has
+# finished creating the configured database. Wait for the actual database.
+until docker exec "$NAME" pg_isready -U ftn -d ftn >/dev/null 2>&1 && \
+      docker exec "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn -c 'SELECT 1' >/dev/null 2>&1; do
   sleep 1
 done
 
