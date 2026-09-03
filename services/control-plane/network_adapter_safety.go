@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"strings"
+	"time"
 )
 
 // ValidateNetworkExecutionIntent validates the common execution contract used
@@ -24,7 +25,7 @@ func ValidateNetworkExecutionIntent(i NetworkExecutionIntent) error {
 		if !i.PrechangeSnapshot || !i.VerificationRequired || !i.RollbackSafe {
 			return errors.New("snapshot_verification_and_rollback_required")
 		}
-		if i.Timeout <= 0 || i.Timeout > 2*60*1000000000 {
+		if i.Timeout <= 0 || i.Timeout > 2*time.Minute {
 			return errors.New("execution_timeout_out_of_bounds")
 		}
 	}
