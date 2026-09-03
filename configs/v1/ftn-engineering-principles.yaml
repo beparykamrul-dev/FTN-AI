@@ -1,0 +1,78 @@
+version: v1
+kind: FTNEngineeringPrinciples
+metadata:
+  name: ftn-engineering-principles
+spec:
+  identity:
+    product: FTN
+    implementation: original-ftn
+    rule: best_of_breed_integration_without_copying
+  architecture:
+    style: provider_neutral
+    modular: true
+    composable: true
+    capability_driven: true
+    protocol_agnostic: true
+    transport_agnostic: true
+    hardware_acceleration: capability_gated
+    graceful_degradation: true
+  best_of_breed:
+    selection:
+      criteria: [performance, reliability, security, interoperability, operability, observability, maintainability]
+      source: open_standards_and_best_in_class_technology
+      implementation: clean_room_ftn_adapters_and_contracts
+    rule: use_interfaces_and_standards_as_boundaries_not_copied_implementations
+  platform_layers:
+    control_plane: ftn
+    service_plane: ftn
+    device_plane: ftn-device-driver
+    routing: ftn-routed
+    transport: ftn-multi-transport
+    backbone: ftn-buckboon
+    telemetry: silk-primary
+    data: postgresql
+    metrics: ftn-metrics
+    security: ftn-pki-and-security
+    ai: ftn-ai
+  device_drivers:
+    required: true
+    provider_neutral_core: true
+    vendor_adapters: true
+    classes: [router, switch, olt, onu, server, storage, camera, tv, mobile, embedded, virtual_node]
+    management_protocols: [snmp, ssh, netconf, restconf, gnmi, routeros-api, omci, redfish, ipmi, onvif, vendor-api]
+    telemetry_protocols: [snmp, netflow, ipfix, syslog, streaming-telemetry, metrics, events]
+    isolation: true
+    automatic_discovery: true
+    read_only_probe: automatic
+    privileged_change: approval-required
+  service_transport:
+    multi_protocol: true
+    multi_transport: true
+    capability_negotiation: true
+    health_selection: true
+    deterministic_failover: true
+    security_downgrade: prohibited
+  performance:
+    zero_copy_preferred: true
+    io_uring_preferred: true
+    reuseport: true
+    xdp_ebpf: capability-gated
+    rdma: capability-gated
+    dpdk: capability-gated
+    vpp: capability-gated
+  security:
+    mtls: true
+    pki: true
+    secret_store: external
+    credential_logging: false
+    raw_payload_persistence: false
+    unauthorized_external_control: prohibited
+  change_control:
+    snapshot_before_change: true
+    verification_after_change: true
+    rollback_when_safe: true
+    destructive_actions: explicit-approval
+  quality:
+    tests: [unit, integration, contract, interoperability, failover, security]
+    compatibility: backward_compatible_by_default
+    production_claims_require_evidence: true
