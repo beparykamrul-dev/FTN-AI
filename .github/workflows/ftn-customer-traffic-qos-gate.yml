@@ -1,0 +1,23 @@
+name: FTN Customer Traffic QoS Gate
+
+on:
+  push:
+    branches: [main, repair/ci-build-2026-09-03]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  customer-traffic-qos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate customer traffic QoS contract
+        shell: bash
+        run: bash scripts/ftn-customer-traffic-qos-gate.sh
+      - name: Test traffic policy engine
+        shell: bash
+        run: go test ./internal/platform/traffic
