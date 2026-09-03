@@ -1,0 +1,57 @@
+version: v1
+kind: FTNProjectCompletionGate
+metadata:
+  name: ftn-project-completion-gate
+spec:
+  scope: full-ftn-platform
+  architecture:
+    service_native_multiprotocol: true
+    universal_interface: true
+    device_driver_fabric: true
+    ftn_routed: true
+    ftn_buckboon: true
+    ftn_mesh: true
+    ftn_dns: true
+    ftn_ddns: true
+    ftn_anycast: true
+    silk_primary_telemetry: true
+  delivery:
+    backend: required
+    frontend: required
+    mobile: required
+    desktop: required
+    tv: required
+    core_router: required
+    pop: required
+    olt_onu: required
+    billing: required
+    payment: required
+    iptv: required
+    support: required
+    monitoring: required
+    security: required
+    pki: required
+    backup_dr: required
+  quality:
+    unit_tests: required
+    integration_tests: required
+    contract_tests: required
+    security_tests: required
+    failover_tests: required
+    config_validation: required
+    gofmt: required
+    go_test: required
+    compose_validation: required
+  production:
+    implementation_status: evidence_based
+    live_device_access_required: true
+    live_route_verification_required: true
+    live_dns_delegation_required: true
+    live_telemetry_verification_required: true
+    production_verified_without_evidence: prohibited
+  safety:
+    privileged_changes: approval-required
+    destructive_actions: explicit-approval
+    external_target_control: prohibited
+    unauthorized_access: prohibited
+    credential_logging: prohibited
