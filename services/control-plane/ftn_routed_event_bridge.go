@@ -11,10 +11,10 @@ import (
 // FTNRoutedEventBridge converts routing-state changes into bounded FTN events.
 // It does not execute route changes and does not persist raw protocol payloads.
 type FTNRoutedEventBridge struct {
-	mu     sync.RWMutex
-	sink   FTNBGPEventSink
-	bfd    map[string]FTNBFDSession
-	peers  map[string]FTNBGPState
+	mu    sync.RWMutex
+	sink  FTNBGPEventSink
+	bfd   map[string]FTNBFDSession
+	peers map[string]FTNBGPState
 }
 
 func NewFTNRoutedEventBridge(sink FTNBGPEventSink) *FTNRoutedEventBridge {
@@ -45,11 +45,10 @@ func (b *FTNRoutedEventBridge) BFDState(ctx context.Context, peer string, state 
 		return fmt.Errorf("peer is required")
 	}
 	switch state {
-	case FTNBFDUp, FTNBFDDown, FTNBFDUnknown, FTNBFDStateUp, FTNBFDStateDown, FTNBFDStateUnknown:
+	case FTNBFDUp, FTNBFDDown, FTNBFDUnknown:
 	default:
 		return fmt.Errorf("invalid BFD state")
 	}
-	state = FTNBFDState(state)
 	now := time.Now().UTC()
 	b.mu.Lock()
 	previous, exists := b.bfd[peer]
