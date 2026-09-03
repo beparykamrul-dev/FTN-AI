@@ -1,0 +1,33 @@
+apiVersion: ftn.ai/v1
+kind: SiLKDatabase
+metadata:
+  name: ftn-silk-main
+spec:
+  role: primary-flow-observability-store
+  source:
+    netflow: enabled
+    ipfix: enabled
+    sflow: compatible
+  persistence:
+    database: postgresql
+    table: ftn_silk_flow_records
+    rawPacketPayload: false
+    normalizedMetadataOnly: true
+  identity:
+    tenant: required
+    exporter: required
+    subscriber: optional
+    service: optional
+    mainServer: optional
+  retention:
+    policy: configurable
+    deleteMode: approved-job-only
+  integrity:
+    deterministicFingerprint: required
+    duplicateSuppression: required
+  architecture:
+    origin: ftn-main-server
+    transport: ftn-buckboon
+    routing: ftn-routed
+    telemetryStore: silk
+    thirdPartyLocalOrigin: false
