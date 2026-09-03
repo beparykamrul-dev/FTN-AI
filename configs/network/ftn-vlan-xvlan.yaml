@@ -1,0 +1,38 @@
+apiVersion: ftn.network/v1
+kind: VLANFabric
+metadata:
+  name: ftn-access-fabric
+spec:
+  scope: ftn-owned
+  modes:
+    vlan8021q: true
+    qinq8021ad: true
+    xvlan: true
+  segmentation:
+    customer: true
+    management: true
+    service: true
+    infrastructure: true
+  transport:
+    access: vlan
+    aggregation: qinq
+    backbone: vxlan
+    evpn_control_plane: true
+  mapping:
+    onu_to_vlan: supported
+    olt_to_outer_vlan: supported
+    subscriber_to_service_vlan: supported
+    vlan_to_vrf: supported
+    vlan_to_ipam: supported
+  safety:
+    configuration_requires_approval: true
+    prechange_snapshot: true
+    postchange_verification: true
+    rollback_when_safe: true
+    external_targets: prohibited
+  telemetry:
+    vlan_state: true
+    interface_state: true
+    onu_binding_state: true
+    packet_counters: true
+    errors: true
