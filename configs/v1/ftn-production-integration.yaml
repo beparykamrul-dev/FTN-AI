@@ -1,0 +1,60 @@
+version: v1
+kind: FTNProductionIntegration
+metadata:
+  name: ftn-production-integration
+spec:
+  control_plane: ftn-control-plane
+  service_plane: ftn-main-server
+  interface: ftn-interface
+  device_driver: ftn-device-driver
+  routing: ftn-routed
+  backbone: ftn-buckboon
+  mesh: ftn-mesh
+  dns: ftn-dns
+  ddns: ftn-ddns
+  anycast: ftn-anycast
+  telemetry: silk-primary
+  services:
+    native_multi_protocol: true
+    capability_negotiation: true
+    health_selection: true
+    deterministic_failover: true
+    security_downgrade: prohibited
+  data:
+    transactional: postgresql
+    pooling: pgbouncer
+    flow_telemetry: silk
+    metrics: ftn-metrics
+    cache: redis
+    analytics: clickhouse
+    backup: s3-compatible
+  network:
+    protocols: [bgp, bfd, ospf, netflow, ipfix, snmp, syslog, grpc, http1, http2, http3, quic, websocket, dns, dot, doh, doq]
+    tunnels: [wireguard, amneziawg, openvpn, gre, vxlan, quic, hysteria2, shadowsocks, ssh, ssh-reverse, frp, rtunnel]
+  security:
+    identity: pki-mtls
+    secrets: external-secret-store
+    authorization: required
+    audit: required
+    snapshot_before_change: true
+    verify_after_change: true
+    rollback_when_safe: true
+    destructive_actions: explicit-approval
+  automation:
+    telemetry_and_health: automatic
+    non_destructive_recovery: automatic
+    network_configuration: approval-required
+    route_publication: approval-required
+    firewall_policy: approval-required
+    external_provider_activation: approval-required
+  clients:
+    android: compatible
+    web: compatible
+    desktop: compatible
+    tv: compatible
+    api_versioning: required
+    backward_compatibility: required
+  acceptance:
+    implementation_claim_requires_code: true
+    ci_claim_requires_workflow_evidence: true
+    production_claim_requires_live_evidence: true
