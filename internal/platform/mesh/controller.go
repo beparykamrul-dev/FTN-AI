@@ -1,13 +1,41 @@
 package mesh
 
 import (
-    "sort"
-    "sync"
-    "time"
+	"sort"
+	"sync"
+	"time"
 )
 
-type Node struct { ID, Address string; Online bool; LastSeen time.Time }
-type Link struct { ID, From, To string; Metric uint32; Up bool; LastSeen time.Time }
+type Node struct {
+	ID string `json:"id"`
+	Name string `json:"name,omitempty"`
+	Address string `json:"address,omitempty"`
+	Role string `json:"role,omitempty"`
+	Region string `json:"region,omitempty"`
+	Endpoint string `json:"endpoint,omitempty"`
+	Scope Scope `json:"scope,omitempty"`
+	Online bool `json:"online"`
+	Enabled bool `json:"enabled"`
+	LastSeen time.Time `json:"last_seen,omitempty"`
+}
+
+type Link struct {
+	ID string `json:"id,omitempty"`
+	From string `json:"from"`
+	To string `json:"to"`
+	State LinkState `json:"state,omitempty"`
+	Metric uint32 `json:"metric"`
+	LatencyMS float64 `json:"latency_ms,omitempty"`
+	LatencyMillis float64 `json:"latencyMillis,omitempty"`
+	LossPercent float64 `json:"loss_percent,omitempty"`
+	Loss float64 `json:"loss,omitempty"`
+	JitterMs float64 `json:"jitter_ms,omitempty"`
+	Healthy bool `json:"healthy"`
+	Up bool `json:"up"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	LastSeen time.Time `json:"last_seen,omitempty"`
+}
+
 type Snapshot struct { Nodes []Node `json:"nodes"`; Links []Link `json:"links"`; GeneratedAt time.Time `json:"generated_at"` }
 
 type Controller struct { mu sync.RWMutex; nodes map[string]Node; links map[string]Link }
