@@ -1,0 +1,2 @@
+ALTER TABLE control_nodes
+  ADD COLUMN IF NOT EXISTS probe_address TEXT NOT NULL DEFAULT '';
