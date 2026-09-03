@@ -1,0 +1,42 @@
+version: v1
+kind: FTNProductionCompletion
+metadata:
+  name: ftn-production-completion
+spec:
+  canonical_platform: ftn
+  service_plane: ftn-native
+  protocol_model: multi-protocol
+  transport_model: multi-transport
+  control_plane: ftn-control-plane
+  device_plane: ftn-device-driver
+  routing: ftn-routed
+  backbone: ftn-buckboon
+  mesh: ftn-mesh
+  dns: ftn-dns
+  ddns: ftn-ddns
+  anycast: ftn-anycast
+  telemetry: silk-primary
+  data: postgresql
+  metrics: ftn-metrics
+  identity: pki-mtls
+  security: ftn-security
+  clients: [android, web, desktop, tv]
+  operational_domains: [network, routing, backbone, dns, ddns, anycast, devices, billing, payment, iptv, support, monitoring, telemetry, ai, automation, backup, disaster-recovery]
+  lifecycle: [discover, identify, validate, provision, verify, monitor, reconcile, failover, backup, restore, retire]
+  policy:
+    capability_negotiation: true
+    health_gated_selection: true
+    deterministic_failover: true
+    snapshot_before_change: true
+    post_change_verification: true
+    rollback_when_safe: true
+    privileged_changes: approval-required
+    destructive_changes: explicit-approval
+    unauthorized_external_control: prohibited
+  observability:
+    raw_payload_persistence: false
+    secrets_in_logs: false
+    flow_identity: [tenant_id, device_id, service_id, path_id, subscriber_id, exporter_id]
+  release:
+    production_claim_requires_evidence: true
+    simulation_as_production_evidence: false
