@@ -1,0 +1,31 @@
+version: v1
+kind: FTNCertificateProviders
+metadata:
+  name: ftn-certificate-providers
+spec:
+  internal_pki:
+    enabled: true
+    source: internal-pki
+    mtls: true
+    private_keys: external-secret-store
+  acme:
+    enabled: true
+    source: acme
+    challenge: dns-01
+    renewal: automated
+    account_key: external-secret-store
+  akamai:
+    enabled: true
+    source: akamai
+    role: external-certificate-provider
+    credentials: external-secret-store
+    deployment: approval-required
+    renewal: staged
+  policy:
+    chain_validation: required
+    hostname_validation: required
+    key_usage_validation: required
+    security_downgrade: prohibited
+    ca_validation_bypass: prohibited
+    private_key_logging: prohibited
+    certificate_deployment: audit-required
