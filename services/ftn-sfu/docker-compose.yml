@@ -2,8 +2,9 @@ services:
   ftn-sfu:
     image: livekit/livekit-server:v1.9.2
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      FTN_SFU_API_KEY: "${FTN_SFU_API_KEY:?set FTN_SFU_API_KEY}"
+      FTN_SFU_API_SECRET: "${FTN_SFU_API_SECRET:?set FTN_SFU_API_SECRET}"
     command: ["/bin/sh", "/etc/ftn-sfu/entrypoint.sh"]
     ports:
       - "${FTN_SFU_HTTP_PORT:-7880}:7880/tcp"
@@ -23,8 +24,9 @@ services:
   ftn-turn:
     image: coturn/coturn:4.6.3
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      FTN_TURN_USERNAME: "${FTN_TURN_USERNAME:?set FTN_TURN_USERNAME}"
+      FTN_TURN_PASSWORD: "${FTN_TURN_PASSWORD:?set FTN_TURN_PASSWORD}"
     command:
       - "-c"
       - "/etc/coturn/turnserver.conf"
