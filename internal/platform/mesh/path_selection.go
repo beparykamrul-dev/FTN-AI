@@ -5,14 +5,6 @@ import (
 	"sort"
 )
 
-type PathCandidate struct {
-	PeerID string `json:"peer_id"`
-	LatencyMS float64 `json:"latency_ms"`
-	LossPct float64 `json:"loss_pct"`
-	CapacityMbps float64 `json:"capacity_mbps"`
-	HealthScore uint8 `json:"health_score"`
-}
-
 type PathPolicy struct {
 	LatencyWeight float64
 	LossWeight float64
@@ -20,9 +12,7 @@ type PathPolicy struct {
 	HealthWeight float64
 }
 
-func DefaultPathPolicy() PathPolicy {
-	return PathPolicy{LatencyWeight: 0.40, LossWeight: 0.25, CapacityWeight: 0.15, HealthWeight: 0.20}
-}
+func DefaultPathPolicy() PathPolicy { return PathPolicy{LatencyWeight: 0.40, LossWeight: 0.25, CapacityWeight: 0.15, HealthWeight: 0.20} }
 
 func RankPaths(paths []PathCandidate, policy PathPolicy) []PathCandidate {
 	out := append([]PathCandidate(nil), paths...)
