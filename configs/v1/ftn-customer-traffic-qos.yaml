@@ -1,0 +1,34 @@
+version: v1
+kind: FTNCustomerTrafficQoS
+metadata:
+  name: ftn-customer-traffic-qos
+spec:
+  objective: low-latency-customer-traffic
+  availability_target: 99.99
+  classification:
+    identity_source: managed-service-registry
+    endpoint_ips: dynamic
+    fallback_classes: [realtime, voice, video, gaming, normal, bulk]
+    services: [whatsapp, telegram, imo, pubg, freefire]
+  metrics:
+    required: [latency, jitter, packet_loss, congestion, health]
+  path_selection:
+    engine: exrouter
+    score_based: true
+    health_aware: true
+    hysteresis: true
+    hold_down_seconds: 5
+  qos:
+    dscp: true
+    queue_aware: true
+    congestion_aware: true
+    customer_fairness: true
+  route_preference:
+    local_peering: preferred_when_healthy_and_authorized
+    domestic: preferred_when_measured_better
+    international: fallback
+    private_backbone: preferred_when_measured_better
+  security:
+    anti_spoofing: required
+    policy_gated_changes: true
+    no_embedded_provider_credentials: true
