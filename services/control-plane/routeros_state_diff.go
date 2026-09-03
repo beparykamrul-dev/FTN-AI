@@ -16,9 +16,9 @@ type RouterOSQoSState struct {
 }
 
 type RouterOSSnapshot struct {
-	DeviceID string             `json:"device_id"`
-	Rules    []RouterOSQoSState `json:"rules"`
-	CapturedAt time.Time        `json:"captured_at"`
+	DeviceID   string             `json:"device_id"`
+	Rules      []RouterOSQoSState `json:"rules"`
+	CapturedAt time.Time          `json:"captured_at"`
 }
 
 type RouterOSDesiredState struct {
@@ -32,9 +32,16 @@ type RouterOSQoSDiffChange struct {
 }
 
 type RouterOSDiff struct {
-	Adds    []RouterOSQoSState       `json:"adds,omitempty"`
-	Changes []RouterOSQoSDiffChange  `json:"changes,omitempty"`
-	Removes []RouterOSQoSState       `json:"removes,omitempty"`
+	Adds    []RouterOSQoSState      `json:"adds,omitempty"`
+	Changes []RouterOSQoSDiffChange `json:"changes,omitempty"`
+	Removes []RouterOSQoSState      `json:"removes,omitempty"`
+}
+
+type RouterOSQoSExecutionPlan struct {
+	DeviceID        string       `json:"device_id"`
+	Diff            RouterOSDiff `json:"diff"`
+	RequiresApproval bool         `json:"requires_approval"`
+	ApplyAllowed    bool         `json:"apply_allowed"`
 }
 
 func (d RouterOSDiff) Empty() bool {
@@ -65,7 +72,9 @@ func normalizeRouterOSQoSState(rules []RouterOSQoSState) ([]RouterOSQoSState, er
 		out = append(out, rule)
 	}
 	sort.Slice(out, func(i, j int) bool {
-		if out[i].ServiceID != out[j].ServiceID { return out[i].ServiceID < out[j].ServiceID }
+		if out[i].ServiceID != out[j].ServiceID {
+			return out[i].ServiceID < out[j].ServiceID
+		}
 		return out[i].PathID < out[j].PathID
 	})
 	return out, nil
@@ -76,18 +85,26 @@ func NormalizeRouterOSQoSState(rules []RouterOSQoSState) ([]RouterOSQoSState, er
 }
 
 func NormalizeRouterOSSnapshot(snapshot RouterOSSnapshot) (RouterOSSnapshot, error) {
-	if strings.TrimSpace(snapshot.DeviceID) == "" { return RouterOSSnapshot{}, errors.New("routeros_snapshot_device_id_required") }
+	if strings.TrimSpace(snapshot.DeviceID) == "" {
+		return RouterOSSnapshot{}, errors.New("routeros_snapshot_device_id_required")
+	}
 	rules, err := normalizeRouterOSQoSState(snapshot.Rules)
-	if err != nil { return RouterOSSnapshot{}, err }
+	if err != nil {
+		return RouterOSSnapshot{}, err
+	}
 	snapshot.DeviceID = strings.TrimSpace(snapshot.DeviceID)
 	snapshot.Rules = rules
 	return snapshot, nil
 }
 
 func NormalizeRouterOSDesiredState(desired RouterOSDesiredState) (RouterOSDesiredState, error) {
-	if strings.TrimSpace(desired.DeviceID) == "" { return RouterOSDesiredState{}, errors.New("routeros_desired_device_id_required") }
+	if strings.TrimSpace(desired.DeviceID) == "" {
+		return RouterOSDesiredState{}, errors.New("routeros_desired_device_id_required")
+	}
 	rules, err := normalizeRouterOSQoSState(desired.Rules)
-	if err != nil { return RouterOSDesiredState{}, err }
+	if err != nil {
+		return RouterOSDesiredState{}, err
+	}
 	desired.DeviceID = strings.TrimSpace(desired.DeviceID)
 	desired.Rules = rules
 	return desired, nil
@@ -97,27 +114,60 @@ func routerOSQoSKey(r RouterOSQoSState) string { return r.ServiceID + "\x00" + r
 
 func DiffRouterOSQoSState(snapshot RouterOSSnapshot, desired RouterOSDesiredState) (RouterOSDiff, error) {
 	s, err := NormalizeRouterOSSnapshot(snapshot)
-	if err != nil { return RouterOSDiff{}, err }
+	if err != nil {
+		return RouterOSDiff{}, err
+	}
 	d, err := NormalizeRouterOSDesiredState(desired)
-	if err != nil { return RouterOSDiff{}, err }
-	if s.DeviceID != d.DeviceID { return RouterOSDiff{}, errors.New("routeros_device_mismatch") }
+	if err != nil {
+		return RouterOSDiff{}, err
+	}
+	if s.DeviceID != d.DeviceID {
+		return RouterOSDiff{}, errors.New("routeros_device_mismatch")
+	}
 
 	before := make(map[string]RouterOSQoSState, len(s.Rules))
 	after := make(map[string]RouterOSQoSState, len(d.Rules))
-	for _, r := range s.Rules { before[routerOSQoSKey(r)] = r }
-	for _, r := range d.Rules { after[routerOSQoSKey(r)] = r }
+	for _, r := range s.Rules {
+		before[routerOSQoSKey(r)] = r
+	}
+	for _, r := range d.Rules {
+		after[routerOSQoSKey(r)] = r
+	}
 
 	out := RouterOSDiff{}
 	for key, r := range after {
 		old, ok := before[key]
-		if !ok { out.Adds = append(out.Adds, r); continue }
-		if old != r { out.Changes = append(out.Changes, RouterOSQoSDiffChange{Before: old, After: r}) }
+		if !ok {
+			out.Adds = append(out.Adds, r)
+			continue
+		}
+		if old != r {
+			out.Changes = append(out.Changes, RouterOSQoSDiffChange{Before: old, After: r})
+		}
 	}
 	for key, r := range before {
-		if _, ok := after[key]; !ok { out.Removes = append(out.Removes, r) }
+		if _, ok := after[key]; !ok {
+			out.Removes = append(out.Removes, r)
+		}
 	}
 	sort.Slice(out.Adds, func(i, j int) bool { return routerOSQoSKey(out.Adds[i]) < routerOSQoSKey(out.Adds[j]) })
 	sort.Slice(out.Removes, func(i, j int) bool { return routerOSQoSKey(out.Removes[i]) < routerOSQoSKey(out.Removes[j]) })
 	sort.Slice(out.Changes, func(i, j int) bool { return routerOSQoSKey(out.Changes[i].After) < routerOSQoSKey(out.Changes[j].After) })
 	return out, nil
+}
+
+// BuildRouterOSQoSExecutionPlan is intentionally plan-only. It never mutates a
+// RouterOS device. A non-empty diff always requires explicit approval before a
+// separate adapter is allowed to execute it.
+func BuildRouterOSQoSExecutionPlan(snapshot RouterOSSnapshot, desired RouterOSDesiredState) (RouterOSQoSExecutionPlan, error) {
+	diff, err := DiffRouterOSQoSState(snapshot, desired)
+	if err != nil {
+		return RouterOSQoSExecutionPlan{}, err
+	}
+	return RouterOSQoSExecutionPlan{
+		DeviceID: snapshot.DeviceID,
+		Diff: diff,
+		RequiresApproval: !diff.Empty(),
+		ApplyAllowed: false,
+	}, nil
 }
