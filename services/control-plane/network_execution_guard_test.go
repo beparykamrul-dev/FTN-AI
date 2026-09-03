@@ -7,12 +7,15 @@ import (
 
 func TestEvaluateNetworkExecution(t *testing.T) {
 	base := NetworkExecutionIntent{
-		Device: NetworkDevice{ID: "core-a", Kind: "core-router", Address: "10.0.0.1", Healthy: true},
-		Action: "configure-interface",
-		Approved: true,
-		PrechangeSnapshot: true,
+		Device:               NetworkDevice{ID: "core-a", Kind: "core-router", Address: "10.0.0.1", Healthy: true},
+		Action:               "configure-interface",
+		ApprovalID:           "approval-1",
+		Approved:             true,
+		Explicit:             true,
+		PrechangeSnapshot:    true,
 		VerificationRequired: true,
-		Timeout: 30 * time.Second,
+		RollbackSafe:         true,
+		Timeout:              30 * time.Second,
 	}
 	if got := EvaluateNetworkExecution(base); !got.Allowed {
 		t.Fatalf("expected allowed execution, got %+v", got)
