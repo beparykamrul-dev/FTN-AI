@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -64,72 +65,49 @@ type TrafficDecision struct {
 }
 
 func trafficScore(o TrafficPathObservation, now time.Time) float64 {
-	if !o.Healthy || strings.TrimSpace(o.PathID) == "" {
-		return -1
-	}
+	if !o.Healthy || strings.TrimSpace(o.PathID) == "" { return -1 }
 	s := 100 - o.LatencyMs - 1.5*o.JitterMs - 5*o.PacketLoss - 20*o.Congestion
-	if o.ObservedAt.IsZero() {
-		return s - 10
-	}
-	if age := now.Sub(o.ObservedAt); age > 2*time.Minute {
-		return -1
-	} else if age > 30*time.Second {
-		s -= 20
-	}
+	if o.ObservedAt.IsZero() { return s - 10 }
+	if age := now.Sub(o.ObservedAt); age > 2*time.Minute { return -1 } else if age > 30*time.Second { s -= 20 }
 	return s
 }
 
 func usableObservation(o TrafficPathObservation, service TrafficServicePolicy) bool {
 	observedService := strings.TrimSpace(o.ServiceID)
-	if observedService == service.ID {
-		return true
-	}
-	// Class-level fallback is only valid for an explicitly generic service.
-	// This prevents (for example) a PUBG observation from being reused for Free Fire.
-	genericID := map[TrafficClass]string{
-		TrafficRealtime: "realtime-generic",
-		TrafficVoice:    "voice-generic",
-		TrafficVideo:    "video-generic",
-	}[service.Class]
+	if observedService == service.ID { return true }
+	genericID := map[TrafficClass]string{TrafficRealtime: "realtime-generic", TrafficVoice: "voice-generic", TrafficVideo: "video-generic"}[service.Class]
 	return observedService == genericID && strings.TrimSpace(string(o.Class)) == string(service.Class)
 }
 
-// SelectTrafficPath performs stateless selection. Stateful hold-down is handled
-// by TrafficPathController so the pure selector remains deterministic and testable.
 func SelectTrafficPath(observations []TrafficPathObservation, service TrafficServicePolicy, now time.Time) (TrafficDecision, bool) {
 	best := TrafficDecision{}
 	bestScore := -1.0
 	for _, o := range observations {
-		if !usableObservation(o, service) {
-			continue
-		}
+		if !usableObservation(o, service) { continue }
 		s := trafficScore(o, now)
 		if s > bestScore || (s == bestScore && o.PathID < best.PathID) {
 			bestScore = s
 			best = TrafficDecision{PathID: o.PathID, ServiceID: service.ID, Class: service.Class, Score: s, DSCP: service.DSCP, Priority: service.Priority, HoldDownSec: 5}
 		}
 	}
-	if bestScore < 0 || best.PathID == "" {
-		return TrafficDecision{}, false
-	}
+	if bestScore < 0 || best.PathID == "" { return TrafficDecision{}, false }
 	return best, true
 }
 
 type TrafficPathController struct {
-	CurrentPath   string
+	mu sync.Mutex
+	CurrentPath string
 	CandidatePath string
 	CandidateSince time.Time
-	LastSwitch    time.Time
+	LastSwitch time.Time
 }
 
-// Decide prevents route flapping. A healthy current path is retained unless a
-// materially better candidate has stayed preferred for the hold-down period.
-// An unhealthy current path may fail over immediately.
 func (c *TrafficPathController) Decide(observations []TrafficPathObservation, service TrafficServicePolicy, now time.Time) (TrafficDecision, bool) {
+	if c == nil { return TrafficDecision{}, false }
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	best, ok := SelectTrafficPath(observations, service, now)
-	if !ok {
-		return TrafficDecision{}, false
-	}
+	if !ok { return TrafficDecision{}, false }
 	if c.CurrentPath == "" {
 		c.CurrentPath, c.LastSwitch = best.PathID, now
 		best.Failover = false
@@ -170,23 +148,13 @@ func (c *TrafficPathController) Decide(observations []TrafficPathObservation, se
 
 func SortedTrafficPolicies(in []TrafficServicePolicy) []TrafficServicePolicy {
 	out := append([]TrafficServicePolicy(nil), in...)
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Priority == out[j].Priority {
-			return out[i].ID < out[j].ID
-		}
-		return out[i].Priority > out[j].Priority
-	})
+	sort.SliceStable(out, func(i, j int) bool { if out[i].Priority == out[j].Priority { return out[i].ID < out[j].ID }; return out[i].Priority > out[j].Priority })
 	return out
 }
 
 var errTrafficPolicyInvalid = errors.New("traffic policy is invalid")
 
 func validateTrafficPolicy(p TrafficServicePolicy) error {
-	if strings.TrimSpace(p.ID) == "" {
-		return errTrafficPolicyInvalid
-	}
-	if p.DSCP > 63 {
-		return errTrafficPolicyInvalid
-	}
+	if strings.TrimSpace(p.ID) == "" || p.DSCP > 63 { return errTrafficPolicyInvalid }
 	return nil
 }
