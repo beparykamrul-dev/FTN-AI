@@ -35,6 +35,7 @@ spec:
     support: [http2, http3, websocket, grpc]
     notification: [https, websocket, grpc]
     device_driver: [snmp, ssh, netconf, restconf, gnmi, routeros-api, omci, redfish, ipmi, onvif]
+    sfu: [webrtc, websocket, http1, udp]
   ftn_protocol:
     framing: negotiated
     session: authenticated
