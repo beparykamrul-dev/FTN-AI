@@ -1,10 +1,13 @@
 package main
 
 import (
+    "context"
     "encoding/json"
     "errors"
+    "log"
     "net"
     "net/http"
+    "os"
     "sort"
     "strings"
     "sync"
@@ -36,13 +39,36 @@ type TrafficRuntime struct {
     flows       []TrafficFlowObservation
     decisions   map[string]TrafficDecision
     controllers map[string]*TrafficPathController
+    listener    *FlowListener
 }
 
 func NewTrafficRuntime() *TrafficRuntime {
-    return &TrafficRuntime{
+    runtime := &TrafficRuntime{
         decisions:   make(map[string]TrafficDecision),
         controllers: make(map[string]*TrafficPathController),
     }
+    if cfg, enabled := flowListenerConfigFromEnv(); enabled {
+        listener, err := NewFlowListener(cfg, NewFlowTelemetryCollector(), runtime)
+        if err != nil {
+            log.Printf("FTN flow telemetry disabled: %v", err)
+        } else if err := listener.Start(context.Background()); err != nil {
+            log.Printf("FTN flow telemetry listener failed to start: %v", err)
+        } else {
+            runtime.listener = listener
+            log.Printf("FTN flow telemetry listener active on %s", cfg.Address)
+        }
+    }
+    return runtime
+}
+
+func (t *TrafficRuntime) Close() error {
+    t.mu.RLock()
+    listener := t.listener
+    t.mu.RUnlock()
+    if listener == nil {
+        return nil
+    }
+    return listener.Close()
 }
 
 func (t *TrafficRuntime) UpsertEndpoint(e ManagedEndpoint) error {
@@ -106,14 +132,7 @@ func (t *TrafficRuntime) Classify(f FlowRecord, now time.Time) (TrafficFlowObser
     if !ok {
         return TrafficFlowObservation{}, false
     }
-    return TrafficFlowObservation{
-        FlowRecord: f,
-        ServiceID:  best.ServiceID,
-        Class:      policy.Class,
-        Region:     best.Region,
-        Provider:   best.Provider,
-        ObservedAt: now,
-    }, true
+    return TrafficFlowObservation{FlowRecord: f, ServiceID: best.ServiceID, Class: policy.Class, Region: best.Region, Provider: best.Provider, ObservedAt: now}, true
 }
 
 func trafficPolicyByID(id string) (TrafficServicePolicy, bool) {
@@ -178,11 +197,7 @@ func (t *TrafficRuntime) Decisions(now time.Time, nodes []Node) []TrafficDecisio
             if !n.Healthy || !nodeHasService(n, serviceID) {
                 continue
             }
-            byService[serviceID] = append(byService[serviceID], TrafficPathObservation{
-                PathID: n.ID, ServiceID: serviceID, Class: p.Class,
-                LatencyMs: n.LatencyMs, PacketLoss: n.PacketLoss,
-                Healthy: n.Healthy, ObservedAt: now,
-            })
+            byService[serviceID] = append(byService[serviceID], TrafficPathObservation{PathID: n.ID, ServiceID: serviceID, Class: p.Class, LatencyMs: n.LatencyMs, PacketLoss: n.PacketLoss, Healthy: n.Healthy, ObservedAt: now})
         }
     }
 
@@ -217,62 +232,50 @@ func (t *TrafficRuntime) Decisions(now time.Time, nodes []Node) []TrafficDecisio
 }
 
 func (a *App) trafficEndpoints(w http.ResponseWriter, r *http.Request) {
-    if !method(w, r, http.MethodPost) {
-        return
-    }
-    if !requirePermission(a, "network.configure", w, r) {
-        return
-    }
+    if !method(w, r, http.MethodPost) { return }
+    if !requirePermission(a, "network.configure", w, r) { return }
     var e ManagedEndpoint
     dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10))
-    if err := dec.Decode(&e); err != nil {
-        jsonResponse(w, 400, map[string]string{"error": "invalid_json"})
-        return
-    }
-    if err := a.traffic.UpsertEndpoint(e); err != nil {
-        jsonResponse(w, 400, map[string]string{"error": err.Error()})
-        return
-    }
+    if err := dec.Decode(&e); err != nil { jsonResponse(w, 400, map[string]string{"error": "invalid_json"}); return }
+    if err := a.traffic.UpsertEndpoint(e); err != nil { jsonResponse(w, 400, map[string]string{"error": err.Error()}); return }
     a.audit(r, "traffic.endpoint", e.ServiceID, "accepted", e)
     jsonResponse(w, http.StatusAccepted, map[string]any{"status": "accepted", "service_id": e.ServiceID, "cidr": e.CIDR, "source": "managed-endpoint-feed"})
 }
 
 func (a *App) trafficFlowIngest(w http.ResponseWriter, r *http.Request) {
-    if !method(w, r, http.MethodPost) {
-        return
-    }
-    if !requirePermission(a, "network.read", w, r) {
-        return
-    }
-    var req struct {
-        Flows []FlowRecord `json:"flows"`
-    }
+    if !method(w, r, http.MethodPost) { return }
+    if !requirePermission(a, "network.read", w, r) { return }
+    var req struct { Flows []FlowRecord `json:"flows"` }
     dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<20))
-    if err := dec.Decode(&req); err != nil {
-        jsonResponse(w, 400, map[string]string{"error": "invalid_json"})
-        return
-    }
-    if len(req.Flows) > 4096 {
-        jsonResponse(w, 413, map[string]string{"error": "flow_batch_limit"})
-        return
-    }
+    if err := dec.Decode(&req); err != nil { jsonResponse(w, 400, map[string]string{"error": "invalid_json"}); return }
+    if len(req.Flows) > 4096 { jsonResponse(w, 413, map[string]string{"error": "flow_batch_limit"}); return }
     now := time.Now().UTC()
     accepted := a.traffic.Ingest(req.Flows, now)
     jsonResponse(w, http.StatusAccepted, map[string]any{"accepted": accepted, "received": len(req.Flows), "observed_at": now})
 }
 
 func (a *App) trafficDecisions(w http.ResponseWriter, r *http.Request) {
-    if !method(w, r, http.MethodGet) {
-        return
-    }
-    if !requirePermission(a, "network.read", w, r) {
-        return
-    }
+    if !method(w, r, http.MethodGet) { return }
+    if !requirePermission(a, "network.read", w, r) { return }
     nodes, err := a.loadNodes(r.Context())
-    if err != nil {
-        jsonResponse(w, 500, map[string]string{"error": "node_query_failed"})
-        return
-    }
+    if err != nil { jsonResponse(w, 500, map[string]string{"error": "node_query_failed"}); return }
     decisions := a.traffic.Decisions(time.Now().UTC(), nodes)
     jsonResponse(w, 200, map[string]any{"decisions": decisions, "execution": "read-only", "configuration_changes": "approval-required"})
+}
+
+func flowListenerConfigFromEnv() (FlowListenerConfig, bool) {
+    address := strings.TrimSpace(os.Getenv("FTN_FLOW_LISTEN_ADDR"))
+    exportersRaw := strings.TrimSpace(os.Getenv("FTN_FLOW_EXPORTERS"))
+    if address == "" || exportersRaw == "" {
+        return FlowListenerConfig{}, false
+    }
+    exporters := make([]string, 0, 16)
+    for _, item := range strings.Split(exportersRaw, ",") {
+        item = strings.TrimSpace(item)
+        if item != "" {
+            exporters = append(exporters, item)
+            if len(exporters) == 256 { break }
+        }
+    }
+    return FlowListenerConfig{Address: address, Exporters: exporters}, len(exporters) > 0
 }
