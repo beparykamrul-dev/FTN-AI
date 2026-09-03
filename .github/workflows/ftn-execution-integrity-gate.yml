@@ -1,0 +1,50 @@
+name: FTN Execution Integrity Gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/control-plane/migrations/**'
+      - 'services/control-plane/tests/sql/**'
+      - '.github/workflows/ftn-execution-integrity-gate.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/control-plane/migrations/**'
+      - 'services/control-plane/tests/sql/**'
+      - '.github/workflows/ftn-execution-integrity-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply migration chain
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: |
+          set -euo pipefail
+          for f in $(find services/control-plane/migrations -maxdepth 1 -type f -name '*.sql' | sort -V); do
+            echo "Applying $f"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Run semantic integrity assertions
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: psql "$PGURL" -v ON_ERROR_STOP=1 -f services/control-plane/tests/sql/024_execution_integrity_semantic.sql
