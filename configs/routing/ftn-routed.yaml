@@ -1,0 +1,40 @@
+apiVersion: ftn.network/v1
+kind: FTNRouted
+metadata:
+  name: ftn-routed
+spec:
+  implementation: go
+  role: routing-control-plane
+  protocols:
+    bgp:
+      enabled: true
+      families: [ipv4-unicast, ipv6-unicast, l2vpn-evpn]
+    ibgp: true
+    ebgp: true
+    ospf: true
+    bfd: true
+  forwarding:
+    vrf: true
+    ecmp: true
+    fib_programming: approval-gated
+  policy:
+    default_action: reject
+    route_changes_require_approval: true
+    external_route_changes_require_approval: true
+    destructive_actions_require_explicit_approval: true
+  resilience:
+    prechange_snapshot: true
+    postchange_verification: true
+    rollback_when_safe: true
+    core_ha: core-a-core-b
+  telemetry:
+    route_events: true
+    peer_state: true
+    bfd_state: true
+    rib_fib_consistency: true
+    prometheus: true
+  integrations:
+    gobgp: contract
+    geoflow2: advisory
+    bmp: telemetry
+    event_journal: audit
