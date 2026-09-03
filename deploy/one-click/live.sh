@@ -20,9 +20,10 @@ chmod 600 "$ENV_FILE"
 # Only manifests explicitly marked production are started. This prevents test/dev
 # compose files from accidentally entering a live deployment.
 mapfile -t manifests < <(find "$ROOT_DIR" -type f \( -name 'docker-compose.yml' -o -name 'compose.yml' \) \
-  -not -path '*/.git/*' -not -path '*/node_modules/*' -print0 | xargs -0 -r grep -Il 'FTN_PRODUCTION_STACK=true' | sort)
+  -not -path '*/.git/*' -not -path '*/node_modules/*' -print0 | \
+  xargs -0 -r grep -El 'FTN_PRODUCTION_STACK=true|x-ftn-production-stack:[[:space:]]*true' | sort)
 
-((${#manifests[@]})) || fail 'No production Compose manifest is marked with FTN_PRODUCTION_STACK=true'
+((${#manifests[@]})) || fail 'No production Compose manifest is marked for FTN live deployment'
 
 log "Found ${#manifests[@]} production stack(s)"
 for compose in "${manifests[@]}"; do
@@ -50,13 +51,11 @@ for compose in "${manifests[@]}"; do
  done
 
 # Wait for the control-plane readiness contract when it exists.
-if curl -fsS --max-time 3 http://127.0.0.1:8080/readyz >/dev/null 2>&1 || \
-   curl -fsS --max-time 3 http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
-  log 'Control-plane readiness: OK'
-elif [ -f "$ROOT_DIR/services/control-plane/docker-compose.yml" ]; then
+if [ -f "$ROOT_DIR/services/control-plane/docker-compose.yml" ]; then
   for _ in $(seq 1 60); do
     if curl -fsS --max-time 3 http://127.0.0.1:8080/readyz >/dev/null 2>&1 || \
        curl -fsS --max-time 3 http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
+      log 'Control-plane readiness: OK'
       break
     fi
     sleep 2
@@ -64,7 +63,6 @@ elif [ -f "$ROOT_DIR/services/control-plane/docker-compose.yml" ]; then
   curl -fsS --max-time 5 http://127.0.0.1:8080/readyz >/dev/null 2>&1 || \
     curl -fsS --max-time 5 http://127.0.0.1:8080/healthz >/dev/null 2>&1 || \
     fail 'Control-plane readiness check failed'
-  log 'Control-plane readiness: OK'
 fi
 
 log 'Production stack status'
