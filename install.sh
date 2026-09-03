@@ -26,8 +26,8 @@ docker compose version >/dev/null 2>&1 || fail 'Docker Compose v2 is required'
 
 if [ -d "$INSTALL_DIR/.git" ]; then
   log "Updating existing checkout: $INSTALL_DIR"
-  git -C "$INSTALL_DIR" fetch --prune origin
-  git -C "$INSTALL_DIR" checkout -q "$REF"
+  git -C "$INSTALL_DIR" fetch --prune origin "$REF"
+  git -C "$INSTALL_DIR" checkout -q -B "$REF" "origin/$REF"
   git -C "$INSTALL_DIR" reset --hard -q "origin/$REF"
 else
   log "Cloning FTN-AI ($REF) -> $INSTALL_DIR"
@@ -36,5 +36,5 @@ else
 fi
 
 cd "$INSTALL_DIR"
-chmod +x deploy/one-click/bootstrap.sh
+chmod +x deploy/one-click/bootstrap.sh deploy/one-click/live.sh
 exec deploy/one-click/bootstrap.sh
