@@ -15,6 +15,7 @@ type Node struct {
 	Provider string `json:"provider"`
 	Region string `json:"region,omitempty"`
 	Services []string `json:"services"`
+	ProbeAddress string `json:"probe_address,omitempty"`
 	CPUPercent float64 `json:"cpu_percent"`
 	RAMPercent float64 `json:"ram_percent"`
 	SSDPercent float64 `json:"ssd_percent"`
@@ -45,11 +46,25 @@ func refreshNodeHealth(list []Node, now time.Time) []Node { out:=make([]Node,len
 func (a *App) loadNodes(ctx context.Context) ([]Node,error) {
 	if a.db==nil { nodesMu.RLock(); defer nodesMu.RUnlock(); return refreshNodeHealth(nodes,time.Now().UTC()),nil }
 	qctx,c:=context.WithTimeout(ctx,2*time.Second); defer c()
-	rows,err:=a.db.Query(qctx,`select id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at from control_nodes order by id`); if err!=nil{return nil,err}; defer rows.Close()
-	out:=[]Node{}; for rows.Next(){var n Node; if err:=rows.Scan(&n.ID,&n.Provider,&n.Region,&n.Services,&n.CPUPercent,&n.RAMPercent,&n.SSDPercent,&n.HDDPercent,&n.NetMbps,&n.LatencyMs,&n.PacketLoss,&n.Healthy,&n.LastSeen);err!=nil{return nil,err}; if validNode(n){out=append(out,n)}}; return refreshNodeHealth(out,time.Now().UTC()),rows.Err()
+	rows,err:=a.db.Query(qctx,`select id,provider,region,services,probe_address,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at from control_nodes order by id`); if err!=nil{return nil,err}; defer rows.Close()
+	out:=[]Node{}; for rows.Next(){var n Node; if err:=rows.Scan(&n.ID,&n.Provider,&n.Region,&n.Services,&n.ProbeAddress,&n.CPUPercent,&n.RAMPercent,&n.SSDPercent,&n.HDDPercent,&n.NetMbps,&n.LatencyMs,&n.PacketLoss,&n.Healthy,&n.LastSeen);err!=nil{return nil,err}; if validNode(n){out=append(out,n)}}; return refreshNodeHealth(out,time.Now().UTC()),rows.Err()
+}
+
+func (a *App) trafficProbeTargets(ctx context.Context) []TrafficProbeTarget {
+	ns, err := a.loadNodes(ctx)
+	if err != nil { return nil }
+	policies := DefaultTrafficServicePolicies()
+	targets := make([]TrafficProbeTarget, 0, len(ns)*2)
+	for _, n := range ns {
+		if strings.TrimSpace(n.ProbeAddress) == "" || !n.Healthy { continue }
+		for _, policy := range policies {
+			if nodeHasService(n, policy.ID) { targets = append(targets, TrafficProbeTarget{ServiceID: policy.ID, PathID: n.ID, Address: n.ProbeAddress}) }
+		}
+	}
+	return targets
 }
 
 func (a *App) nodeCatalog(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet){return}; out,err:=a.loadNodes(r.Context());if err!=nil{jsonResponse(w,500,map[string]string{"error":"node_query_failed"});return};jsonResponse(w,200,map[string]any{"nodes":out})}
 func upsertMemoryNode(n Node){nodesMu.Lock();defer nodesMu.Unlock();for i:=range nodes{if nodes[i].ID==n.ID{nodes[i]=n;return}};nodes=append(nodes,n)}
-func (a *App) registerNode(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodPost){return};var n Node;if err:=json.NewDecoder(r.Body).Decode(&n);err!=nil{jsonResponse(w,400,map[string]string{"error":"invalid_json"});return};if !validNode(n){jsonResponse(w,400,map[string]string{"error":"invalid_node"});return};n.LastSeen=time.Now().UTC();if a.db==nil{upsertMemoryNode(n);jsonResponse(w,202,map[string]any{"status":"registered","node":n});return};ctx,c:=context.WithTimeout(r.Context(),2*time.Second);defer c();_,err:=a.db.Exec(ctx,`insert into control_nodes(id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) on conflict(id) do update set provider=excluded.provider,region=excluded.region,services=excluded.services,cpu_percent=excluded.cpu_percent,ram_percent=excluded.ram_percent,ssd_percent=excluded.ssd_percent,hdd_percent=excluded.hdd_percent,net_mbps=excluded.net_mbps,latency_ms=excluded.latency_ms,packet_loss_percent=excluded.packet_loss_percent,healthy=excluded.healthy,updated_at=now()`,n.ID,n.Provider,n.Region,n.Services,n.CPUPercent,n.RAMPercent,n.SSDPercent,n.HDDPercent,n.NetMbps,n.LatencyMs,n.PacketLoss,n.Healthy);if err!=nil{jsonResponse(w,500,map[string]string{"error":"node_register_failed"});return};jsonResponse(w,202,map[string]any{"status":"registered","node":n})}
+func (a *App) registerNode(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodPost){return};var n Node;if err:=json.NewDecoder(r.Body).Decode(&n);err!=nil{jsonResponse(w,400,map[string]string{"error":"invalid_json"});return};if !validNode(n){jsonResponse(w,400,map[string]string{"error":"invalid_node"});return};n.LastSeen=time.Now().UTC();if a.db==nil{upsertMemoryNode(n);jsonResponse(w,202,map[string]any{"status":"registered","node":n});return};ctx,c:=context.WithTimeout(r.Context(),2*time.Second);defer c();_,err:=a.db.Exec(ctx,`insert into control_nodes(id,provider,region,services,probe_address,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set provider=excluded.provider,region=excluded.region,services=excluded.services,probe_address=excluded.probe_address,cpu_percent=excluded.cpu_percent,ram_percent=excluded.ram_percent,ssd_percent=excluded.ssd_percent,hdd_percent=excluded.hdd_percent,net_mbps=excluded.net_mbps,latency_ms=excluded.latency_ms,packet_loss_percent=excluded.packet_loss_percent,healthy=excluded.healthy,updated_at=now()`,n.ID,n.Provider,n.Region,n.Services,n.ProbeAddress,n.CPUPercent,n.RAMPercent,n.SSDPercent,n.HDDPercent,n.NetMbps,n.LatencyMs,n.PacketLoss,n.Healthy);if err!=nil{jsonResponse(w,500,map[string]string{"error":"node_register_failed"});return};jsonResponse(w,202,map[string]any{"status":"registered","node":n})}
 func (a *App) placement(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodPost){return};var req PlacementRequest;if err:=json.NewDecoder(r.Body).Decode(&req);err!=nil||req.ServiceID==""{jsonResponse(w,400,map[string]string{"error":"service_id_required"});return};if !serviceExists(a.catalog,req.ServiceID){jsonResponse(w,404,map[string]string{"error":"service_not_found"});return};available,err:=a.loadNodes(r.Context());if err!=nil{jsonResponse(w,500,map[string]string{"error":"node_query_failed"});return};candidates:=make([]Node,0,len(available));for _,n:=range available{if nodeScore(n,req)>=0{candidates=append(candidates,n)}};sort.SliceStable(candidates,func(i,j int)bool{return nodeScore(candidates[i],req)>nodeScore(candidates[j],req)});if len(candidates)==0{jsonResponse(w,503,map[string]any{"status":"no_eligible_node","service_id":req.ServiceID});return};best:=candidates[0];jsonResponse(w,200,map[string]any{"status":"placement_ready","service_id":req.ServiceID,"node_id":best.ID,"provider":best.Provider,"region":best.Region,"score":nodeScore(best,req),"candidates":candidates,"execution":"approval_required"})}
