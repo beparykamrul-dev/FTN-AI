@@ -73,6 +73,12 @@ func (t *TrafficRuntime) Close() error {
     return listener.Close()
 }
 
+func (t *TrafficRuntime) FlowCount() int {
+    t.mu.RLock()
+    defer t.mu.RUnlock()
+    return len(t.flows)
+}
+
 func (t *TrafficRuntime) UpsertQuality(o TrafficQualityObservation, now time.Time) error {
     if t.quality == nil {
         return errors.New("traffic_quality_store_required")
