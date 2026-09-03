@@ -1,0 +1,30 @@
+apiVersion: ftn.ai/v1
+kind: MainServerServicePlane
+metadata:
+  name: ftn-main-server-origin
+spec:
+  origin:
+    type: ftn-main-server
+    thirdPartyLocalOrigin: false
+    externalLocalCDN: false
+  servicePlane:
+    sourceOfTruth: ftn-main-server
+    subscriberAccess: pppoe-vlan-qinq
+    transport: ftn-buckboon
+    routing: ftn-routed
+    steering: policy-routing
+    vrfIsolation: required
+  access:
+    localRouter: required
+    olt: required
+    onu: required
+  telemetry:
+    silk: enabled
+    netflowIPFIX: enabled
+    rawPacketPayloadStorage: false
+  security:
+    FTNOwnedAssetsOnly: true
+    approvalForNetworkMutation: true
+    prechangeSnapshot: required
+    verificationAfterChange: required
+    rollbackWhenSafe: true
