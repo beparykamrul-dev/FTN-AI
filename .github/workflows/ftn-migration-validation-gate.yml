@@ -1,0 +1,58 @@
+name: FTN Migration Validation Gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/control-plane/migrations/**'
+      - 'services/control-plane/scripts/migrate.sh'
+      - 'services/control-plane/scripts/validate_migrations.sh'
+      - '.github/workflows/ftn-migration-validation-gate.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/control-plane/migrations/**'
+      - 'services/control-plane/scripts/migrate.sh'
+      - 'services/control-plane/scripts/validate_migrations.sh'
+      - '.github/workflows/ftn-migration-validation-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ftn-migration-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-validation:
+    name: PostgreSQL 015-023 migration validation
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PostgreSQL client check
+        run: psql --version
+
+      - name: Validate migration chain and PostgreSQL execution order
+        env:
+          MIGRATION_VALIDATION_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          MIGRATION_VALIDATION_ALLOW_CREATE: '1'
+        run: bash services/control-plane/scripts/validate_migrations.sh
