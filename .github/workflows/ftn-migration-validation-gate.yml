@@ -2,7 +2,9 @@ name: FTN Migration Validation Gate
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - fix/migration-validation-015-023
     paths:
       - 'services/control-plane/migrations/**'
       - 'services/control-plane/scripts/migrate.sh'
