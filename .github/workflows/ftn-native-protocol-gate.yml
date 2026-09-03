@@ -1,0 +1,23 @@
+name: FTN Native Multi-Protocol Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Validate FTN native protocol fabric
+        run: bash scripts/ftn-native-protocol-gate.sh
+      - name: Test control-plane protocol engine
+        working-directory: services/control-plane
+        run: go test ./... -run 'FTNNativeProtocol|FTNDNSDDNS|FTNAnycastDNS'
