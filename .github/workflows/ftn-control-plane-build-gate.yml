@@ -35,14 +35,12 @@ jobs:
           go-version: '1.24'
           cache-dependency-path: services/control-plane/go.sum
 
-      - name: Verify dependencies
-        working-directory: services/control-plane
-        run: go mod verify
+      - name: Verify control-plane module
+        run: cd services/control-plane && go env GOMOD && go mod verify
 
       - name: Format gate
-        working-directory: services/control-plane
         run: |
-          find . -type f -name '*.go' -print0 | xargs -0 gofmt -w
+          cd services/control-plane
           files="$(find . -type f -name '*.go' -print0 | xargs -0 gofmt -l)"
           if [ -n "$files" ]; then
             printf '%s\n' "$files"
@@ -50,17 +48,13 @@ jobs:
           fi
 
       - name: Static analysis
-        working-directory: services/control-plane
-        run: go vet ./...
+        run: cd services/control-plane && go vet ./...
 
       - name: Unit tests
-        working-directory: services/control-plane
-        run: go test ./...
+        run: cd services/control-plane && go test ./...
 
       - name: Production binary build
-        working-directory: services/control-plane
-        run: CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /tmp/ftn-control-plane .
+        run: cd services/control-plane && CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /tmp/ftn-control-plane .
 
       - name: Container build gate
-        working-directory: .
         run: docker build -f services/control-plane/Dockerfile -t ftn-control-plane:ci .
