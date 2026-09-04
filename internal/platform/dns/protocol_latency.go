@@ -21,11 +21,14 @@ type ProtocolLatency struct {
 func ProbeProtocolLatency(ctx context.Context, protocol, address string, timeout time.Duration) ProtocolLatency {
 	result := ProtocolLatency{Protocol: protocol}
 	if protocol != "tcp" && protocol != "udp" { result.Error = fmt.Sprintf("unsupported protocol: %s", protocol); return result }
+	if address == "" { result.Error = "address is required"; return result }
+	if timeout <= 0 { timeout = 5 * time.Second }
+	if ctx == nil { ctx = context.Background() }
 	start := time.Now()
 	conn, err := (&net.Dialer{Timeout: timeout}).DialContext(ctx, protocol, address)
 	result.RTT = time.Since(start)
 	if err != nil { result.Error = err.Error(); return result }
-	_ = conn.Close()
+	if err := conn.Close(); err != nil { result.Error = err.Error(); return result }
 	result.Success = true
 	return result
 }
