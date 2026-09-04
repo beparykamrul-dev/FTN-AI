@@ -2,14 +2,6 @@ package fiber
 
 import "time"
 
-type FiberNode struct {
-	ID string `json:"id"`
-	Kind string `json:"kind"`
-	Latitude float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Status string `json:"status"`
-}
-
 type FiberLink struct {
 	ID string `json:"id"`
 	From string `json:"from"`
@@ -33,5 +25,5 @@ func AnalyzeFailure(link FiberLink, evidence []string) RecoveryCandidate {
 	if link.Status == "cut" || link.Status == "down" { confidence += 0.25 }
 	if len(evidence) > 0 { confidence += 0.05 * float64(len(evidence)) }
 	if confidence > 0.95 { confidence = 0.95 }
-	return RecoveryCandidate{LinkID: link.ID, Confidence: confidence, Reason: "fiber failure evidence requires approved recovery", CreatedAt: time.Now().UTC()}
+	return RecoveryCandidate{LinkID: link.ID, Confidence: confidence, Reason: "fiber failure evidence requires approved recovery", CreatedAt:time.Now().UTC()}
 }
