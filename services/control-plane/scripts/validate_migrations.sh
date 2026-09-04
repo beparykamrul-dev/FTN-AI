@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$ROOT/migrations"
 START=15
-END=23
+END=24
 
 fail() { echo "migration-validation: ERROR: $*" >&2; exit 1; }
 command -v psql >/dev/null || fail "psql is required"
@@ -12,7 +12,7 @@ command -v psql >/dev/null || fail "psql is required"
 mapfile -t all < <(find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort -V)
 ((${#all[@]})) || fail "no SQL migrations found"
 
-# The 015..023 production gate must have exactly one migration file per version.
+# The 015..024 production gate must have exactly one migration file per version.
 # Legacy duplicate versions outside this range are replayed with migrate.sh's
 # existing first-file-wins behavior during the shadow execution below.
 for v in $(seq "$START" "$END"); do
@@ -20,7 +20,7 @@ for v in $(seq "$START" "$END"); do
   ((${#files[@]} == 1)) || fail "version $v requires exactly one migration file; found ${#files[@]}: ${files[*]-}"
 done
 
-echo "migration-validation: unique 015..023 chain OK"
+echo "migration-validation: unique 015..024 chain OK"
 
 # Replay the same effective migration sequence as migrate.sh. This validates real
 # PostgreSQL execution order: missing tables/columns/functions/indexes or trigger
