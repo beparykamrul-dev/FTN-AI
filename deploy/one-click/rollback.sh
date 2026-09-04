@@ -31,6 +31,7 @@ done
 
 [ -f "$previous/services/control-plane/docker-compose.yml" ] || fail 'Previous release lacks control-plane Compose manifest'
 [ -f "$previous/deploy/one-click/release-compatibility.sh" ] || fail 'Previous release lacks schema compatibility gate'
+[ -f "$previous/scripts/validate-production-storage.sh" ] || fail 'Previous release lacks production storage validator'
 
 chmod 600 "$RELEASE_ROOT/.env"
 log "Current release: $current"
@@ -49,15 +50,20 @@ mapfile -t manifests < <(find "$previous" -type f \( -name 'docker-compose.yml' 
   xargs -0 -r grep -El 'FTN_PRODUCTION_STACK=true|x-ftn-production-stack:[[:space:]]*true' | sort)
 ((${#manifests[@]})) || fail 'No production manifests in previous release'
 
-# Validate everything before changing the release pointer or restarting services.
+# Validate every rollback target before changing the release pointer.
 for compose in "${manifests[@]}"; do
   docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" config --quiet
   log "Validated: ${compose#$previous/}"
 done
 
+# Reuse the same storage ownership gate used by live deployment.
+log 'Validating rollback target storage ownership'
+ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-production-storage.sh"
+
 # Reject host-port collisions in the rollback target before touching the live stack.
 tmp_ports="$(mktemp)"
-trap 'rm -f "$tmp_ports"' EXIT
+cleanup_ports(){ rm -f "$tmp_ports"; }
+trap cleanup_ports EXIT
 for compose in "${manifests[@]}"; do
   docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" config --format json \
     | python3 -c 'import json,sys
@@ -65,12 +71,34 @@ x=json.load(sys.stdin)
 for s,v in x.get("services",{}).items():
   for p in v.get("ports",[]) or []:
     if isinstance(p,dict) and p.get("published") is not None:
-      print(f"{p.get(\"published\")}/{p.get(\"protocol\",\"tcp\")} {s}")' >> "$tmp_ports"
- done
-awk '{ key=$1; if (seen[key]++) { print "duplicate host port: " $0; bad=1 } } END { exit bad ? 1 : 0 }' "$tmp_ports" \
-  || fail 'Rollback target has a host port collision'
+      host_ip=p.get("host_ip") or "*"
+      print(f"{host_ip}\t{p.get(\"published\")}\t{p.get(\"protocol\",\"tcp\")}\t{s}")' >> "$tmp_ports"
+done
+python3 - "$tmp_ports" <<'PY'
+import sys
+from collections import defaultdict
+
+seen = defaultdict(list)
+with open(sys.argv[1], encoding="utf-8") as fh:
+    for line in fh:
+        host_ip, port, proto, service = line.rstrip("\n").split("\t", 3)
+        seen[(port, proto)].append((host_ip, service))
+
+bad = False
+for (port, proto), entries in seen.items():
+    if len(entries) < 2:
+        continue
+    wildcard = any(ip in {"*", "0.0.0.0", "::"} for ip, _ in entries)
+    concrete = {ip for ip, _ in entries}
+    if wildcard or len(concrete) < len(entries):
+        print(f"duplicate host port binding: {port}/{proto}: {entries}")
+        bad = True
+PY
+if [ $? -ne 0 ]; then
+  fail 'Rollback target has a host port collision'
+fi
 rm -f "$tmp_ports"
-trap - ERR
+trap 'printf "[FTN][ROLLBACK][ERROR] failed at line %s\n" "$LINENO" >&2' ERR
 
 ln -sfn "$previous" "$CURRENT_LINK"
 cd "$previous"
@@ -87,9 +115,11 @@ for _ in $(seq 1 60); do
 done
 [ "$pg_ok" -eq 1 ] || fail 'PostgreSQL did not become healthy during rollback'
 
-log 'Starting previous control-plane without database downgrade'
+# Do not invoke migration-runner during rollback. The compatibility gate above
+# only permits rollback when the existing schema is not newer than this release.
+log 'Starting previous control-plane without database downgrade or dependency startup'
 docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" \
-  -f "$CONTROL_COMPOSE" up -d --build --remove-orphans control-plane
+  -f "$CONTROL_COMPOSE" up -d --build --remove-orphans --no-deps control-plane
 
 ready=0
 for _ in $(seq 1 60); do
