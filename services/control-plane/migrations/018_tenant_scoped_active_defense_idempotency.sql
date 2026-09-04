@@ -8,6 +8,15 @@ WHERE tenant_id IS NOT NULL
 ALTER TABLE active_defense_executions
   DROP CONSTRAINT IF EXISTS active_defense_executions_idempotency_key_key;
 
+-- Tenant ownership is part of the active-defense lifecycle. Cascading tenant deletion
+-- avoids the previous FK/trigger conflict where ON DELETE SET NULL was rejected by
+-- the tenant-required trigger below.
+ALTER TABLE active_defense_executions
+  DROP CONSTRAINT IF EXISTS active_defense_executions_tenant_id_fkey;
+ALTER TABLE active_defense_executions
+  ADD CONSTRAINT active_defense_executions_tenant_id_fkey
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+
 CREATE UNIQUE INDEX IF NOT EXISTS active_defense_executions_tenant_idempotency_uq
   ON active_defense_executions(tenant_id, idempotency_key);
 
