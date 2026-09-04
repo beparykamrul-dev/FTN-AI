@@ -1,8 +1,7 @@
 package main
 
 import (
-	"net/http"
-	"net/http/httptest"
+	"encoding/json"
 	"testing"
 )
 
@@ -15,13 +14,29 @@ func TestQKDNodeDoesNotExposeRawKeyMaterial(t *testing.T) {
 	}
 }
 
-func TestQKDIntentRequiresNodeOrKMS(t *testing.T) {
-	a := &App{}
-	r := httptest.NewRequest(http.MethodPost, "/api/v1/qkd/intents", nil)
-	w := httptest.NewRecorder()
-	// The permission layer is deliberately exercised before validation in the
-	// handler; this test only documents the contract type boundary.
-	_ = a
-	_ = r
-	_ = w
+func TestQKDContractsSerializeOnlyMetadata(t *testing.T) {
+	node := QKDNode{ID: "node-1", Name: "qkd-1", Role: "kms", KMSRef: "kms://ftn/qkd-1", Status: "healthy"}
+	status := QKDStatus{NodeID: node.ID, KMSRef: node.KMSRef, PoolState: "ready", AvailableKeys: 10, Healthy: true}
+	for name, value := range map[string]any{"node": node, "status": status} {
+		body, err := json.Marshal(value)
+		if err != nil {
+			t.Fatalf("%s marshal failed: %v", name, err)
+		}
+		if len(body) == 0 || containsRawKeyMaterial(body) {
+			t.Fatalf("%s contract exposed unexpected key material: %s", name, body)
+		}
+	}
+}
+
+func containsRawKeyMaterial(body []byte) bool {
+	var decoded map[string]any
+	if json.Unmarshal(body, &decoded) != nil {
+		return true
+	}
+	for _, key := range []string{"raw_key", "raw_key_material", "key_material", "secret_key", "private_key"} {
+		if _, ok := decoded[key]; ok {
+			return true
+		}
+	}
+	return false
 }
