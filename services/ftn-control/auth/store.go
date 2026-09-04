@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"strings"
 )
 
 type IdentityRecord struct {
@@ -17,6 +19,10 @@ type Store struct{ DB *sql.DB }
 
 func (s *Store) FindIdentity(ctx context.Context, login string) (IdentityRecord, error) {
 	var r IdentityRecord
+	login = strings.TrimSpace(login)
+	if s == nil || s.DB == nil || login == "" {
+		return r, errors.New("invalid identity lookup")
+	}
 	err := s.DB.QueryRowContext(ctx, `
 		SELECT id, username, email, password_hash, status
 		FROM ftn_identities
@@ -26,6 +32,9 @@ func (s *Store) FindIdentity(ctx context.Context, login string) (IdentityRecord,
 }
 
 func (s *Store) HasActiveService(ctx context.Context, identityID, serviceID string) (bool, error) {
+	if s == nil || s.DB == nil || strings.TrimSpace(identityID) == "" || strings.TrimSpace(serviceID) == "" {
+		return false, errors.New("invalid service authorization lookup")
+	}
 	var exists bool
 	err := s.DB.QueryRowContext(ctx, `
 		SELECT EXISTS(
