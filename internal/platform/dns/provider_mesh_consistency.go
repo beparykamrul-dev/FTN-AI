@@ -14,7 +14,7 @@ type ProviderMeshConsistency struct {
 }
 
 type MeshConsistencyResult struct {
-	Zones map[string]Zone `json:"zones"`
+	Zones  map[string]Zone   `json:"zones"`
 	Report ConsistencyReport `json:"report"`
 	Errors map[string]string `json:"errors,omitempty"`
 }
@@ -24,26 +24,57 @@ func NewProviderMeshConsistency(registry *SDKRegistry, ai *DNSConsistencyAI) *Pr
 }
 
 func (m *ProviderMeshConsistency) ImportAndAnalyze(ctx context.Context, configs []ProviderConfig, zone string) (MeshConsistencyResult, error) {
-	if m == nil || m.Registry == nil { return MeshConsistencyResult{}, fmt.Errorf("provider SDK registry is required") }
-	if m.AI == nil { return MeshConsistencyResult{}, fmt.Errorf("consistency AI is required") }
-	if ctx == nil { return MeshConsistencyResult{}, fmt.Errorf("context is required") }
-	if zone == "" { return MeshConsistencyResult{}, fmt.Errorf("zone is required") }
+	if m == nil || m.Registry == nil {
+		return MeshConsistencyResult{}, fmt.Errorf("provider SDK registry is required")
+	}
+	if m.AI == nil {
+		return MeshConsistencyResult{}, fmt.Errorf("consistency AI is required")
+	}
+	if ctx == nil {
+		return MeshConsistencyResult{}, fmt.Errorf("context is required")
+	}
+	if zone == "" {
+		return MeshConsistencyResult{}, fmt.Errorf("zone is required")
+	}
 
 	result := MeshConsistencyResult{Zones: map[string]Zone{}, Errors: map[string]string{}}
 	normalized := map[string][]Record{}
 	for _, cfg := range configs {
 		sdk, err := m.Registry.Open(cfg)
-		if err != nil { result.Errors[cfg.ID] = err.Error(); continue }
-		if err := ValidateProviderSDK(ctx, sdk, "import"); err != nil { result.Errors[cfg.ID] = err.Error(); continue }
+		if err != nil {
+			result.Errors[cfg.ID] = err.Error()
+			continue
+		}
+		if err := ValidateProviderSDK(ctx, sdk, "import"); err != nil {
+			result.Errors[cfg.ID] = err.Error()
+			continue
+		}
 		z, err := sdk.ImportZone(ctx, zone)
-		if err != nil { result.Errors[cfg.ID] = err.Error(); continue }
+		if err != nil {
+			result.Errors[cfg.ID] = err.Error()
+			continue
+		}
 		result.Zones[cfg.ID] = z
-		normalized[cfg.ID] = z.Records
+
+		records := make([]Record, 0, len(z.Records))
+		for _, record := range z.Records {
+			records = append(records, Record{
+				Name:  record.Name,
+				Type:  record.Type,
+				Value: record.Value,
+				TTL:   record.TTL,
+			})
+		}
+		normalized[cfg.ID] = records
 	}
 
 	report, err := m.AI.Analyze(ctx, normalized)
-	if err != nil { return MeshConsistencyResult{}, err }
+	if err != nil {
+		return MeshConsistencyResult{}, err
+	}
 	result.Report = report
-	if len(result.Errors) == 0 { result.Errors = nil }
+	if len(result.Errors) == 0 {
+		result.Errors = nil
+	}
 	return result, nil
 }
