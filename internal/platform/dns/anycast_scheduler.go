@@ -40,7 +40,8 @@ func (s *AnycastScheduler) Run(ctx context.Context, schedule AnycastSchedule, re
     ticker := time.NewTicker(schedule.Interval)
     defer ticker.Stop()
     run := func() error {
-        result := schedule.Probe.Probe(ctx)
+        observed := schedule.Probe.Probe(ctx)
+        result := DNSProbeResult{Address: schedule.Probe.Address, Reachable: observed.Reachable, Latency: observed.Latency, Error: observed.Error}
         return reconcile(ctx, result)
     }
     if err := run(); err != nil { return err }
