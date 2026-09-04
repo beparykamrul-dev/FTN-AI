@@ -34,21 +34,20 @@ for compose in "${manifests[@]}"; do
   fi
 done
 
-for path in \
-  scripts/production-compose-env.sh \
-  scripts/validate-production-storage.sh \
-  scripts/validate-production-ports.sh \
-  scripts/validate-host-port-ownership.sh \
-  scripts/validate-production-health.sh \
-  services/control-plane/scripts/migrate.sh \
-  services/control-plane/migrations/024_execution_immutability_backfill.sql \
-  services/control-plane/tests/sql/024_execution_integrity_state_machine.sql \
-  deploy/one-click/live.sh; do
+for path in scripts/production-compose-env.sh scripts/validate-production-storage.sh scripts/validate-production-ports.sh scripts/validate-host-port-ownership.sh scripts/validate-production-health.sh services/control-plane/scripts/migrate.sh services/control-plane/migrations/024_execution_immutability_backfill.sql services/control-plane/tests/sql/024_execution_integrity_state_machine.sql deploy/one-click/live.sh; do
   [ -f "$ROOT_DIR/$path" ] || fail "required deployment artifact missing: $path"
 done
 
 log 'Validating production host process port ownership'
 ENV_FILE="$ENV_FILE" bash "$ROOT_DIR/scripts/validate-host-port-ownership.sh"
+
+if [ "${FTN_ROUTING_NODE:-0}" = '1' ]; then
+  [ -f "$ROOT_DIR/scripts/validate-routing-kernel.sh" ] || fail 'routing kernel validator is missing'
+  log 'Validating routing-node kernel profile'
+  bash "$ROOT_DIR/scripts/validate-routing-kernel.sh"
+else
+  log 'Routing-node kernel profile: skipped (FTN_ROUTING_NODE=0)'
+fi
 
 log "Production manifests: ${#manifests[@]}"
 log "Production Compose profiles: ${COMPOSE_PROFILES:-none}"
