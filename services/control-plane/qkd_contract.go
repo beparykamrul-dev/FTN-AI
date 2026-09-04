@@ -21,11 +21,16 @@ func (a *App) qkdNodes(w http.ResponseWriter,r *http.Request){if !method(w,r,htt
 func (a *App) qkdLinks(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"links":[]QKDLink{}})}
 func (a *App) qkdStatus(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"status":[]QKDStatus{}})}
 func (a *App) qkdKMS(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"kms":[]map[string]any{}})}
+
+func validQKDAction(action string) bool {
+	switch action { case "provision", "rotate", "revoke", "bind", "unbind", "failover": return true; default: return false }
+}
+
 func (a *App) qkdIntent(w http.ResponseWriter,r *http.Request){
 	if !method(w,r,http.MethodPost)||!requirePermission(a,qkdChangePermission,w,r){return}
 	var req QKDIntent
 	dec:=json.NewDecoder(http.MaxBytesReader(w,r.Body,64<<10));if err:=dec.Decode(&req);err!=nil{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"invalid_json"});return};var extra any;if err:=dec.Decode(&extra);err!=io.EOF{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"multiple_json_values"});return}
-	req.Action=strings.TrimSpace(req.Action);req.NodeID=strings.TrimSpace(req.NodeID);req.Consumer=strings.TrimSpace(req.Consumer);req.Policy=strings.TrimSpace(req.Policy);req.KMSRef=strings.TrimSpace(req.KMSRef)
-	if req.Action==""{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"action_required"});return};if req.KMSRef==""&&req.NodeID==""{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"node_or_kms_required"});return}
+	req.Action=strings.ToLower(strings.TrimSpace(req.Action));req.NodeID=strings.TrimSpace(req.NodeID);req.Consumer=strings.TrimSpace(req.Consumer);req.Policy=strings.TrimSpace(req.Policy);req.KMSRef=strings.TrimSpace(req.KMSRef)
+	if !validQKDAction(req.Action){jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"unsupported_action"});return};if req.KMSRef==""&&req.NodeID==""{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"node_or_kms_required"});return}
 	a.audit(r,"qkd.intent",req.NodeID,"accepted",req);jsonResponse(w,http.StatusAccepted,map[string]any{"status":"intent_accepted","execution":"approval_gated","raw_key_material":false})
 }
