@@ -28,7 +28,8 @@ for required in \
   services/control-plane/migrations/010_dns_guard_filtering.sql \
   services/control-plane/migrations/011_migration_registry.sql \
   services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
-  services/control-plane/migrations/013_approval_payload_binding.sql; do
+  services/control-plane/migrations/013_approval_payload_binding.sql \
+  services/control-plane/migrations/014_tenant_scoped_approval_hash.sql; do
   test -f "$required"
 done
 
@@ -62,7 +63,8 @@ for migration in \
   services/control-plane/migrations/010_dns_guard_filtering.sql \
   services/control-plane/migrations/011_migration_registry.sql \
   services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
-  services/control-plane/migrations/013_approval_payload_binding.sql; do
+  services/control-plane/migrations/013_approval_payload_binding.sql \
+  services/control-plane/migrations/014_tenant_scoped_approval_hash.sql; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
@@ -91,13 +93,16 @@ test "$event_trigger" = "1"
 schema_version="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT to_regclass('public.event_journal') IS NOT NULL AND to_regclass('public.durable_jobs') IS NOT NULL;")"
 test "$schema_version" = "t"
 
-registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 13;")"
-test "$registry_count" = "3"
+registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 14;")"
+test "$registry_count" = "4"
 
 control_nodes_tenant="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='control_nodes' AND column_name='tenant_id');")"
 test "$control_nodes_tenant" = "t"
 
 approval_payload="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='change_approvals' AND column_name='payload_hash');")"
 test "$approval_payload" = "t"
+
+approval_scoped_unique="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='change_approvals_tenant_request_hash_uq');")"
+test "$approval_scoped_unique" = "t"
 
 echo "PostgreSQL migration + backup + restore validation passed."
