@@ -83,11 +83,16 @@ events_before="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) 
 test "$events_before" = "1"
 
 echo "Creating custom-format backup"
-docker exec "$NAME" pg_dump -U ftn -d ftn -Fc > "$DUMP"
+# Keep the binary dump inside the container and copy it out. This avoids
+# docker exec/stdout transport edge cases for custom-format pg_dump output.
+docker exec "$NAME" pg_dump -U ftn -d ftn -Fc -f /tmp/ftn-restore.dump
+docker cp "$NAME:/tmp/ftn-restore.dump" "$DUMP"
 test -s "$DUMP"
-docker exec "$NAME" pg_restore --list < "$DUMP" >/dev/null
+pg_restore --list "$DUMP" >/dev/null
+
 docker exec "$NAME" createdb -U ftn ftn_restore
-docker exec -i "$NAME" pg_restore -U ftn -d ftn_restore --exit-on-error < "$DUMP"
+docker cp "$DUMP" "$NAME:/tmp/ftn-restore.dump"
+docker exec "$NAME" pg_restore -U ftn -d ftn_restore --exit-on-error /tmp/ftn-restore.dump
 
 after="$(docker exec "$NAME" psql -At -U ftn -d ftn_restore -c "SELECT count(*) FROM tenants WHERE slug='ci-restore';")"
 test "$after" = "1"
