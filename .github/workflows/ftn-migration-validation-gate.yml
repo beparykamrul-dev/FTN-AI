@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - fix/migration-validation-015-023
+      - fix/provider-upstream-rpf-2
     paths:
       - 'services/control-plane/migrations/**'
       - 'services/control-plane/schema.sql'
