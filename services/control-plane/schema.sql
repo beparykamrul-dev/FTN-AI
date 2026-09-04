@@ -1,5 +1,7 @@
 CREATE TABLE IF NOT EXISTS service_requests (
   id BIGSERIAL PRIMARY KEY,
+  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+  principal_id UUID REFERENCES principals(id) ON DELETE SET NULL,
   service_id TEXT NOT NULL,
   device_brand TEXT,
   model TEXT,
@@ -9,6 +11,8 @@ CREATE TABLE IF NOT EXISTS service_requests (
   status TEXT NOT NULL DEFAULT 'accepted',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS service_requests_tenant_idx ON service_requests(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS service_requests_principal_idx ON service_requests(principal_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS service_requests_service_id_idx ON service_requests(service_id);
 CREATE INDEX IF NOT EXISTS service_requests_mac_idx ON service_requests(mac);
 CREATE INDEX IF NOT EXISTS service_requests_created_at_idx ON service_requests(created_at DESC);
