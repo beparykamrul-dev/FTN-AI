@@ -13,7 +13,7 @@ export DEBIAN_FRONTEND=noninteractive
 if command -v apt-get >/dev/null 2>&1; then
   log 'Installing required host dependencies'
   apt-get update
-  apt-get install -y ca-certificates curl git jq openssl postgresql-client procps
+  apt-get install -y ca-certificates curl git jq openssl postgresql-client procps iproute2
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -31,13 +31,15 @@ chmod 700 secrets
 touch .env
 chmod 600 .env
 
-ensure_secret(){
+ensure_setting(){
   local key="$1" value="$2" tmp
   tmp="$(mktemp)"
   awk -v k="$key" -v v="$value" 'BEGIN{done=0} $0 ~ "^"k"=" {if(!done){print k"="v;done=1};next} {print} END{if(!done)print k"="v}' .env > "$tmp"
   chmod 600 "$tmp"
   mv "$tmp" .env
 }
+
+ensure_secret(){ ensure_setting "$1" "$2"; }
 
 secret_or_generate(){
   local key="$1" value
@@ -52,11 +54,10 @@ secret_or_generate FTN_SFU_API_KEY
 secret_or_generate FTN_SFU_API_SECRET
 secret_or_generate FTN_TURN_PASSWORD
 ensure_secret FTN_TURN_USERNAME "ftn"
+ensure_setting FTN_ROUTING_NODE "${FTN_ROUTING_NODE:-0}"
 
 log 'Applying bounded adaptive TCP performance profile'
 bash "$ROOT_DIR/scripts/configure-tcp-performance.sh"
 
-# All production Compose manifests are discovered and started by one canonical
-# runner. This keeps bootstrap, upgrades and recovery on the same execution path.
 chmod +x deploy/one-click/live.sh
 exec bash deploy/one-click/live.sh
