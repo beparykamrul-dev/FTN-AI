@@ -6,20 +6,9 @@ import (
 	"strings"
 )
 
-type ProviderType string
-
-const (
-	ProviderPowerDNS ProviderType = "powerdns"
-	ProviderTechnitium ProviderType = "technitium"
-	ProviderCoreDNS ProviderType = "coredns"
-	ProviderUnbound ProviderType = "unbound"
-	ProviderDNSDist ProviderType = "dnsdist"
-	ProviderGoDNS ProviderType = "godns"
-	ProviderAnycast ProviderType = "anycast"
-	ProviderDNSPod ProviderType = "dnspod"
-	ProviderCloudflare ProviderType = "cloudflare"
-	ProviderAkamai ProviderType = "akamai"
-)
+// ProviderType is retained as a compatibility alias for the canonical
+// ProviderKind registry model.
+type ProviderType = ProviderKind
 
 type ProviderConfig struct {
 	ID string `json:"id"`
