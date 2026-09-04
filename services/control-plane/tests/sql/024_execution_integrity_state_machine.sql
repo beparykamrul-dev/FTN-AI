@@ -189,7 +189,9 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     GET STACKED DIAGNOSTICS got = MESSAGE_TEXT;
     ROLLBACK TO SAVEPOINT expired_claim;
-    IF got NOT LIKE '%expired%' THEN RAISE; END IF;
+    -- The production gate deliberately uses one fail-closed error for both
+    -- non-approved and expired approvals; assert that exact contract here.
+    IF got NOT LIKE '%not_approved_or_expired%' THEN RAISE; END IF;
   END;
 
   RAISE NOTICE 'FTN execution integrity state-machine tests PASSED';
