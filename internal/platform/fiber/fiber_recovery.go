@@ -7,9 +7,33 @@ import (
     "time"
 )
 
-type FiberNode struct { ID, ParentID, OLTID, ONUID, ResellerID, CustomerID string; Lat, Lon float64; Status string; LastSeen time.Time }
+type FiberNode struct {
+    ID string `json:"id"`
+    Kind string `json:"kind,omitempty"`
+    ParentID string `json:"parent_id,omitempty"`
+    OLTID string `json:"olt_id,omitempty"`
+    ONUID string `json:"onu_id,omitempty"`
+    ResellerID string `json:"reseller_id,omitempty"`
+    CustomerID string `json:"customer_id,omitempty"`
+    Lat float64 `json:"lat,omitempty"`
+    Lon float64 `json:"lon,omitempty"`
+    Latitude float64 `json:"latitude,omitempty"`
+    Longitude float64 `json:"longitude,omitempty"`
+    Status string `json:"status"`
+    LastSeen time.Time `json:"last_seen,omitempty"`
+}
 type FiberMap struct { Nodes map[string]FiberNode; UpdatedAt time.Time }
-type RecoveryPlan struct { NodeID string; CandidateParentIDs []string; Reason string; Confidence float64; RequiresApproval bool; CreatedAt time.Time }
+type RecoveryPlan struct {
+    ID string `json:"id,omitempty"`
+    NodeID string `json:"node_id,omitempty"`
+    RootAsset string `json:"root_asset,omitempty"`
+    CandidateParentIDs []string `json:"candidate_parent_ids,omitempty"`
+    Reason string `json:"reason,omitempty"`
+    Risk string `json:"risk,omitempty"`
+    Confidence float64 `json:"confidence,omitempty"`
+    RequiresApproval bool `json:"requires_approval"`
+    CreatedAt time.Time `json:"created_at,omitempty"`
+}
 type RecoveryEngine struct { mu sync.RWMutex; nodes map[string]FiberNode; plans map[string]RecoveryPlan }
 func NewRecoveryEngine() *RecoveryEngine { return &RecoveryEngine{nodes:map[string]FiberNode{},plans:map[string]RecoveryPlan{}} }
 func (e *RecoveryEngine) Upsert(n FiberNode) error { if n.ID=="" { return fmt.Errorf("fiber node id required") }; e.mu.Lock(); e.nodes[n.ID]=n; e.mu.Unlock(); return nil }
