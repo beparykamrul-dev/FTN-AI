@@ -19,13 +19,10 @@ func (s *MailService) SaveMessage(ctx context.Context, message Message, body []b
 	if int64(len(body)) != message.SizeBytes {
 		return errors.New("message size mismatch")
 	}
-	if err := s.Store.CheckQuota(ctx, message.MailboxID, message.SizeBytes); err != nil {
-		return err
-	}
 	if message.ID == "" { message.ID = uuid.NewString() }
 	if message.StorageKey == "" { message.StorageKey = "mail/" + message.MailboxID + "/" + message.ID + ".bin" }
 	if err := s.Blobs.Put(ctx, message.StorageKey, body); err != nil { return err }
-	if err := s.Store.AppendMessage(ctx, message); err != nil {
+	if err := s.Store.AppendMessageWithQuota(ctx, message); err != nil {
 		// Best-effort cleanup prevents an orphaned encrypted blob.
 		return err
 	}
