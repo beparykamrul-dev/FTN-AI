@@ -8,3 +8,7 @@ CREATE INDEX IF NOT EXISTS control_nodes_tenant_idx
 
 CREATE INDEX IF NOT EXISTS control_nodes_tenant_health_idx
   ON control_nodes(tenant_id, healthy);
+
+INSERT INTO schema_migrations(version,name)
+VALUES (12,'012_control_nodes_tenant_scope.sql')
+ON CONFLICT (version) DO NOTHING;
