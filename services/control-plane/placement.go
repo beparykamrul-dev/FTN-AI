@@ -12,6 +12,7 @@ import (
 
 type Node struct {
 	ID             string    `json:"id"`
+	TenantID       string    `json:"-"`
 	Provider       string    `json:"provider"`
 	Region         string    `json:"region,omitempty"`
 	Services       []string  `json:"services"`
@@ -89,15 +90,24 @@ func refreshNodeHealth(list []Node, now time.Time) []Node {
 	return out
 }
 
-func (a *App) loadNodes(ctx context.Context) ([]Node, error) {
+func (a *App) loadNodes(ctx context.Context, tenantID string) ([]Node, error) {
+	if tenantID == "" {
+		return nil, context.Canceled
+	}
 	if a.db == nil {
 		nodesMu.RLock()
 		defer nodesMu.RUnlock()
-		return refreshNodeHealth(nodes, time.Now().UTC()), nil
+		out := make([]Node, 0, len(nodes))
+		for _, n := range nodes {
+			if n.TenantID == tenantID {
+				out = append(out, n)
+			}
+		}
+		return refreshNodeHealth(out, time.Now().UTC()), nil
 	}
 	qctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	rows, err := a.db.Query(qctx, `select id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at from control_nodes order by id`)
+	rows, err := a.db.Query(qctx, `select id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at from control_nodes where tenant_id=$1::uuid order by id`, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +115,7 @@ func (a *App) loadNodes(ctx context.Context) ([]Node, error) {
 	out := []Node{}
 	for rows.Next() {
 		var n Node
+		n.TenantID = tenantID
 		if err := rows.Scan(&n.ID, &n.Provider, &n.Region, &n.Services, &n.CPUPercent, &n.RAMPercent, &n.SSDPercent, &n.HDDPercent, &n.NetMbps, &n.LatencyMs, &n.PacketLoss, &n.Healthy, &n.LastSeen); err != nil {
 			return nil, err
 		}
@@ -119,7 +130,8 @@ func (a *App) nodeCatalog(w http.ResponseWriter, r *http.Request) {
 	if !method(w, r, http.MethodGet) || !requirePermission(a, "node.read", w, r) {
 		return
 	}
-	out, err := a.loadNodes(r.Context())
+	rc := requestInfo(r)
+	out, err := a.loadNodes(r.Context(), rc.TenantID)
 	if err != nil {
 		jsonResponse(w, 500, map[string]string{"error": "node_query_failed"})
 		return
@@ -131,7 +143,7 @@ func upsertMemoryNode(n Node) {
 	nodesMu.Lock()
 	defer nodesMu.Unlock()
 	for i := range nodes {
-		if nodes[i].ID == n.ID {
+		if nodes[i].ID == n.ID && nodes[i].TenantID == n.TenantID {
 			nodes[i] = n
 			return
 		}
@@ -143,6 +155,11 @@ func (a *App) registerNode(w http.ResponseWriter, r *http.Request) {
 	if !method(w, r, http.MethodPost) || !requirePermission(a, "node.manage", w, r) {
 		return
 	}
+	rc := requestInfo(r)
+	if rc.TenantID == "" {
+		jsonResponse(w, 400, map[string]string{"error": "tenant_required"})
+		return
+	}
 	var n Node
 	if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
 		jsonResponse(w, 400, map[string]string{"error": "invalid_json"})
@@ -152,6 +169,7 @@ func (a *App) registerNode(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, 400, map[string]string{"error": "invalid_node"})
 		return
 	}
+	n.TenantID = rc.TenantID
 	n.LastSeen = time.Now().UTC()
 	if a.db == nil {
 		upsertMemoryNode(n)
@@ -160,7 +178,7 @@ func (a *App) registerNode(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
-	_, err := a.db.Exec(ctx, `insert into control_nodes(id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) on conflict(id) do update set provider=excluded.provider,region=excluded.region,services=excluded.services,cpu_percent=excluded.cpu_percent,ram_percent=excluded.ram_percent,ssd_percent=excluded.ssd_percent,hdd_percent=excluded.hdd_percent,net_mbps=excluded.net_mbps,latency_ms=excluded.latency_ms,packet_loss_percent=excluded.packet_loss_percent,healthy=excluded.healthy,updated_at=now()`, n.ID, n.Provider, n.Region, n.Services, n.CPUPercent, n.RAMPercent, n.SSDPercent, n.HDDPercent, n.NetMbps, n.LatencyMs, n.PacketLoss, n.Healthy)
+	_, err := a.db.Exec(ctx, `insert into control_nodes(tenant_id,id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at) values($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set tenant_id=excluded.tenant_id,provider=excluded.provider,region=excluded.region,services=excluded.services,cpu_percent=excluded.cpu_percent,ram_percent=excluded.ram_percent,ssd_percent=excluded.ssd_percent,hdd_percent=excluded.hdd_percent,net_mbps=excluded.net_mbps,latency_ms=excluded.latency_ms,packet_loss_percent=excluded.packet_loss_percent,healthy=excluded.healthy,updated_at=now() where control_nodes.tenant_id=excluded.tenant_id`, n.TenantID, n.ID, n.Provider, n.Region, n.Services, n.CPUPercent, n.RAMPercent, n.SSDPercent, n.HDDPercent, n.NetMbps, n.LatencyMs, n.PacketLoss, n.Healthy)
 	if err != nil {
 		jsonResponse(w, 500, map[string]string{"error": "node_register_failed"})
 		return
@@ -181,7 +199,8 @@ func (a *App) placement(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, 404, map[string]string{"error": "service_not_found"})
 		return
 	}
-	available, err := a.loadNodes(r.Context())
+	rc := requestInfo(r)
+	available, err := a.loadNodes(r.Context(), rc.TenantID)
 	if err != nil {
 		jsonResponse(w, 500, map[string]string{"error": "node_query_failed"})
 		return
