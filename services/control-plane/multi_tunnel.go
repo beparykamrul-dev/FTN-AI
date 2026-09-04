@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"math"
 	"sort"
 	"strings"
 )
@@ -49,15 +50,16 @@ func ValidateMultiTunnelPolicy(p MultiTunnelPolicy) error {
 func SelectMultiTunnelPaths(p MultiTunnelPolicy, endpoints []TunnelEndpoint) []TunnelEndpoint {
 	if p.MaxActivePaths <= 0 { return nil }
 	allowed := map[string]bool{}
-	for _, proto := range p.Protocols { if proto.Enabled { allowed[strings.ToLower(proto.ID)] = true } }
+	for _, proto := range p.Protocols { if proto.Enabled { allowed[strings.ToLower(strings.TrimSpace(proto.ID))] = true } }
 	out := make([]TunnelEndpoint, 0, len(endpoints))
 	for _, e := range endpoints {
-		if !e.Healthy || !allowed[strings.ToLower(e.Protocol)] { continue }
+		if !e.Healthy || !allowed[strings.ToLower(strings.TrimSpace(e.Protocol))] { continue }
+		if math.IsNaN(e.LatencyMS) || math.IsInf(e.LatencyMS, 0) || e.LatencyMS < 0 { continue }
 		out = append(out, e)
 	}
 	sort.SliceStable(out, func(i,j int) bool {
 		if out[i].LatencyMS != out[j].LatencyMS { return out[i].LatencyMS < out[j].LatencyMS }
-		return out[i].ID < out[j].ID
+		return strings.TrimSpace(out[i].ID) < strings.TrimSpace(out[j].ID)
 	})
 	if len(out) > p.MaxActivePaths { out = out[:p.MaxActivePaths] }
 	return out
