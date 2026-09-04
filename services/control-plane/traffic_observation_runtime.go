@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 )
@@ -36,8 +35,6 @@ func (t *TrafficRuntime) IngestObservations(ctx context.Context, observations []
 	if silk != nil {
 		byService := make(map[string][]FlowObservation)
 		for _, f := range accepted {
-			// Imported observations have already been normalized with their source
-			// timestamp, so never replace it with request-arrival time.
 			o, err := normalizeFlowObservation(f.FlowRecord, f.ObservedAt, time.Time{}, time.Time{})
 			if err != nil { continue }
 			byService[f.ServiceID] = append(byService[f.ServiceID], o)
@@ -49,11 +46,4 @@ func (t *TrafficRuntime) IngestObservations(ctx context.Context, observations []
 		}
 	}
 	return len(accepted)
-}
-
-func (t *TrafficRuntime) IngestNFCAPD(ctx context.Context, rContext context.Context, reader interface{ Read([]byte) (int, error) }, exporter string, version uint16) (int, error) {
-	if t == nil { return 0, errors.New("traffic_runtime_required") }
-	if ctx == nil { ctx = context.Background() }
-	if rContext == nil { rContext = ctx }
-	return 0, errors.New("use DecodeObservations with an io.Reader")
 }
