@@ -15,12 +15,12 @@ services:
       - ./migrations/003_durable_execution.sql:/docker-entrypoint-initdb.d/003-durable-execution.sql:ro
       - ./migrations/004_approval_execution.sql:/docker-entrypoint-initdb.d/004-approval-execution.sql:ro
       - ./migrations/005_job_integrity_leases.sql:/docker-entrypoint-initdb.d/005-job-integrity-leases.sql:ro
-      - ./migrations/006_job_event_automation.sql:/docker-entrypoint-initdb.d/006-job-event-automation.sql:ro
+      - ./migrations/006_job_event_automation.sql:/docker-entrypoint-initdb.d/006-event-automation.sql:ro
       - ./migrations/007_qkd_security.sql:/docker-entrypoint-initdb.d/007-qkd-security.sql:ro
       - ./migrations/008_data_governor.sql:/docker-entrypoint-initdb.d/008-data-governor.sql:ro
       - ./migrations/009_data_governance_controls.sql:/docker-entrypoint-initdb.d/009-data-governance-controls.sql:ro
       - ./migrations/010_dns_guard_filtering.sql:/docker-entrypoint-initdb.d/010-dns-guard-filtering.sql:ro
-      - ./migrations/011-migration-registry.sql:/docker-entrypoint-initdb.d/011-migration-registry.sql:ro
+      - ./migrations/011_migration_registry.sql:/docker-entrypoint-initdb.d/011-migration-registry.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ftn -d ftn"]
       interval: 5s
