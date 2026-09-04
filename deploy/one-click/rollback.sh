@@ -93,10 +93,10 @@ for (port, proto), entries in seen.items():
     if wildcard or len(concrete) < len(entries):
         print(f"duplicate host port binding: {port}/{proto}: {entries}")
         bad = True
+
+if bad:
+    sys.exit(1)
 PY
-if [ $? -ne 0 ]; then
-  fail 'Rollback target has a host port collision'
-fi
 rm -f "$tmp_ports"
 trap 'printf "[FTN][ROLLBACK][ERROR] failed at line %s\n" "$LINENO" >&2' ERR
 
