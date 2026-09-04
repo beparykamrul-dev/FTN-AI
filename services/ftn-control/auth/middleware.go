@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"strings"
 )
 
 type contextKey string
@@ -20,8 +21,12 @@ func IdentityFromContext(ctx context.Context) (string, bool) {
 
 func RequireService(store *SessionStore, serviceID string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if store == nil || store.DB == nil || next == nil || strings.TrimSpace(serviceID) == "" {
+			http.Error(w, "service unavailable", http.StatusServiceUnavailable)
+			return
+		}
 		cookie, err := r.Cookie("ftn_session")
-		if err != nil || cookie.Value == "" {
+		if err != nil || strings.TrimSpace(cookie.Value) == "" {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
