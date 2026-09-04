@@ -43,9 +43,9 @@ func (a *App) createWazuhApproval(r *http.Request, req approvalRequest) (string,
 	rc := requestInfo(r)
 	if req.ExpiresIn <= 0 { req.ExpiresIn = 3600 }
 	if req.ExpiresIn > 86400 { req.ExpiresIn = 86400 }
-	hash := requestBodyHash(req)
+	hash := requestScopedHash(r, req)
 	var id string
-	err := a.db.QueryRow(r.Context(), `insert into change_approvals(tenant_id,requested_by,action,resource,request_hash,status,expires_at) values($1,$2,$3,$4,$5,'pending',now()+make_interval(secs=>$6)) on conflict(request_hash) do update set updated_at=now() returning id::text`, rc.TenantID, rc.PrincipalID, req.Action, req.Resource, hash, req.ExpiresIn).Scan(&id)
+	err := a.db.QueryRow(r.Context(), `insert into change_approvals(tenant_id,requested_by,action,resource,request_hash,status,expires_at) values($1,$2,$3,$4,$5,'pending',now()+make_interval(secs=>$6)) on conflict(request_hash) do update set updated_at=now() where change_approvals.tenant_id=$1 returning id::text`, rc.TenantID, rc.PrincipalID, req.Action, req.Resource, hash, req.ExpiresIn).Scan(&id)
 	if err != nil { return "", err }
 	a.audit(r, "approval.create", id, "pending", map[string]any{"action": req.Action, "resource": req.Resource, "source": "wazuh"})
 	return id, nil
