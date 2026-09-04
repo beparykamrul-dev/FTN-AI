@@ -13,8 +13,6 @@ mapfile -t all < <(find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name '*.sql' -pri
 ((${#all[@]})) || fail "no SQL migrations found"
 
 # The 015..024 production gate must have exactly one migration file per version.
-# Legacy duplicate versions outside this range are replayed with migrate.sh's
-# existing first-file-wins behavior during the shadow execution below.
 for v in $(seq "$START" "$END"); do
   mapfile -t files < <(printf '%s\n' "${all[@]}" | awk -v p="$v" '$0 ~ "^" sprintf("%03d",p) "_" {print}')
   ((${#files[@]} == 1)) || fail "version $v requires exactly one migration file; found ${#files[@]}: ${files[*]-}"
@@ -22,9 +20,6 @@ done
 
 echo "migration-validation: unique 015..024 chain OK"
 
-# Replay the same effective migration sequence as migrate.sh. This validates real
-# PostgreSQL execution order: missing tables/columns/functions/indexes or trigger
-# dependencies fail at the migration that first violates the dependency boundary.
 : "${MIGRATION_VALIDATION_DATABASE_URL:?MIGRATION_VALIDATION_DATABASE_URL is required}"
 : "${MIGRATION_VALIDATION_ALLOW_CREATE:?set MIGRATION_VALIDATION_ALLOW_CREATE=1 for an isolated validation database}"
 [[ "$MIGRATION_VALIDATION_ALLOW_CREATE" == 1 ]] || fail "refusing to create a validation database"
@@ -32,6 +27,12 @@ echo "migration-validation: unique 015..024 chain OK"
 base_db="$(psql "$MIGRATION_VALIDATION_DATABASE_URL" -Atqc 'select current_database()')"
 suffix="$(date +%s)-$$"
 validation_db="${base_db}_migration_gate_${suffix}"
+
+# Keep the host/user/password from the supplied connection URL. psql's -d option
+# overrides the connection string database and can silently fall back to a local
+# Unix socket, which breaks CI service-container validation.
+validation_url="${MIGRATION_VALIDATION_DATABASE_URL%/*}/$validation_db"
+[[ "$validation_url" != "$MIGRATION_VALIDATION_DATABASE_URL" ]] || fail "validation URL must include a database name"
 
 cleanup() {
   psql "$MIGRATION_VALIDATION_DATABASE_URL" -v ON_ERROR_STOP=1 \
@@ -54,13 +55,10 @@ done
 
 for file in "${replay[@]}"; do
   echo "migration-validation: applying $file"
-  psql "$MIGRATION_VALIDATION_DATABASE_URL" -d "$validation_db" -X \
-    -v ON_ERROR_STOP=1 -f "$MIGRATIONS_DIR/$file" >/dev/null
+  psql "$validation_url" -X -v ON_ERROR_STOP=1 -f "$MIGRATIONS_DIR/$file" >/dev/null
 done
 
-# Explicit final-state checks for the durable execution integrity surface.
-psql "$MIGRATION_VALIDATION_DATABASE_URL" -d "$validation_db" -X \
-  -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+psql "$validation_url" -X -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 DO $$
 DECLARE
   required_table text;
@@ -90,7 +88,7 @@ BEGIN
         AND table_name=required_column.table_name
         AND column_name=required_column.column_name
     ) THEN
-      RAISE EXCEPTION 'missing required column: %.%', required_column.table_name, required_column.column_name;
+      RAISE EXCEPTION 'missing required column: %.%', required_column.table_name,required_column.column_name;
     END IF;
   END LOOP;
 END $$;
