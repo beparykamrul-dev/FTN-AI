@@ -18,9 +18,6 @@ fi
 shopt -s nullglob
 files=("$ROOT"/migrations/*.sql)
 
-# A version is the migration identity. Never silently choose one file when two
-# filenames claim the same version; that would make schema state depend on
-# filesystem ordering and can permanently skip a migration.
 declare -A seen_versions=()
 for file in "${files[@]}"; do
   name="$(basename "$file")"
@@ -33,7 +30,6 @@ for file in "${files[@]}"; do
   seen_versions[$version]="$name"
 done
 
-# Apply in numeric migration order, not filesystem/glob order.
 mapfile -t files < <(printf '%s\n' "${files[@]}" | sort -V)
 for file in "${files[@]}"; do
   name="$(basename "$file")"
@@ -42,9 +38,6 @@ for file in "${files[@]}"; do
 
   registered_name="$(psql "$DATABASE_URL" -Atqc "SELECT name FROM schema_migrations WHERE version=${version}" || true)"
   if [[ -n "$registered_name" ]]; then
-    # For migrations managed by this directory, an existing version must point
-    # at the same filename. Legacy baseline names (001-011) are intentionally
-    # exempt because they are synthetic upgrade markers.
     if (( 10#$version >= 12 )) && [[ "$registered_name" != "$name" ]]; then
       echo "migration ${version} is registered as ${registered_name}, expected ${name}" >&2
       exit 1
@@ -53,7 +46,21 @@ for file in "${files[@]}"; do
   fi
 
   echo "applying migration ${version}: ${name}"
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO schema_migrations(version, name) VALUES (${version}, '${name}') ON CONFLICT (version) DO NOTHING;"
+  # Hold a session-level PostgreSQL advisory lock across both the migration DDL
+  # and its registry write. This prevents two migration runners from applying
+  # the same version concurrently. The lock is released when this psql session exits.
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<SQL
+SELECT pg_advisory_lock(hashtextextended('ftn-control-plane-schema-migrations', 0));
+SELECT CASE WHEN EXISTS (SELECT 1 FROM schema_migrations WHERE version=${version})
+  THEN NULL
+  ELSE 'apply' END;
+\\if :{?ERROR}
+\\endif
+\\i '$file'
+INSERT INTO schema_migrations(version, name)
+SELECT ${version}, '${name}'
+WHERE NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version=${version});
+SELECT pg_advisory_unlock(hashtextextended('ftn-control-plane-schema-migrations', 0));
+SQL
 done
 echo "FTN migrations complete"
