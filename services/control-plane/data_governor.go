@@ -98,14 +98,15 @@ func (a *App) dataRequest(w http.ResponseWriter, r *http.Request) {
 	var approvalID string
 	err = a.db.QueryRow(r.Context(), `INSERT INTO change_approvals(tenant_id,requested_by,action,resource,request_hash,status,expires_at) VALUES($1,$2,$3,$4,$5,'pending',now()+interval '1 hour') ON CONFLICT(tenant_id,request_hash) DO UPDATE SET updated_at=now() RETURNING id::text`, rc.TenantID, rc.PrincipalID, approvalAction, approvalResource, hash).Scan(&approvalID)
 	if err != nil { jsonResponse(w, http.StatusInternalServerError, map[string]string{"error":"approval_persist_failed"}); return }
-	encoded, _ := json.Marshal(payload)
-	var id string
-	err = a.db.QueryRow(r.Context(), `INSERT INTO data_requests(tenant_id,asset_id,request_type,status,requested_by,approval_id,request_json) VALUES($1,NULLIF($2,'')::uuid,$3,'pending',$4,$5::uuid,$6::jsonb) RETURNING id::text`, rc.TenantID, req.AssetID, req.RequestType, rc.PrincipalID, approvalID, string(encoded)).Scan(&id)
+	encoded, err := json.Marshal(payload)
+	if err != nil { jsonResponse(w, http.StatusInternalServerError, map[string]string{"error":"request_encode_failed"}); return }
+	var id, status string
+	err = a.db.QueryRow(r.Context(), `INSERT INTO data_requests(tenant_id,asset_id,request_type,status,requested_by,approval_id,request_json,request_hash) VALUES($1,NULLIF($2,'')::uuid,$3,'pending',$4,$5::uuid,$6::jsonb,$7) ON CONFLICT(tenant_id,request_hash) DO UPDATE SET updated_at=data_requests.updated_at RETURNING id::text,status`, rc.TenantID, req.AssetID, req.RequestType, rc.PrincipalID, approvalID, string(encoded), hash).Scan(&id, &status)
 	if err != nil { jsonResponse(w, http.StatusInternalServerError, map[string]string{"error":"data_request_create_failed"}); return }
-	a.audit(r, "data.request", id, "pending", map[string]any{"approval_id": approvalID, "request_type": req.RequestType})
-	jsonResponse(w, http.StatusAccepted, map[string]any{"id": id, "status": "pending", "approval_required": true, "approval_id": approvalID, "request_hash": hash})
+	a.audit(r, "data.request", id, status, map[string]any{"approval_id": approvalID, "request_type": req.RequestType})
+	jsonResponse(w, http.StatusAccepted, map[string]any{"id": id, "status": status, "approval_required": true, "approval_id": approvalID, "request_hash": hash})
 }
 
 var errSensitiveGovernanceMetadata = sensitiveMetadataError{}
 type sensitiveMetadataError struct{}
-func (sensitiveMetadataError) Error() string { return "sensitive governance metadata" }
+func (s sensitiveMetadataError) Error() string { return "sensitive governance metadata" }
