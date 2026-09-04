@@ -42,10 +42,10 @@ print(f"validated {len(files)} JSON files")
 PY
 fi
 
-printf '%s\n' '[4/5] checking Go formatting for changed files'
-mapfile -t changed_go < <(git diff-tree --no-commit-id --name-only -r HEAD -- '*.go')
-if ((${#changed_go[@]})); then
-  unformatted="$(gofmt -l "${changed_go[@]}")"
+printf '%s\n' '[4/5] checking Go formatting for all tracked files'
+mapfile -t tracked_go < <(git ls-files -- '*.go')
+if ((${#tracked_go[@]})); then
+  unformatted="$(gofmt -l "${tracked_go[@]}")"
   if [[ -n "$unformatted" ]]; then
     printf '%s\n' "$unformatted"
     exit 1
