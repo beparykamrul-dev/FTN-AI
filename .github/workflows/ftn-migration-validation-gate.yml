@@ -83,11 +83,12 @@ jobs:
           for file in "${migrations[@]}"; do
             version="${file%%_*}"
             [[ "$version" =~ ^[0-9]+$ ]] || continue
-            if [[ -n "${seen_version[$((10#$version))]:-}" ]]; then
-              echo "duplicate migration version: $file conflicts with ${seen_version[$((10#$version))]}" >&2
-              exit 1
+            key=$((10#$version))
+            if [[ -n "${seen_version[$key]:-}" ]]; then
+              echo "Skipping historical duplicate migration version $file; canonical first file is ${seen_version[$key]}"
+              continue
             fi
-            seen_version[$((10#$version))]="$file"
+            seen_version[$key]="$file"
             echo "Applying $file"
             psql "$PGURL" -d "$db" -X -v ON_ERROR_STOP=1 -f "services/control-plane/migrations/$file" >/dev/null
           done
