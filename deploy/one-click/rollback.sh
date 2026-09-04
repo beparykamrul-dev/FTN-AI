@@ -4,6 +4,7 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RELEASE_ROOT="${FTN_RELEASE_ROOT:-/opt/ftn-ai}"
 CURRENT_LINK="$RELEASE_ROOT/current"
+source "$ROOT_DIR/scripts/production-compose-env.sh"
 
 log(){ printf '[FTN][ROLLBACK] %s\n' "$*"; }
 fail(){ printf '[FTN][ROLLBACK][ERROR] %s\n' "$*" >&2; exit 1; }
@@ -18,31 +19,33 @@ command -v curl >/dev/null 2>&1 || fail 'curl is required'
 
 current="$(readlink -f "$CURRENT_LINK")"
 [ -d "$current" ] || fail "Current release does not exist: $current"
-
 previous=""
 mapfile -t releases < <(find "$RELEASE_ROOT/releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' 2>/dev/null | sort -nr | cut -d' ' -f2-)
 for release in "${releases[@]}"; do
-  if [ "$release" != "$current" ] && [ -f "$release/deploy/one-click/live.sh" ]; then
-    previous="$release"
-    break
-  fi
+  if [ "$release" != "$current" ] && [ -f "$release/deploy/one-click/live.sh" ]; then previous="$release"; break; fi
 done
 [ -n "$previous" ] || fail 'No previous deployable release found'
 
-[ -f "$previous/services/control-plane/docker-compose.yml" ] || fail 'Previous release lacks control-plane Compose manifest'
-[ -f "$previous/deploy/one-click/release-compatibility.sh" ] || fail 'Previous release lacks schema compatibility gate'
-[ -f "$previous/scripts/validate-production-storage.sh" ] || fail 'Previous release lacks production storage validator'
-[ -f "$previous/scripts/validate-production-ports.sh" ] || fail 'Previous release lacks production port validator'
-[ -f "$previous/scripts/validate-production-health.sh" ] || fail 'Previous release lacks production health validator'
+for path in \
+  services/control-plane/docker-compose.yml \
+  deploy/one-click/release-compatibility.sh \
+  scripts/validate-production-storage.sh \
+  scripts/validate-production-ports.sh \
+  scripts/validate-host-port-ownership.sh \
+  scripts/validate-production-health.sh \
+  scripts/production-compose-env.sh; do
+  [ -f "$previous/$path" ] || fail "Previous release lacks required artifact: $path"
+done
 
 chmod 600 "$RELEASE_ROOT/.env"
 log "Current release: $current"
 log "Previous release: $previous"
-
 set -a
 # shellcheck disable=SC1091
 . "$RELEASE_ROOT/.env"
 set +a
+source "$previous/scripts/production-compose-env.sh"
+
 log 'Checking database schema compatibility before rollback'
 bash "$previous/deploy/one-click/release-compatibility.sh" "$previous"
 log 'Database downgrade: NEVER (schema remains append-only)'
@@ -53,7 +56,7 @@ mapfile -t manifests < <(find "$previous" -type f \( -name 'docker-compose.yml' 
 ((${#manifests[@]})) || fail 'No production manifests in previous release'
 
 for compose in "${manifests[@]}"; do
-  docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" config --quiet
+  docker compose --env-file "$RELEASE_ROOT/.env" -f "$compose" config --quiet
   log "Validated: ${compose#$previous/}"
 done
 
@@ -61,48 +64,40 @@ log 'Validating rollback target storage ownership'
 ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-production-storage.sh"
 log 'Validating rollback target host-port ownership'
 ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-production-ports.sh"
+log 'Validating rollback target host process ports'
+ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-host-port-ownership.sh"
 
 ln -sfn "$previous" "$CURRENT_LINK"
 cd "$previous"
-
 CONTROL_COMPOSE="$previous/services/control-plane/docker-compose.yml"
 log 'Starting previous PostgreSQL foundation'
-docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$CONTROL_COMPOSE" up -d postgres
-
+docker compose --env-file "$RELEASE_ROOT/.env" -f "$CONTROL_COMPOSE" up -d postgres
 pg_ok=0
 for _ in $(seq 1 60); do
-  health="$(docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$CONTROL_COMPOSE" ps -a --format '{{.Service}} {{.Health}}' 2>/dev/null || true)"
+  health="$(docker compose --env-file "$RELEASE_ROOT/.env" -f "$CONTROL_COMPOSE" ps -a --format '{{.Service}} {{.Health}}' 2>/dev/null || true)"
   if printf '%s\n' "$health" | awk '$1=="postgres" && $2=="healthy" {ok=1} END{exit ok?0:1}'; then pg_ok=1; break; fi
   sleep 2
 done
 [ "$pg_ok" -eq 1 ] || fail 'PostgreSQL did not become healthy during rollback'
 
 log 'Starting previous control-plane without database downgrade or dependency startup'
-docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" \
-  -f "$CONTROL_COMPOSE" up -d --build --remove-orphans --no-deps control-plane
-
+docker compose --env-file "$RELEASE_ROOT/.env" -f "$CONTROL_COMPOSE" up -d --build --remove-orphans --no-deps control-plane
 ready=0
 for _ in $(seq 1 60); do
   if curl -fsS --max-time 3 http://127.0.0.1:8080/readyz >/dev/null 2>&1; then ready=1; break; fi
   sleep 2
 done
-[ "$ready" -eq 1 ] || {
-  docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$CONTROL_COMPOSE" logs --tail=200 control-plane postgres migration-runner >&2 || true
-  fail 'Previous release failed control-plane readiness after rollback'
-}
+[ "$ready" -eq 1 ] || { docker compose --env-file "$RELEASE_ROOT/.env" -f "$CONTROL_COMPOSE" logs --tail=200 control-plane postgres migration-runner >&2 || true; fail 'Previous release failed control-plane readiness after rollback'; }
 
 for compose in "${manifests[@]}"; do
   [ "$compose" = "$CONTROL_COMPOSE" ] && continue
   log "Restoring: ${compose#$previous/}"
-  docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" \
-    -f "$compose" up -d --build --remove-orphans
+  docker compose --env-file "$RELEASE_ROOT/.env" -f "$compose" up -d --build --remove-orphans
 done
 
 log 'Verifying every restored production service'
 ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-production-health.sh"
 log 'Verifying restored production stack state'
-for compose in "${manifests[@]}"; do
-  docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" ps
-done
-
+for compose in "${manifests[@]}"; do docker compose --env-file "$RELEASE_ROOT/.env" -f "$compose" ps; done
+log "Production Compose profiles: ${COMPOSE_PROFILES:-none}"
 log 'Application rollback complete; all production stacks restored; database schema was not downgraded'
