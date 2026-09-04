@@ -13,6 +13,7 @@ trap 'printf "[FTN][ROLLBACK][ERROR] failed at line %s\n" "$LINENO" >&2' ERR
 command -v docker >/dev/null 2>&1 || fail 'Docker is required'
 command -v readlink >/dev/null 2>&1 || fail 'readlink is required'
 [ -L "$CURRENT_LINK" ] || fail "$CURRENT_LINK is not a release symlink"
+[ -f "$RELEASE_ROOT/.env" ] || fail 'Production .env is missing'
 
 current="$(readlink -f "$CURRENT_LINK")"
 [ -d "$current" ] || fail "Current release does not exist: $current"
@@ -29,18 +30,23 @@ done
 
 [ -f "$previous/services/control-plane/docker-compose.yml" ] || fail 'Previous release lacks control-plane Compose manifest'
 [ -f "$previous/deploy/one-click/live.sh" ] || fail 'Previous release lacks canonical live runner'
+[ -f "$previous/deploy/one-click/release-compatibility.sh" ] || fail 'Previous release lacks schema compatibility gate'
+
+chmod 600 "$RELEASE_ROOT/.env"
+log "Current release: $current"
+log "Previous release: $previous"
+log 'Checking database schema compatibility before rollback'
+set -a
+# shellcheck disable=SC1091
+. "$RELEASE_ROOT/.env"
+set +a
+bash "$previous/deploy/one-click/release-compatibility.sh" "$previous"
 
 # Never attempt an automatic database downgrade. Rollback only changes the application
 # release pointer, then starts the previous release against the existing schema.
-log "Current release: $current"
-log "Previous release: $previous"
 log 'Database downgrade: NEVER (schema remains append-only)'
-
 ln -sfn "$previous" "$CURRENT_LINK"
 cd "$previous"
-
-[ -f "$RELEASE_ROOT/.env" ] || fail 'Production .env is missing'
-chmod 600 "$RELEASE_ROOT/.env"
 
 log 'Validating previous release Compose configuration'
 mapfile -t manifests < <(find "$previous" -type f \( -name 'docker-compose.yml' -o -name 'compose.yml' \) \
