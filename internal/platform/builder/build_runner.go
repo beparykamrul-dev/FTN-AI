@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -20,13 +21,16 @@ func NewBuildRunner(timeout time.Duration) *BuildRunner {
 // Generated source is never passed to a shell. Callers must run this in an
 // isolated container/VM with restricted filesystem, network and credentials.
 func (r *BuildRunner) Run(ctx context.Context, dir string, executable string, args ...string) ([]byte, error) {
-	if executable == "" { return nil, fmt.Errorf("build executable is required") }
+	if r == nil || r.Timeout <= 0 { return nil, fmt.Errorf("build runner is unavailable") }
+	if strings.TrimSpace(executable) == "" { return nil, fmt.Errorf("build executable is required") }
+	if strings.TrimSpace(dir) == "" { return nil, fmt.Errorf("build directory is required") }
 	ctx, cancel := context.WithTimeout(ctx, r.Timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, executable, args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		if ctx.Err() != nil { return out, fmt.Errorf("build timed out: %w", ctx.Err()) }
 		return out, fmt.Errorf("build failed: %w", err)
 	}
 	return out, nil
