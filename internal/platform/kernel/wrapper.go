@@ -6,16 +6,16 @@ import (
 	"fmt"
 )
 
-// Request is a structured kernel operation. Raw shell execution is deliberately
-// not part of this interface; operations must resolve to a registered tool.
-type Request struct {
+// ToolRequest is the structured execution request used by registered kernel
+// tools. It is deliberately distinct from the backend Request contract.
+type ToolRequest struct {
 	Tool       string
 	Operation  string
 	Target     string
 	Parameters map[string]string
 }
 
-type Result struct {
+type ToolResult struct {
 	Status string
 	Output string
 }
@@ -24,7 +24,7 @@ type Result struct {
 type Tool interface {
 	Name() string
 	Operations() []string
-	Execute(ctx context.Context, request Request) (Result, error)
+	Execute(ctx context.Context, request ToolRequest) (ToolResult, error)
 }
 
 type Registry struct {
@@ -45,13 +45,13 @@ func NewRegistry(tools ...Tool) (*Registry, error) {
 	return r, nil
 }
 
-func (r *Registry) Execute(ctx context.Context, request Request) (Result, error) {
+func (r *Registry) Execute(ctx context.Context, request ToolRequest) (ToolResult, error) {
 	if request.Tool == "" || request.Operation == "" {
-		return Result{}, errors.New("tool and operation are required")
+		return ToolResult{}, errors.New("tool and operation are required")
 	}
 	tool, ok := r.tools[request.Tool]
 	if !ok {
-		return Result{}, fmt.Errorf("kernel tool not registered: %s", request.Tool)
+		return ToolResult{}, fmt.Errorf("kernel tool not registered: %s", request.Tool)
 	}
 	return tool.Execute(ctx, request)
 }
@@ -59,6 +59,6 @@ func (r *Registry) Execute(ctx context.Context, request Request) (Result, error)
 // DoExecute is the controlled equivalent of a kernel do_execute operation.
 // It accepts structured tool calls only and never forwards arbitrary code or
 // shell text to a host.
-func (r *Registry) DoExecute(ctx context.Context, request Request) (Result, error) {
+func (r *Registry) DoExecute(ctx context.Context, request ToolRequest) (ToolResult, error) {
 	return r.Execute(ctx, request)
 }
