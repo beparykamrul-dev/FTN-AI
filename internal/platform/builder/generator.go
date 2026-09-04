@@ -26,8 +26,12 @@ func (g *Generator) Generate(m Manifest, destination string) error {
 	for _, name := range t.Files {
 		path := filepath.Join(root, filepath.FromSlash(name))
 		if err := ensureWithin(root, path); err != nil { return err }
+		if err := ensureNoSymlinkEscape(root, path); err != nil { return err }
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { return err }
-		if _, err := os.Stat(path); err == nil { continue }
+		if info, err := os.Lstat(path); err == nil {
+			if info.Mode()&os.ModeSymlink != 0 { return fmt.Errorf("refusing to write through symlink: %s", name) }
+			continue
+		} else if !os.IsNotExist(err) { return err }
 		content := []byte("// FTN generated project skeleton: " + name + "\n")
 		if err := os.WriteFile(path, content, 0o644); err != nil { return err }
 	}
@@ -39,6 +43,25 @@ func ensureWithin(root, path string) error {
 	if err != nil { return err }
 	if rel == ".." || len(rel) >= 3 && rel[:3] == ".."+string(filepath.Separator) {
 		return fmt.Errorf("path escapes project destination")
+	}
+	return nil
+}
+
+func ensureNoSymlinkEscape(root, path string) error {
+	rootClean, err := filepath.EvalSymlinks(root)
+	if err != nil { return err }
+	current := filepath.Dir(path)
+	for {
+		resolved, err := filepath.EvalSymlinks(current)
+		if err == nil {
+			if err := ensureWithin(rootClean, resolved); err != nil { return err }
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+		if current == root { break }
+		parent := filepath.Dir(current)
+		if parent == current { return fmt.Errorf("invalid project destination") }
+		current = parent
 	}
 	return nil
 }
