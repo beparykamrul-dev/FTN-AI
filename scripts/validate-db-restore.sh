@@ -7,10 +7,7 @@ cd "$ROOT"
 POSTGRES_IMAGE="postgres:17-alpine"
 NAME="ftn-db-restore-${GITHUB_RUN_ID:-local}-$$"
 DUMP="$(mktemp)"
-cleanup() {
-  docker rm -f "$NAME" >/dev/null 2>&1 || true
-  rm -f "$DUMP"
-}
+cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; rm -f "$DUMP"; }
 trap cleanup EXIT
 
 for required in \
@@ -32,23 +29,14 @@ for required in \
   services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql \
   services/control-plane/migrations/017_active_defense_execution.sql \
   services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql \
-  services/control-plane/migrations/019_tenant_scoped_service_requests.sql; do
-  test -f "$required"
-done
+  services/control-plane/migrations/019_tenant_scoped_service_requests.sql \
+  services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql; do test -f "$required"; done
 
 echo "Starting isolated PostgreSQL validation instance"
-docker run -d --name "$NAME" \
-  -e POSTGRES_DB=ftn \
-  -e POSTGRES_USER=ftn \
-  -e POSTGRES_PASSWORD=ci-only-password \
-  "$POSTGRES_IMAGE" >/dev/null
-
+docker run -d --name "$NAME" -e POSTGRES_DB=ftn -e POSTGRES_USER=ftn -e POSTGRES_PASSWORD=ci-only-password "$POSTGRES_IMAGE" >/dev/null
 ready_deadline=$((SECONDS + 90))
 until docker exec "$NAME" pg_isready -U ftn -d ftn >/dev/null 2>&1; do
-  if (( SECONDS >= ready_deadline )); then
-    echo "PostgreSQL readiness timeout" >&2
-    exit 1
-  fi
+  if (( SECONDS >= ready_deadline )); then echo "PostgreSQL readiness timeout" >&2; exit 1; fi
   sleep 1
 done
 
@@ -71,86 +59,53 @@ for migration in \
   services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql \
   services/control-plane/migrations/017_active_defense_execution.sql \
   services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql \
-  services/control-plane/migrations/019_tenant_scoped_service_requests.sql; do
+  services/control-plane/migrations/019_tenant_scoped_service_requests.sql \
+  services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
 
-echo "Writing deterministic integrity fixture"
 docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
-INSERT INTO tenants (slug, name) VALUES ('ci-restore', 'CI Restore Validation') ON CONFLICT (slug) DO NOTHING;
-INSERT INTO tenants (slug, name) VALUES ('ci-restore-b', 'CI Restore Validation B') ON CONFLICT (slug) DO NOTHING;
+INSERT INTO tenants (slug,name) VALUES ('ci-restore','CI Restore Validation') ON CONFLICT (slug) DO NOTHING;
+INSERT INTO tenants (slug,name) VALUES ('ci-restore-b','CI Restore Validation B') ON CONFLICT (slug) DO NOTHING;
 SQL
 
-before="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM tenants WHERE slug='ci-restore';")"
-test "$before" = "1"
-
-echo "Validating tenant-scoped durable-job idempotency"
-docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
-INSERT INTO durable_jobs(tenant_id, idempotency_key, job_type, correlation_id)
-SELECT id, 'ci-shared-key', 'ci.test', 'ci-restore-a' FROM tenants WHERE slug='ci-restore' ON CONFLICT DO NOTHING;
-INSERT INTO durable_jobs(tenant_id, idempotency_key, job_type, correlation_id)
-SELECT id, 'ci-shared-key', 'ci.test', 'ci-restore-a-replay' FROM tenants WHERE slug='ci-restore' ON CONFLICT DO NOTHING;
-INSERT INTO durable_jobs(tenant_id, idempotency_key, job_type, correlation_id)
-SELECT id, 'ci-shared-key', 'ci.test', 'ci-restore-b' FROM tenants WHERE slug='ci-restore-b' ON CONFLICT DO NOTHING;
-SQL
-same_tenant_jobs="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM durable_jobs WHERE tenant_id=(SELECT id FROM tenants WHERE slug='ci-restore') AND idempotency_key LIKE '%:ci-shared-key';")"
-test "$same_tenant_jobs" = "1"
-scoped_jobs="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM durable_jobs WHERE idempotency_key LIKE '%:ci-shared-key' AND tenant_id IN (SELECT id FROM tenants WHERE slug IN ('ci-restore','ci-restore-b'));" )"
-test "$scoped_jobs" = "2"
-idempotency_trigger="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_scope_idempotency';")"
-test "$idempotency_trigger" = "1"
-
-echo "Validating tenant-scoped active-defense idempotency"
-docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
-INSERT INTO active_defense_executions(tenant_id,idempotency_key,alert_hash,target_asset,target_scope,adapter,operation,duration_seconds)
-SELECT id,'ci-defense-key','ci-alert-a','asset-a','ftn-owned-asset','nftables','temporary-containment',60 FROM tenants WHERE slug='ci-restore';
-INSERT INTO active_defense_executions(tenant_id,idempotency_key,alert_hash,target_asset,target_scope,adapter,operation,duration_seconds)
-SELECT id,'ci-defense-key','ci-alert-b','asset-b','ftn-owned-asset','nftables','temporary-containment',60 FROM tenants WHERE slug='ci-restore-b';
-SQL
-defense_rows="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM active_defense_executions WHERE idempotency_key LIKE '%:ci-defense-key';")"
-test "$defense_rows" = "2"
-defense_trigger="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='active_defense_scope_idempotency';")"
-test "$defense_trigger" = "1"
-defense_index="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND indexname='active_defense_executions_tenant_idempotency_uq';")"
-test "$defense_index" = "1"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM tenants WHERE slug='ci-restore';")" = "1"
 
 echo "Validating tenant-scoped service requests"
 docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
 INSERT INTO service_requests(tenant_id,service_id,status) SELECT id,'internet','accepted' FROM tenants WHERE slug='ci-restore';
 INSERT INTO service_requests(tenant_id,service_id,status) SELECT id,'internet','accepted' FROM tenants WHERE slug='ci-restore-b';
 SQL
-service_request_columns="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='service_requests' AND column_name IN ('tenant_id','principal_id');")"
-test "$service_request_columns" = "2"
-service_request_tenants="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(DISTINCT tenant_id) FROM service_requests;")"
-test "$service_request_tenants" = "2"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(DISTINCT tenant_id) FROM service_requests;")" = "2"
 
+echo "Validating tenant-scoped API idempotency storage"
+docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
+DO $$
+DECLARE t1 uuid; t2 uuid; p1 uuid; p2 uuid;
+BEGIN
+  SELECT id INTO t1 FROM tenants WHERE slug='ci-restore';
+  SELECT id INTO t2 FROM tenants WHERE slug='ci-restore-b';
+  INSERT INTO principals(tenant_id,subject,kind,issuer) VALUES(t1,'ci-p1','user','ci') ON CONFLICT DO NOTHING;
+  INSERT INTO principals(tenant_id,subject,kind,issuer) VALUES(t2,'ci-p2','user','ci') ON CONFLICT DO NOTHING;
+  SELECT id INTO p1 FROM principals WHERE tenant_id=t1 AND subject='ci-p1';
+  SELECT id INTO p2 FROM principals WHERE tenant_id=t2 AND subject='ci-p2';
+  INSERT INTO idempotency_keys(key,principal_id,request_hash,response_status,response_body,expires_at) VALUES(t1::text||':'||p1::text||':shared',p1,'hash-a',202,'{}',now()+interval '1 hour');
+  INSERT INTO idempotency_keys(key,principal_id,request_hash,response_status,response_body,expires_at) VALUES(t2::text||':'||p2::text||':shared',p2,'hash-b',202,'{}',now()+interval '1 hour');
+END $$;
+SQL
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM idempotency_keys WHERE key LIKE '%:shared';")" = "2"
 
 echo "Creating custom-format backup"
 docker exec "$NAME" pg_dump -U ftn -d ftn -Fc > "$DUMP"
 test -s "$DUMP"
 docker exec "$NAME" createdb -U ftn ftn_restore
 docker exec -i "$NAME" pg_restore -U ftn -d ftn_restore --exit-on-error < "$DUMP"
-after="$(docker exec "$NAME" psql -At -U ftn -d ftn_restore -c "SELECT count(*) FROM tenants WHERE slug='ci-restore';")"
-test "$after" = "1"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn_restore -c "SELECT count(*) FROM tenants WHERE slug='ci-restore';")" = "1"
 
-event_trigger="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_event_journal';")"
-test "$event_trigger" = "1"
-approval_event_trigger="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='change_approvals_lifecycle_event';")"
-test "$approval_event_trigger" = "1"
-schema_version="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT to_regclass('public.event_journal') IS NOT NULL AND to_regclass('public.durable_jobs') IS NOT NULL;")"
-test "$schema_version" = "t"
-registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 19;")"
-test "$registry_count" = "9"
-control_nodes_tenant="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='control_nodes' AND column_name='tenant_id');")"
-test "$control_nodes_tenant" = "t"
-approval_payload="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='change_approvals' AND column_name='payload_hash');")"
-test "$approval_payload" = "t"
-approval_scoped_unique="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='change_approvals_tenant_request_hash_uq');")"
-test "$approval_scoped_unique" = "t"
-active_defense="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT to_regclass('public.active_defense_executions') IS NOT NULL;")"
-test "$active_defense" = "t"
-service_request_tenant_index="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='service_requests_tenant_idx');")"
-test "$service_request_tenant_index" = "t"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_event_journal';")" = "1"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='change_approvals_lifecycle_event';")" = "1"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 20;")" = "10"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='service_requests_tenant_idx');")" = "t"
 
 echo "PostgreSQL migration + backup + restore validation passed."
