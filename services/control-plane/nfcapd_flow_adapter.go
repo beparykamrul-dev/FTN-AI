@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"strconv"
 	"strings"
@@ -56,6 +57,13 @@ func parseNFCAPDUint(rec []string, idx int, field string, bits int) (uint64, err
 	return v, nil
 }
 
+func sumNFCAPD(a, b uint64) (uint64, error) {
+	if math.MaxUint64-a < b {
+		return 0, errors.New("counter_overflow")
+	}
+	return a + b, nil
+}
+
 func (a NFCAPDFlowAdapter) Decode(ctx context.Context, r io.Reader, exporter string, version uint16) ([]FlowRecord, error) {
 	if r == nil {
 		return nil, errors.New("flow_reader_required")
@@ -83,6 +91,7 @@ func (a NFCAPDFlowAdapter) Decode(ctx context.Context, r io.Reader, exporter str
 			return out, ctx.Err()
 		default:
 		}
+
 		rec, err := cr.Read()
 		if err == io.EOF {
 			break
@@ -97,10 +106,9 @@ func (a NFCAPDFlowAdapter) Decode(ctx context.Context, r io.Reader, exporter str
 			rec[i] = strings.TrimSpace(rec[i])
 		}
 
-		// Accept both the stable eight-column FTN format and common nfdump
-		// header names. Once a header is recognized, data columns are mapped
-		// by name instead of relying on exporter-specific column ordering.
-		if columns == nil && len(rec) >= 8 && (strings.EqualFold(rec[0], "ts") || strings.EqualFold(rec[0], "first") || strings.EqualFold(rec[0], "srcip") || strings.EqualFold(rec[0], "sa")) {
+		if columns == nil && len(rec) >= 8 &&
+			(strings.EqualFold(rec[0], "ts") || strings.EqualFold(rec[0], "first") ||
+				strings.EqualFold(rec[0], "srcip") || strings.EqualFold(rec[0], "sa")) {
 			c := &nfcapdColumns{
 				src:      findNFCAPDColumn(rec, "srcip", "sa", "sourceip", "sourceipv4address", "sourceipv6address"),
 				dst:      findNFCAPDColumn(rec, "dstip", "da", "destinationip", "destinationipv4address", "destinationipv6address"),
@@ -110,14 +118,15 @@ func (a NFCAPDFlowAdapter) Decode(ctx context.Context, r io.Reader, exporter str
 				sampling: findNFCAPDColumn(rec, "sampling", "samplinginterval"),
 			}
 			if c.src >= 0 && c.dst >= 0 && c.sport >= 0 && c.dport >= 0 && c.proto >= 0 {
-				c.bytes = findNFCAPDColumn(rec, "bytes", "ibytes", "octettotalcount")
-				c.packets = findNFCAPDColumn(rec, "packets", "ipackets", "packettotalcount")
+				c.bytes = findNFCAPDColumn(rec, "bytes", "ibytes", "obytes", "octettotalcount")
+				c.packets = findNFCAPDColumn(rec, "packets", "ipackets", "opackets", "packettotalcount")
 				if c.bytes >= 0 && c.packets >= 0 {
 					columns = c
 					continue
 				}
 			}
 		}
+
 		if len(rec) >= 1 && (strings.EqualFold(rec[0], "ts") || strings.EqualFold(rec[0], "first") || strings.EqualFold(rec[0], "srcip") || strings.EqualFold(rec[0], "sa")) {
 			continue
 		}
@@ -130,6 +139,9 @@ func (a NFCAPDFlowAdapter) Decode(ctx context.Context, r io.Reader, exporter str
 		}
 		if len(rec) <= bytesIdx || len(rec) <= packetsIdx {
 			return nil, errors.New("nfcapd_record_too_short")
+		}
+		if srcIdx < 0 || dstIdx < 0 || srcIdx >= len(rec) || dstIdx >= len(rec) {
+			return nil, errors.New("flow_source_destination_required")
 		}
 		src, dst := rec[srcIdx], rec[dstIdx]
 		if net.ParseIP(src) == nil || net.ParseIP(dst) == nil {
@@ -165,11 +177,7 @@ func (a NFCAPDFlowAdapter) Decode(ctx context.Context, r io.Reader, exporter str
 				rate = 1
 			}
 		}
-		out = append(out, FlowRecord{
-			ExporterID: exporter, Version: version, SourceIP: src, DestinationIP: dst,
-			SourcePort: uint16(sport), DestinationPort: uint16(dport), Protocol: uint8(proto),
-			Bytes: bytes, Packets: packets, SamplingRate: uint32(rate),
-		})
+		out = append(out, FlowRecord{ExporterID: exporter, Version: version, SourceIP: src, DestinationIP: dst, SourcePort: uint16(sport), DestinationPort: uint16(dport), Protocol: uint8(proto), Bytes: bytes, Packets: packets, SamplingRate: uint32(rate)})
 		if len(out) > maxSiLKBatchSize {
 			return nil, errors.New("flow_batch_limit")
 		}
