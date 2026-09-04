@@ -26,6 +26,7 @@ for compose in "${manifests[@]}"; do
 done
 [ -f "$ROOT_DIR/scripts/validate-production-storage.sh" ] || fail 'Production storage validator is missing'
 [ -f "$ROOT_DIR/scripts/validate-production-ports.sh" ] || fail 'Production port validator is missing'
+[ -f "$ROOT_DIR/scripts/validate-production-health.sh" ] || fail 'Production health validator is missing'
 log 'Validating persistent storage ownership'
 bash "$ROOT_DIR/scripts/validate-production-storage.sh"
 log 'Validating production host-port ownership'
@@ -65,6 +66,8 @@ if [ -f "$CONTROL_COMPOSE" ]; then
   [ "$ready" -eq 1 ] || { docker compose --profile "*" --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" logs --tail=200 control-plane postgres migration-runner >&2 || true; fail 'Control-plane readiness check failed'; }
   log 'Control-plane readiness: OK'
 fi
+log 'Verifying every production-marked service'
+ENV_FILE="$ENV_FILE" bash "$ROOT_DIR/scripts/validate-production-health.sh"
 log 'Production stack status'
 for compose in "${manifests[@]}"; do docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" ps; done
 log 'ONE-CLICK LIVE DEPLOYMENT COMPLETE'
