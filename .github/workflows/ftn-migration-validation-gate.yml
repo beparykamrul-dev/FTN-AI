@@ -54,7 +54,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: PostgreSQL client check
         run: psql --version
@@ -79,13 +79,19 @@ jobs:
           psql "$PGURL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";" >/dev/null
           psql "$PGURL" -d "$db" -X -v ON_ERROR_STOP=1 -f services/control-plane/schema.sql >/dev/null
           mapfile -t migrations < <(find services/control-plane/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort -V)
-          last_version=''
+          declare -A seen_version=()
           for file in "${migrations[@]}"; do
             version="${file%%_*}"
             [[ "$version" =~ ^[0-9]+$ ]] || continue
-            [[ "$version" == "$last_version" ]] && continue
+            if [[ -n "${seen_version[$((10#$version))]:-}" ]]; then
+              echo "duplicate migration version: $file conflicts with ${seen_version[$((10#$version))]}" >&2
+              exit 1
+            fi
+            seen_version[$((10#$version))]="$file"
             echo "Applying $file"
             psql "$PGURL" -d "$db" -X -v ON_ERROR_STOP=1 -f "services/control-plane/migrations/$file" >/dev/null
-            last_version="$version"
+          done
+          for version in {15..24}; do
+            [[ -n "${seen_version[$version]:-}" ]] || { echo "missing migration version: $(printf '%03d' "$version")" >&2; exit 1; }
           done
           psql "$PGURL" -d "$db" -X -v ON_ERROR_STOP=1 -f services/control-plane/tests/sql/024_execution_integrity_state_machine.sql
