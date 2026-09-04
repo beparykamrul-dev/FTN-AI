@@ -7,8 +7,6 @@ import (
 
 type RecoveryCandidate struct { AssetID string `json:"asset_id"`; DistanceM float64 `json:"distance_m"`; Score float64 `json:"score"`; Reason string `json:"reason"` }
 
-type RecoveryPlan struct { FailedAssetID string `json:"failed_asset_id"`; Candidates []RecoveryCandidate `json:"candidates"`; RequiresApproval bool `json:"requires_approval"` }
-
 // BuildRecoveryPlan produces deterministic recovery candidates from the known
 // topology. It never changes the physical topology itself.
 func (m *FiberMap) BuildRecoveryPlan(failedID string) (RecoveryPlan, error) {
