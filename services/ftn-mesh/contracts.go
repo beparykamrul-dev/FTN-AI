@@ -1,6 +1,9 @@
 package ftnmesh
 
-import "context"
+import (
+	"context"
+	"net"
+)
 
 // Node is a normalized backbone/POP mesh participant. Concrete transport and
 // routing implementations stay behind the MeshAdapter boundary.
@@ -62,6 +65,7 @@ func (s MeshSnapshot) Validate() error {
 		}
 		seen[n.ID] = struct{}{}
 	}
+
 	for _, l := range s.Links {
 		if l.ID == "" || l.A == "" || l.B == "" {
 			return errInvalid("link id and endpoints are required")
@@ -69,13 +73,43 @@ func (s MeshSnapshot) Validate() error {
 		if l.A == l.B {
 			return errInvalid("self-link is not allowed: " + l.ID)
 		}
+		if _, ok := seen[l.A]; !ok {
+			return errInvalid("link endpoint does not exist: " + l.A)
+		}
+		if _, ok := seen[l.B]; !ok {
+			return errInvalid("link endpoint does not exist: " + l.B)
+		}
 		if l.CapacityMbps == 0 {
 			return errInvalid("link capacity must be positive: " + l.ID)
 		}
+		if l.LatencyMs < 0 {
+			return errInvalid("link latency cannot be negative: " + l.ID)
+		}
+		if l.LossPct < 0 || l.LossPct > 100 {
+			return errInvalid("link loss must be between 0 and 100: " + l.ID)
+		}
 	}
+
 	for _, r := range s.Routes {
 		if r.ID == "" || r.Prefix == "" || r.Source == "" {
 			return errInvalid("route id, prefix and source are required")
+		}
+		if _, _, err := net.ParseCIDR(r.Prefix); err != nil {
+			return errInvalid("invalid route prefix: " + r.Prefix)
+		}
+		if _, ok := seen[r.Source]; !ok {
+			return errInvalid("route source does not exist: " + r.Source)
+		}
+		for _, target := range r.Targets {
+			if target == "" {
+				return errInvalid("route target cannot be empty: " + r.ID)
+			}
+			if _, ok := seen[target]; !ok {
+				return errInvalid("route target does not exist: " + target)
+			}
+			if target == r.Source {
+				return errInvalid("route source cannot target itself: " + r.ID)
+			}
 		}
 		if !r.Approved {
 			continue
