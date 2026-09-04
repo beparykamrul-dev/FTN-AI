@@ -32,6 +32,7 @@ done
 [ -f "$previous/services/control-plane/docker-compose.yml" ] || fail 'Previous release lacks control-plane Compose manifest'
 [ -f "$previous/deploy/one-click/release-compatibility.sh" ] || fail 'Previous release lacks schema compatibility gate'
 [ -f "$previous/scripts/validate-production-storage.sh" ] || fail 'Previous release lacks production storage validator'
+[ -f "$previous/scripts/validate-production-ports.sh" ] || fail 'Previous release lacks production port validator'
 
 chmod 600 "$RELEASE_ROOT/.env"
 log "Current release: $current"
@@ -50,55 +51,15 @@ mapfile -t manifests < <(find "$previous" -type f \( -name 'docker-compose.yml' 
   xargs -0 -r grep -El 'FTN_PRODUCTION_STACK=true|x-ftn-production-stack:[[:space:]]*true' | sort)
 ((${#manifests[@]})) || fail 'No production manifests in previous release'
 
-# Validate every rollback target before changing the release pointer.
 for compose in "${manifests[@]}"; do
   docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" config --quiet
   log "Validated: ${compose#$previous/}"
 done
 
-# Reuse the same storage ownership gate used by live deployment.
 log 'Validating rollback target storage ownership'
 ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-production-storage.sh"
-
-# Reject host-port collisions in the rollback target before touching the live stack.
-tmp_ports="$(mktemp)"
-cleanup_ports(){ rm -f "$tmp_ports"; }
-trap cleanup_ports EXIT
-for compose in "${manifests[@]}"; do
-  docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" config --format json \
-    | python3 -c 'import json,sys
-x=json.load(sys.stdin)
-for s,v in x.get("services",{}).items():
-  for p in v.get("ports",[]) or []:
-    if isinstance(p,dict) and p.get("published") is not None:
-      host_ip=p.get("host_ip") or "*"
-      print(f"{host_ip}\t{p.get(\"published\")}\t{p.get(\"protocol\",\"tcp\")}\t{s}")' >> "$tmp_ports"
-done
-python3 - "$tmp_ports" <<'PY'
-import sys
-from collections import defaultdict
-
-seen = defaultdict(list)
-with open(sys.argv[1], encoding="utf-8") as fh:
-    for line in fh:
-        host_ip, port, proto, service = line.rstrip("\n").split("\t", 3)
-        seen[(port, proto)].append((host_ip, service))
-
-bad = False
-for (port, proto), entries in seen.items():
-    if len(entries) < 2:
-        continue
-    wildcard = any(ip in {"*", "0.0.0.0", "::"} for ip, _ in entries)
-    concrete = {ip for ip, _ in entries}
-    if wildcard or len(concrete) < len(entries):
-        print(f"duplicate host port binding: {port}/{proto}: {entries}")
-        bad = True
-
-if bad:
-    sys.exit(1)
-PY
-rm -f "$tmp_ports"
-trap 'printf "[FTN][ROLLBACK][ERROR] failed at line %s\n" "$LINENO" >&2' ERR
+log 'Validating rollback target host-port ownership'
+ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-production-ports.sh"
 
 ln -sfn "$previous" "$CURRENT_LINK"
 cd "$previous"
@@ -115,8 +76,6 @@ for _ in $(seq 1 60); do
 done
 [ "$pg_ok" -eq 1 ] || fail 'PostgreSQL did not become healthy during rollback'
 
-# Do not invoke migration-runner during rollback. The compatibility gate above
-# only permits rollback when the existing schema is not newer than this release.
 log 'Starting previous control-plane without database downgrade or dependency startup'
 docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" \
   -f "$CONTROL_COMPOSE" up -d --build --remove-orphans --no-deps control-plane
@@ -131,18 +90,16 @@ done
   fail 'Previous release failed control-plane readiness after rollback'
 }
 
-# Restore every production-marked stack after the canonical control-plane is ready.
-# The shared ftn-control-plane network is therefore available before Control Center.
 for compose in "${manifests[@]}"; do
   [ "$compose" = "$CONTROL_COMPOSE" ] && continue
   log "Restoring: ${compose#$previous/}"
   docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" \
     -f "$compose" up -d --build --remove-orphans
- done
+done
 
 log 'Verifying restored production stack state'
 for compose in "${manifests[@]}"; do
   docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" ps
- done
+done
 
 log 'Application rollback complete; all production stacks restored; database schema was not downgraded'
