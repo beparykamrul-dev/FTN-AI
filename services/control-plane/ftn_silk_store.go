@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/netip"
 	"strings"
@@ -26,12 +27,17 @@ ON CONFLICT (tenant_id, exporter_id, fingerprint, observed_at) DO NOTHING`
 // FTNSiLKStore is the durable database boundary for normalized flow telemetry.
 // It stores flow metadata/counters only; raw packet payloads are never persisted.
 type FTNSiLKStore struct {
-	db       *pgxpool.Pool
-	tenantID string
+	db         *pgxpool.Pool
+	tenantID   string
+	clickhouse *FTNClickHouseStore
 }
 
 func NewFTNSiLKStore(db *pgxpool.Pool, tenantID string) *FTNSiLKStore {
-	return &FTNSiLKStore{db: db, tenantID: strings.TrimSpace(tenantID)}
+	clickhouse, err := NewFTNClickHouseStoreFromEnv()
+	if err != nil {
+		log.Printf("FTN ClickHouse analytics disabled: %v", err)
+	}
+	return &FTNSiLKStore{db: db, tenantID: strings.TrimSpace(tenantID), clickhouse: clickhouse}
 }
 
 func (s *FTNSiLKStore) validateRecord(r FlowRecord) (FlowRecord, *string, *string, error) {
@@ -123,6 +129,13 @@ func (s *FTNSiLKStore) InsertBatch(ctx context.Context, observedAt time.Time, re
 	for range records {
 		if _, err := results.Exec(); err != nil {
 			return err
+		}
+	}
+
+	if s.clickhouse != nil {
+		if err := s.clickhouse.InsertBatch(ctx, observedAt, s.tenantID, records, serviceID, subscriberID, mainServerID); err != nil {
+			// Analytics is deliberately non-blocking for the transactional path.
+			log.Printf("FTN ClickHouse flow persistence failed: %v", err)
 		}
 	}
 	return nil
