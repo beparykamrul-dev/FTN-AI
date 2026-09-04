@@ -22,7 +22,7 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  PERFORM pg_advisory_xact_lock(hashtext(COALESCE(NEW.tenant_id::text, '')));
+  PERFORM pg_advisory_xact_lock(hashtextextended(COALESCE(NEW.tenant_id::text, ''), 0));
   SELECT COALESCE(MAX(sequence) + 1, 1) INTO next_sequence
     FROM event_journal
    WHERE tenant_id IS NOT DISTINCT FROM NEW.tenant_id;
@@ -78,7 +78,7 @@ BEGIN
     ELSE 'approval.state.changed'
   END;
 
-  PERFORM pg_advisory_xact_lock(hashtext(COALESCE(NEW.tenant_id::text, '')));
+  PERFORM pg_advisory_xact_lock(hashtextextended(COALESCE(NEW.tenant_id::text, ''), 0));
 
   INSERT INTO event_journal(
     tenant_id, event_type, sequence, correlation_id, causation_id,
