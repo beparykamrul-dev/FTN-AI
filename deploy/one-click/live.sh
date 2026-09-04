@@ -28,7 +28,7 @@ mapfile -t manifests < <(find "$ROOT_DIR" -type f \( -name 'docker-compose.yml' 
 log "Found ${#manifests[@]} production stack(s)"
 for compose in "${manifests[@]}"; do
   log "Validate: ${compose#$ROOT_DIR/}"
-  docker compose --env-file "$ENV_FILE" -f "$compose" config --quiet
+  docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" config --quiet
  done
 
 # Run repository-level preflight before mutating live services.
@@ -37,17 +37,19 @@ if [ -x "$ROOT_DIR/scripts/preflight.sh" ]; then
   "$ROOT_DIR/scripts/preflight.sh"
 fi
 
-# Apply database migrations through the service's declared migration runner.
+# Compose profiles are explicitly enabled so production services that are grouped
+# under observability/backup/wireless/enterprise/acme profiles are not silently skipped.
+# The production marker remains the allow-list boundary for which manifests may run.
 if [ -f "$ROOT_DIR/services/control-plane/docker-compose.yml" ]; then
   log 'Starting control-plane database/runtime foundation'
-  docker compose --env-file "$ENV_FILE" -f "$ROOT_DIR/services/control-plane/docker-compose.yml" up -d --build --remove-orphans
+  docker compose --profile "*" --env-file "$ENV_FILE" -f "$ROOT_DIR/services/control-plane/docker-compose.yml" up -d --build --remove-orphans
 fi
 
 # Start every other explicitly production-marked stack.
 for compose in "${manifests[@]}"; do
   [ "$compose" = "$ROOT_DIR/services/control-plane/docker-compose.yml" ] && continue
   log "Start: ${compose#$ROOT_DIR/}"
-  docker compose --env-file "$ENV_FILE" -f "$compose" up -d --build --remove-orphans
+  docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" up -d --build --remove-orphans
  done
 
 # Wait for the control-plane readiness contract when it exists.
@@ -67,7 +69,7 @@ fi
 
 log 'Production stack status'
 for compose in "${manifests[@]}"; do
-  docker compose --env-file "$ENV_FILE" -f "$compose" ps
+  docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" ps
  done
 
 log 'ONE-CLICK LIVE DEPLOYMENT COMPLETE'
