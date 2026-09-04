@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"sort"
 	"sync"
 	"time"
 )
@@ -94,6 +95,12 @@ func (w *FTNBGPWatcher) Snapshot() []FTNBGPState {
 	for _, state := range w.peers {
 		out = append(out, state)
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Peer != out[j].Peer {
+			return out[i].Peer < out[j].Peer
+		}
+		return out[i].ASN < out[j].ASN
+	})
 	return out
 }
 
