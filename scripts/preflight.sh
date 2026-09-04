@@ -18,6 +18,11 @@ ENV_FILE="$ROOT_DIR/.env"
 [ -f "$ENV_FILE" ] || fail '.env is missing; run bootstrap first'
 [ "$(stat -c '%a' "$ENV_FILE" 2>/dev/null || stat -f '%Lp' "$ENV_FILE")" = '600' ] || fail '.env must have mode 0600'
 
+# Read routing-node mode from the canonical .env as well as the process
+# environment. Docker Compose does not export --env-file values to the shell.
+FTN_ROUTING_NODE="$(sed -n 's/^FTN_ROUTING_NODE=//p' "$ENV_FILE" | tail -n 1)"
+FTN_ROUTING_NODE="${FTN_ROUTING_NODE:-0}"
+
 [ -f "$ROOT_DIR/services/control-plane/docker-compose.yml" ] || fail 'control-plane production manifest is missing'
 grep -Eq '^x-ftn-production-stack:[[:space:]]*true[[:space:]]*$' "$ROOT_DIR/services/control-plane/docker-compose.yml" || fail 'control-plane is not marked production'
 
@@ -41,12 +46,12 @@ done
 log 'Validating production host process port ownership'
 ENV_FILE="$ENV_FILE" bash "$ROOT_DIR/scripts/validate-host-port-ownership.sh"
 
-if [ "${FTN_ROUTING_NODE:-0}" = '1' ]; then
+if [ "$FTN_ROUTING_NODE" = '1' ]; then
   [ -f "$ROOT_DIR/scripts/validate-routing-kernel.sh" ] || fail 'routing kernel validator is missing'
   log 'Validating routing-node kernel profile'
   bash "$ROOT_DIR/scripts/validate-routing-kernel.sh"
 else
-  log 'Routing-node kernel profile: skipped (FTN_ROUTING_NODE=0)'
+  log "Routing-node kernel profile: skipped (FTN_ROUTING_NODE=$FTN_ROUTING_NODE)"
 fi
 
 log "Production manifests: ${#manifests[@]}"
