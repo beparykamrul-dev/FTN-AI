@@ -40,10 +40,30 @@ jobs:
           docker compose -f services/control-plane/docker-compose.yml logs control-plane
           exit 1
 
-      - name: Create approval bound to exact job payload
+      - name: Create independently authenticated approver and approval
         id: approval
+        working-directory: services/control-plane
         run: |
           set -euo pipefail
+          approver_token="$(openssl rand -hex 32)"
+          approver_hash="$(printf '%s' "$approver_token" | sha256sum | awk '{print $1}')"
+          docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 -v approver_hash="$approver_hash" <<'SQL'
+          DO $$
+          DECLARE tenant_id uuid; principal_id uuid; role_id uuid;
+          BEGIN
+            SELECT id INTO tenant_id FROM tenants WHERE slug='ftn-system';
+            IF tenant_id IS NULL THEN RAISE EXCEPTION 'ftn-system tenant missing'; END IF;
+            INSERT INTO principals(tenant_id,subject,kind,issuer)
+              VALUES(tenant_id,'ci-approver','service','github-actions')
+              ON CONFLICT(tenant_id,issuer,subject) DO UPDATE SET updated_at=now()
+              RETURNING id INTO principal_id;
+            SELECT r.id INTO role_id FROM roles r WHERE r.tenant_id=tenant_id AND r.name='system-admin';
+            IF role_id IS NULL THEN RAISE EXCEPTION 'system-admin role missing'; END IF;
+            INSERT INTO principal_roles(principal_id,role_id) VALUES(principal_id,role_id) ON CONFLICT DO NOTHING;
+            INSERT INTO api_credentials(principal_id,name,token_hash)
+              VALUES(principal_id,'ci-approver',:'approver_hash') ON CONFLICT(token_hash) DO NOTHING;
+          END $$;
+          SQL
           payload="{\"source\":\"github-actions\",\"sha\":\"${GITHUB_SHA}\"}"
           approval_body="$(curl --fail --silent --show-error \
             -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
@@ -53,7 +73,7 @@ jobs:
           approval_id="$(printf '%s' "$approval_body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["approval_id"])')"
           test -n "$approval_id"
           decision_body="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
+            -H "Authorization: Bearer ${approver_token}" \
             -H 'Content-Type: application/json' \
             -d '{"decision":"approve","reason":"CI end-to-end gate"}' \
             "http://127.0.0.1:8080/api/v1/approvals/${approval_id}/decide")"
