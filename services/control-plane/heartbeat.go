@@ -19,7 +19,7 @@ func (a *App) nodeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var n Node
-	if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 256<<10)).Decode(&n); err != nil {
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid_json"})
 		return
 	}
