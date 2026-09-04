@@ -51,14 +51,14 @@ for file in "${files[@]}"; do
   # the file once the first runner has committed it.
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<SQL
 SELECT pg_advisory_lock(hashtextextended('ftn-control-plane-schema-migrations', 0));
-SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version=${version}) AS already_applied \\gset
-\\if :already_applied
-\\else
-\\i '$file'
+SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version=${version}) AS already_applied \gset
+\if :already_applied
+\else
+\i '$file'
 INSERT INTO schema_migrations(version, name)
 SELECT ${version}, '${name}'
 WHERE NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version=${version});
-\\endif
+\endif
 SELECT pg_advisory_unlock(hashtextextended('ftn-control-plane-schema-migrations', 0));
 SQL
 done
