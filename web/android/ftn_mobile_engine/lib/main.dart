@@ -24,25 +24,37 @@ class FTNHomePage extends StatefulWidget {
 class _FTNHomePageState extends State<FTNHomePage> {
   String status = 'Disconnected';
   List<dynamic> tools = const [];
-  final endpoint = const String.fromEnvironment(
-    'FTN_API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:5000',
-  );
+  final endpoint = const String.fromEnvironment('FTN_API_BASE_URL');
+
+  bool _validEndpoint(Uri uri) {
+    if (uri.host.isEmpty) return false;
+    if (uri.scheme == 'https') return true;
+    return (uri.host == '127.0.0.1' || uri.host == 'localhost' || uri.host == '::1') && uri.scheme == 'http';
+  }
 
   Future<void> loadStatus() async {
+    if (!mounted) return;
     setState(() => status = 'Connecting...');
     try {
+      if (endpoint.trim().isEmpty) throw Exception('FTN_API_BASE_URL is not configured');
+      final base = Uri.parse(endpoint);
+      if (!_validEndpoint(base)) throw Exception('API endpoint must use HTTPS');
       final r = await http.get(
-        Uri.parse('$endpoint/api/v1/ftn/android/status'),
+        base.resolve('/api/v1/ftn/android/status'),
         headers: const {'Accept': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 10));
       if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
-      final data = jsonDecode(r.body) as Map<String, dynamic>;
+      final decoded = jsonDecode(r.body);
+      if (decoded is! Map<String, dynamic>) throw Exception('invalid API response');
+      final reportedTools = decoded['tools'];
+      if (reportedTools != null && reportedTools is! List) throw Exception('invalid tools response');
+      if (!mounted) return;
       setState(() {
-        status = '${data['service'] ?? 'FTN'} - ${data['status'] ?? 'unknown'}';
-        tools = (data['tools'] as List?) ?? const [];
+        status = '${decoded['service'] ?? 'FTN'} - ${decoded['status'] ?? 'unknown'}';
+        tools = reportedTools ?? const [];
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => status = 'Connection failed: $e');
     }
   }
