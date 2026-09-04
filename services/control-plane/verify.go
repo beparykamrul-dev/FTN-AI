@@ -17,8 +17,8 @@ type verifyRequest struct {
 }
 
 // Verification is the final state gate. A privileged approval becomes executed
-// only after the claimed worker's successful execution has been independently
-// verified. This endpoint records state; it never performs device mutations.
+// only after an authorized verifier records a successful result. The verifier
+// identity is persisted so the audit trail distinguishes execution from verification.
 func (a *App) verifyJob(w http.ResponseWriter, r *http.Request) {
 	if !method(w, r, http.MethodPost) || !requirePermission(a, "job.verify", w, r) {
 		return
@@ -41,6 +41,10 @@ func (a *App) verifyJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rc := requestInfo(r)
+	if strings.TrimSpace(rc.PrincipalID) == "" || strings.TrimSpace(rc.TenantID) == "" {
+		jsonResponse(w, 401, map[string]string{"error": "principal_required"})
+		return
+	}
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
 		jsonResponse(w, 500, map[string]string{"error": "verify_begin_failed"})
@@ -50,8 +54,8 @@ func (a *App) verifyJob(w http.ResponseWriter, r *http.Request) {
 
 	var status string
 	var attemptWorker, attemptStatus string
-	var approvalID *string
-	err = tx.QueryRow(r.Context(), `select j.status,ea.worker_id,ea.status,j.approval_id::text from durable_jobs j join execution_attempts ea on ea.job_id=j.id and ea.attempt_no=$3 where j.id=$1::uuid and j.tenant_id=$2::uuid for update`, id, rc.TenantID, in.AttemptNo).Scan(&status, &attemptWorker, &attemptStatus, &approvalID)
+	var approvalID, requestedBy *string
+	err = tx.QueryRow(r.Context(), `select j.status,ea.worker_id,ea.status,j.approval_id::text,a.requested_by::text from durable_jobs j join execution_attempts ea on ea.job_id=j.id and ea.attempt_no=$3 left join change_approvals a on a.id=j.approval_id and a.tenant_id=j.tenant_id where j.id=$1::uuid and j.tenant_id=$2::uuid for update`, id, rc.TenantID, in.AttemptNo).Scan(&status, &attemptWorker, &attemptStatus, &approvalID, &requestedBy)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			jsonResponse(w, 404, map[string]string{"error": "job_or_attempt_not_found"})
@@ -64,9 +68,13 @@ func (a *App) verifyJob(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, 409, map[string]string{"error": "verification_state_conflict"})
 		return
 	}
+	if requestedBy != nil && *requestedBy == rc.PrincipalID {
+		jsonResponse(w, 409, map[string]string{"error": "verification_separation_required"})
+		return
+	}
 
 	if !in.Success {
-		if _, err = tx.Exec(r.Context(), `update durable_jobs set verification_payload=$2::jsonb,last_error=$3,updated_at=now() where id=$1::uuid`, id, string(in.Result), in.Error); err != nil {
+		if _, err = tx.Exec(r.Context(), `update durable_jobs set verification_payload=$2::jsonb,last_error=$3,updated_at=now() where id=$1::uuid and tenant_id=$4::uuid`, id, string(in.Result), in.Error, rc.TenantID); err != nil {
 			jsonResponse(w, 500, map[string]string{"error": "verification_update_failed"})
 			return
 		}
@@ -74,12 +82,12 @@ func (a *App) verifyJob(w http.ResponseWriter, r *http.Request) {
 			jsonResponse(w, 500, map[string]string{"error": "verification_commit_failed"})
 			return
 		}
-		a.audit(r, "job.verify", id, "verification_failed", map[string]any{"worker_id": in.WorkerID, "attempt": in.AttemptNo, "approval_id": approvalID, "result": json.RawMessage(in.Result), "error": in.Error})
+		a.audit(r, "job.verify", id, "verification_failed", map[string]any{"worker_id": in.WorkerID, "verifier_id": rc.PrincipalID, "attempt": in.AttemptNo, "approval_id": approvalID, "result": json.RawMessage(in.Result), "error": in.Error})
 		jsonResponse(w, 409, map[string]any{"job_id": id, "status": "succeeded", "verification": "verification_failed"})
 		return
 	}
 
-	if _, err = tx.Exec(r.Context(), `update durable_jobs set verification_payload=$2::jsonb,last_error='',updated_at=now() where id=$1::uuid`, id, string(in.Result)); err != nil {
+	if _, err = tx.Exec(r.Context(), `update durable_jobs set verification_payload=$2::jsonb,last_error='',updated_at=now() where id=$1::uuid and tenant_id=$3::uuid`, id, string(in.Result), rc.TenantID); err != nil {
 		jsonResponse(w, 500, map[string]string{"error": "verification_update_failed"})
 		return
 	}
@@ -93,6 +101,6 @@ func (a *App) verifyJob(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, 500, map[string]string{"error": "verification_commit_failed"})
 		return
 	}
-	a.audit(r, "job.verify", id, "verified", map[string]any{"worker_id": in.WorkerID, "attempt": in.AttemptNo, "approval_id": approvalID, "result": json.RawMessage(in.Result)})
-	jsonResponse(w, 200, map[string]any{"job_id": id, "status": "succeeded", "verification": "verified"})
+	a.audit(r, "job.verify", id, "verified", map[string]any{"worker_id": in.WorkerID, "verifier_id": rc.PrincipalID, "attempt": in.AttemptNo, "approval_id": approvalID, "result": json.RawMessage(in.Result)})
+	jsonResponse(w, 200, map[string]any{"job_id": id, "status": "succeeded", "verification": "verified", "verifier_id": rc.PrincipalID})
 }
