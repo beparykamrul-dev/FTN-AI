@@ -10,6 +10,9 @@ if [[ -s /tmp/ftn-gofmt.txt ]]; then
   exit 1
 fi
 
-go test ./...
+GOPROXY=direct go test ./...
+if [[ -f services/control-plane/go.mod ]]; then
+  (cd services/control-plane && GOPROXY=direct go test ./...)
+fi
 
 echo "FTN final integrity check: PASS"
