@@ -30,7 +30,8 @@ for required in \
   services/control-plane/migrations/017_active_defense_execution.sql \
   services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql \
   services/control-plane/migrations/019_tenant_scoped_service_requests.sql \
-  services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql; do test -f "$required"; done
+  services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql \
+  services/control-plane/migrations/021_verification_identity.sql; do test -f "$required"; done
 
 echo "Starting isolated PostgreSQL validation instance"
 docker run -d --name "$NAME" -e POSTGRES_DB=ftn -e POSTGRES_USER=ftn -e POSTGRES_PASSWORD=ci-only-password "$POSTGRES_IMAGE" >/dev/null
@@ -60,7 +61,8 @@ for migration in \
   services/control-plane/migrations/017_active_defense_execution.sql \
   services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql \
   services/control-plane/migrations/019_tenant_scoped_service_requests.sql \
-  services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql; do
+  services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql \
+  services/control-plane/migrations/021_verification_identity.sql; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
@@ -96,6 +98,9 @@ END $$;
 SQL
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM idempotency_keys WHERE key LIKE '%:shared';")" = "2"
 
+echo "Validating verifier identity column"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='durable_jobs' AND column_name='verified_by');")" = "t"
+
 echo "Creating custom-format backup"
 docker exec "$NAME" pg_dump -U ftn -d ftn -Fc > "$DUMP"
 test -s "$DUMP"
@@ -105,7 +110,7 @@ test "$(docker exec "$NAME" psql -At -U ftn -d ftn_restore -c "SELECT count(*) F
 
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_event_journal';")" = "1"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='change_approvals_lifecycle_event';")" = "1"
-test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 20;")" = "10"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 21;")" = "11"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='service_requests_tenant_idx');")" = "t"
 
 echo "PostgreSQL migration + backup + restore validation passed."
