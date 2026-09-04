@@ -49,6 +49,7 @@ func (a *App) rollbackJob(w http.ResponseWriter, r *http.Request) {
 		where j.id=$1::uuid and j.tenant_id=$2::uuid and a.tenant_id=$2::uuid
 		  and a.action='job.rollback' and a.resource=$1::text
 		  and a.status='approved' and (a.expires_at is null or a.expires_at>now())
+		for update of j,a
 	`, id, rc.TenantID, q.ApprovalID).Scan(&jobStatus, &approvalStatus, &action, &rollbackPayload, &approvalAction, &approvalResource, &payloadHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		jsonResponse(w, 404, map[string]string{"error": "job_or_approval_not_found"})
