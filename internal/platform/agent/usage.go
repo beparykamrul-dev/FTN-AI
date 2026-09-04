@@ -7,19 +7,7 @@ import (
 	"time"
 )
 
-type Plan struct {
-	ID          string
-	RequestsDay int64
-	TokensDay   int64
-}
-
-type Usage struct {
-	Requests int64
-	Tokens   int64
-	ResetAt  time.Time
-}
-
-// UsageGate enforces plan entitlements before an agent runtime is called.
+// UsageGate enforces the canonical plan entitlements defined in quota.go.
 type UsageGate struct {
 	mu    sync.Mutex
 	plans map[string]Plan
@@ -40,13 +28,14 @@ func (g *UsageGate) CheckAndConsume(ctx context.Context, principal, planID strin
 	defer g.mu.Unlock()
 	p, ok := g.plans[planID]
 	if !ok { return fmt.Errorf("unknown plan: %s", planID) }
+	if p.RequestsPerDay <= 0 || p.TokensPerDay <= 0 { return fmt.Errorf("invalid plan: %s", planID) }
 	now := g.now()
 	u := g.usage[principal]
 	if u.ResetAt.IsZero() || !now.Before(u.ResetAt) {
 		u = Usage{ResetAt: now.UTC().Truncate(24*time.Hour).Add(24*time.Hour)}
 	}
-	if u.Requests >= p.RequestsDay { return fmt.Errorf("request quota exceeded") }
-	if u.Tokens+tokens > p.TokensDay { return fmt.Errorf("token quota exceeded") }
+	if u.Requests >= p.RequestsPerDay { return fmt.Errorf("request quota exceeded") }
+	if u.Tokens+tokens > p.TokensPerDay { return fmt.Errorf("token quota exceeded") }
 	u.Requests++
 	u.Tokens += tokens
 	g.usage[principal] = u
