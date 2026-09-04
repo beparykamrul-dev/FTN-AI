@@ -93,6 +93,7 @@ func (l *FlowListener) readLoop(ctx context.Context) {
         packet := make([]byte, n); copy(packet, buf[:n])
         select {
         case l.queue <- FlowIngress{packet: packet, exporter: addr.IP.String()}: atomic.AddUint64(&l.stats.Accepted, 1)
+        case <-ctx.Done(): return
         default: atomic.AddUint64(&l.stats.QueueDrops, 1)
         }
     }
@@ -117,7 +118,7 @@ func (l *FlowListener) processLoop(ctx context.Context) {
             if len(result.Records) > 0 {
                 normalized := make([]FlowRecord, 0, len(result.Records))
                 for _, record := range result.Records { normalized = append(normalized, NormalizeSampledCounters(record)) }
-                l.runtime.Ingest(normalized, time.Now().UTC())
+                l.runtime.IngestContext(ctx, normalized, time.Now().UTC())
             }
         }
     }
