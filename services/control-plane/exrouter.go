@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+	"strings"
 )
 
 type ExRouterRequest struct {
@@ -42,7 +43,12 @@ func (a *App) exRouter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ExRouterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ServiceID == "" {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10)).Decode(&req); err != nil {
+		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid_json"})
+		return
+	}
+	req.ServiceID, req.Region, req.Provider = strings.TrimSpace(req.ServiceID), strings.TrimSpace(req.Region), strings.TrimSpace(req.Provider)
+	if req.ServiceID == "" {
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "service_id_required"})
 		return
 	}
