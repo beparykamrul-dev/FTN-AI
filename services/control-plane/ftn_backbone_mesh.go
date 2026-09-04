@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"net/netip"
 	"sort"
 	"strings"
@@ -33,7 +34,7 @@ func SelectFTNLocalService(endpoints []FTNLocalServiceEndpoint) (FTNGlobalLocalR
 	for _, e := range endpoints {
 		if strings.TrimSpace(e.ServiceID)=="" || strings.TrimSpace(e.POPID)=="" || !e.Healthy { continue }
 		if _, err := netip.ParseAddr(strings.TrimSpace(e.Address)); err != nil { continue }
-		if e.LatencyMS < 0 || e.CapacityPercent < 0 || e.CapacityPercent > 100 { continue }
+		if !isFiniteNonNegative(e.LatencyMS) || !isFinitePercent(e.CapacityPercent) { continue }
 		candidates = append(candidates, e)
 	}
 	if len(candidates)==0 { return FTNGlobalLocalRouteDecision{}, fmt.Errorf("no_healthy_local_service") }
@@ -47,3 +48,6 @@ func SelectFTNLocalService(endpoints []FTNLocalServiceEndpoint) (FTNGlobalLocalR
 	h:=sha256.Sum256([]byte(v))
 	return FTNGlobalLocalRouteDecision{ServiceID:chosen.ServiceID,POPID:chosen.POPID,Address:chosen.Address,Reason:"lowest-healthy-latency-capacity",DecisionHash:hex.EncodeToString(h[:])},nil
 }
+
+func isFiniteNonNegative(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v,0) && v >= 0 }
+func isFinitePercent(v float64) bool { return isFiniteNonNegative(v) && v <= 100 }
