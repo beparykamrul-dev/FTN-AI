@@ -11,20 +11,20 @@ import (
 )
 
 type Node struct {
-	ID             string    `json:"id"`
-	TenantID       string    `json:"-"`
-	Provider       string    `json:"provider"`
-	Region         string    `json:"region,omitempty"`
-	Services       []string  `json:"services"`
-	CPUPercent     float64   `json:"cpu_percent"`
-	RAMPercent     float64   `json:"ram_percent"`
-	SSDPercent     float64   `json:"ssd_percent"`
-	HDDPercent     float64   `json:"hdd_percent"`
-	NetMbps        float64   `json:"net_mbps"`
-	LatencyMs      float64   `json:"latency_ms"`
-	PacketLoss     float64   `json:"packet_loss_percent"`
-	Healthy        bool      `json:"healthy"`
-	LastSeen       time.Time `json:"last_seen,omitempty"`
+	ID         string    `json:"id"`
+	TenantID   string    `json:"-"`
+	Provider   string    `json:"provider"`
+	Region     string    `json:"region,omitempty"`
+	Services   []string  `json:"services"`
+	CPUPercent float64   `json:"cpu_percent"`
+	RAMPercent float64   `json:"ram_percent"`
+	SSDPercent float64   `json:"ssd_percent"`
+	HDDPercent float64   `json:"hdd_percent"`
+	NetMbps    float64   `json:"net_mbps"`
+	LatencyMs  float64   `json:"latency_ms"`
+	PacketLoss float64   `json:"packet_loss_percent"`
+	Healthy    bool      `json:"healthy"`
+	LastSeen   time.Time `json:"last_seen,omitempty"`
 }
 
 type PlacementRequest struct {
@@ -178,9 +178,13 @@ func (a *App) registerNode(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
-	_, err := a.db.Exec(ctx, `insert into control_nodes(tenant_id,id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at) values($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set tenant_id=excluded.tenant_id,provider=excluded.provider,region=excluded.region,services=excluded.services,cpu_percent=excluded.cpu_percent,ram_percent=excluded.ram_percent,ssd_percent=excluded.ssd_percent,hdd_percent=excluded.hdd_percent,net_mbps=excluded.net_mbps,latency_ms=excluded.latency_ms,packet_loss_percent=excluded.packet_loss_percent,healthy=excluded.healthy,updated_at=now() where control_nodes.tenant_id=excluded.tenant_id`, n.TenantID, n.ID, n.Provider, n.Region, n.Services, n.CPUPercent, n.RAMPercent, n.SSDPercent, n.HDDPercent, n.NetMbps, n.LatencyMs, n.PacketLoss, n.Healthy)
+	res, err := a.db.Exec(ctx, `insert into control_nodes(tenant_id,id,provider,region,services,cpu_percent,ram_percent,ssd_percent,hdd_percent,net_mbps,latency_ms,packet_loss_percent,healthy,updated_at) values($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now()) on conflict(id) do update set tenant_id=excluded.tenant_id,provider=excluded.provider,region=excluded.region,services=excluded.services,cpu_percent=excluded.cpu_percent,ram_percent=excluded.ram_percent,ssd_percent=excluded.ssd_percent,hdd_percent=excluded.hdd_percent,net_mbps=excluded.net_mbps,latency_ms=excluded.latency_ms,packet_loss_percent=excluded.packet_loss_percent,healthy=excluded.healthy,updated_at=now() where control_nodes.tenant_id=excluded.tenant_id`, n.TenantID, n.ID, n.Provider, n.Region, n.Services, n.CPUPercent, n.RAMPercent, n.SSDPercent, n.HDDPercent, n.NetMbps, n.LatencyMs, n.PacketLoss, n.Healthy)
 	if err != nil {
 		jsonResponse(w, 500, map[string]string{"error": "node_register_failed"})
+		return
+	}
+	if res.RowsAffected() != 1 {
+		jsonResponse(w, 409, map[string]string{"error": "node_id_conflict"})
 		return
 	}
 	jsonResponse(w, 202, map[string]any{"status": "registered", "node": n})
