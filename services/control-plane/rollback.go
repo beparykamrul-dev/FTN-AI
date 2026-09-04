@@ -71,7 +71,8 @@ func (a *App) rollbackJob(w http.ResponseWriter, r *http.Request) {
 	_, err = tx.Exec(r.Context(), `
 		update durable_jobs
 		set status='queued',attempts=0,max_attempts=3,available_at=now(),locked_at=null,
-		    locked_by=null,finished_at=null,last_error='',execution_action=case
+		    locked_by=null,finished_at=null,last_error='',payload=$3::jsonb,
+		    execution_action=case
 		      when execution_action='' then 'rollback' else execution_action||'.rollback' end,
 		    approval_id=$2::uuid,rollback_payload=$3::jsonb,correlation_id=$4,updated_at=now()
 		where id=$1::uuid and tenant_id=$5::uuid
