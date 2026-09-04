@@ -30,7 +30,8 @@ for required in \
   services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
   services/control-plane/migrations/013_approval_payload_binding.sql \
   services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
-  services/control-plane/migrations/015_approval_event_trigger.sql; do
+  services/control-plane/migrations/015_approval_event_trigger.sql \
+  services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql; do
   test -f "$required"
 done
 
@@ -66,7 +67,8 @@ for migration in \
   services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
   services/control-plane/migrations/013_approval_payload_binding.sql \
   services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
-  services/control-plane/migrations/015_approval_event_trigger.sql; do
+  services/control-plane/migrations/015_approval_event_trigger.sql \
+  services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
@@ -74,10 +76,29 @@ done
 echo "Writing deterministic integrity fixture"
 docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
 INSERT INTO tenants (slug, name) VALUES ('ci-restore', 'CI Restore Validation') ON CONFLICT (slug) DO NOTHING;
+INSERT INTO tenants (slug, name) VALUES ('ci-restore-b', 'CI Restore Validation B') ON CONFLICT (slug) DO NOTHING;
 SQL
 
 before="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM tenants WHERE slug='ci-restore';")"
 test "$before" = "1"
+
+echo "Validating tenant-scoped durable-job idempotency"
+docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
+INSERT INTO durable_jobs(tenant_id, idempotency_key, job_type, correlation_id)
+SELECT id, 'ci-shared-key', 'ci.test', 'ci-restore-a'
+FROM tenants WHERE slug='ci-restore'
+ON CONFLICT DO NOTHING;
+INSERT INTO durable_jobs(tenant_id, idempotency_key, job_type, correlation_id)
+SELECT id, 'ci-shared-key', 'ci.test', 'ci-restore-b'
+FROM tenants WHERE slug='ci-restore-b'
+ON CONFLICT DO NOTHING;
+SQL
+
+scoped_jobs="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM durable_jobs WHERE idempotency_key LIKE '%:ci-shared-key' AND tenant_id IN (SELECT id FROM tenants WHERE slug IN ('ci-restore','ci-restore-b'));" )"
+test "$scoped_jobs" = "2"
+
+idempotency_trigger="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_scope_idempotency';")"
+test "$idempotency_trigger" = "1"
 
 echo "Creating custom-format backup"
 docker exec "$NAME" pg_dump -U ftn -d ftn -Fc > "$DUMP"
@@ -98,8 +119,8 @@ test "$approval_event_trigger" = "1"
 schema_version="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT to_regclass('public.event_journal') IS NOT NULL AND to_regclass('public.durable_jobs') IS NOT NULL;")"
 test "$schema_version" = "t"
 
-registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 15;")"
-test "$registry_count" = "5"
+registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 16;")"
+test "$registry_count" = "6"
 
 control_nodes_tenant="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='control_nodes' AND column_name='tenant_id');")"
 test "$control_nodes_tenant" = "t"
