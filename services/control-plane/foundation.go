@@ -23,6 +23,7 @@ func requestInfo(r *http.Request) requestContext { if v,ok:=r.Context().Value(ct
 func randomID(prefix string) string { b:=make([]byte,16); if _,err:=rand.Read(b);err!=nil{return fmt.Sprintf("%s-%d",prefix,time.Now().UnixNano())}; return prefix+"-"+hex.EncodeToString(b) }
 func bearerToken(r *http.Request) string { a:=strings.TrimSpace(r.Header.Get("Authorization")); if !strings.HasPrefix(a,"Bearer "){return ""}; return strings.TrimSpace(strings.TrimPrefix(a,"Bearer ")) }
 func tokenHash(token string) string { s:=sha256.Sum256([]byte(token)); return hex.EncodeToString(s[:]) }
+func scopedIdempotencyKey(r *http.Request,key string) string { rc:=requestInfo(r); return rc.TenantID+":"+rc.PrincipalID+":"+key }
 
 func (a *App) authenticateDB(r *http.Request) (requestContext,error) {
 	if a.db==nil{return requestContext{},errors.New("database authentication unavailable")}; token:=bearerToken(r); if token==""{return requestContext{},errors.New("missing bearer token")}
@@ -50,27 +51,9 @@ func (a *App) ensureSystemIdentity(ctx context.Context,token string) error {
 	return tx.Commit(ctx)
 }
 
-func (a *App) idempotentResponse(r *http.Request,key,bodyHash string)([]byte,int,bool,error){if a.db==nil||key==""{return nil,0,false,nil};var status int;var body []byte;var storedHash string;err:=a.db.QueryRow(r.Context(),`select response_status,response_body::text,request_hash from idempotency_keys where key=$1 and expires_at>now() and principal_id=$2::uuid`,key,requestInfo(r).PrincipalID).Scan(&status,&body,&storedHash);if errors.Is(err,pgx.ErrNoRows){return nil,0,false,nil};if err!=nil{return nil,0,false,err};if storedHash!=bodyHash{return nil,0,false,errors.New("idempotency key reused with different request")};return body,status,true,nil}
-func (a *App) saveIdempotency(r *http.Request,key,bodyHash string,status int,body []byte)error{if a.db==nil||key==""{return nil};var payload map[string]any;if err:=json.Unmarshal(body,&payload);err!=nil{payload=map[string]any{"response":string(body)}};payload["_request_hash"]=bodyHash;encoded,_:=json.Marshal(payload);var owner string;err:=a.db.QueryRow(r.Context(),`insert into idempotency_keys(key,principal_id,request_hash,response_status,response_body,expires_at) values($1,nullif($2,'')::uuid,$3,$4,$5::jsonb,now()+interval '24 hours') on conflict(key) do update set response_status=excluded.response_status,response_body=excluded.response_body,expires_at=excluded.expires_at where idempotency_keys.principal_id=excluded.principal_id and idempotency_keys.request_hash=excluded.request_hash returning principal_id::text`,key,requestInfo(r).PrincipalID,bodyHash,status,string(encoded)).Scan(&owner);if errors.Is(err,pgx.ErrNoRows){return errors.New("idempotency key owned by another principal or request hash")};return err}
+func (a *App) idempotentResponse(r *http.Request,key,bodyHash string)([]byte,int,bool,error){if a.db==nil||key==""{return nil,0,false,nil};key=scopedIdempotencyKey(r,key);var status int;var body []byte;var storedHash string;err:=a.db.QueryRow(r.Context(),`select response_status,response_body::text,request_hash from idempotency_keys where key=$1 and expires_at>now() and principal_id=$2::uuid`,key,requestInfo(r).PrincipalID).Scan(&status,&body,&storedHash);if errors.Is(err,pgx.ErrNoRows){return nil,0,false,nil};if err!=nil{return nil,0,false,err};if storedHash!=bodyHash{return nil,0,false,errors.New("idempotency key reused with different request")};return body,status,true,nil}
+func (a *App) saveIdempotency(r *http.Request,key,bodyHash string,status int,body []byte)error{if a.db==nil||key==""{return nil};key=scopedIdempotencyKey(r,key);var payload map[string]any;if err:=json.Unmarshal(body,&payload);err!=nil{payload=map[string]any{"response":string(body)}};payload["_request_hash"]=bodyHash;encoded,_:=json.Marshal(payload);var owner string;err:=a.db.QueryRow(r.Context(),`insert into idempotency_keys(key,principal_id,request_hash,response_status,response_body,expires_at) values($1,nullif($2,'')::uuid,$3,$4,$5::jsonb,now()+interval '24 hours') on conflict(key) do update set response_status=excluded.response_status,response_body=excluded.response_body,expires_at=excluded.expires_at where idempotency_keys.principal_id=excluded.principal_id and idempotency_keys.request_hash=excluded.request_hash returning principal_id::text`,key,requestInfo(r).PrincipalID,bodyHash,status,string(encoded)).Scan(&owner);if errors.Is(err,pgx.ErrNoRows){return errors.New("idempotency key owned by another principal or request hash")};return err}
 func writeAuthorizedJSON(w http.ResponseWriter,status int,v any){w.Header().Set("Content-Type","application/json");w.WriteHeader(status);_=json.NewEncoder(w).Encode(v)}
 func requirePermission(a *App,permission string,w http.ResponseWriter,r *http.Request)bool{if err:=a.authorize(r,permission);err!=nil{writeAuthorizedJSON(w,http.StatusForbidden,map[string]string{"error":"forbidden"});a.audit(r,"authorization.denied",r.URL.Path,"denied",map[string]string{"permission":permission});return false};return true}
-
-// requestBodyHash hashes semantic JSON rather than its whitespace/encoding so
-// approval payloads created from decoded JSON match execution requests carrying
-// equivalent RawMessage bytes.
-func requestBodyHash(v any) string {
-	b, err := json.Marshal(v)
-	if err != nil {
-		b = []byte("null")
-	}
-	var normalized any
-	if json.Unmarshal(b, &normalized) == nil {
-		if canonical, err := json.Marshal(normalized); err == nil {
-			b = canonical
-		}
-	}
-	s := sha256.Sum256(b)
-	return hex.EncodeToString(s[:])
-}
-
+func requestBodyHash(v any) string { b,err:=json.Marshal(v);if err!=nil{b=[]byte("null")};var normalized any;if json.Unmarshal(b,&normalized)==nil{if canonical,err:=json.Marshal(normalized);err==nil{b=canonical}};s:=sha256.Sum256(b);return hex.EncodeToString(s[:]) }
 func requestScopedHash(r *http.Request,v any) string { rc:=requestInfo(r); return requestBodyHash(map[string]any{"tenant_id":rc.TenantID,"principal_id":rc.PrincipalID,"payload":v}) }
