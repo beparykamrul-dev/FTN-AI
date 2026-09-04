@@ -12,6 +12,7 @@ trap 'printf "[FTN][ROLLBACK][ERROR] failed at line %s\n" "$LINENO" >&2' ERR
 [ "$(id -u)" -eq 0 ] || fail 'Run as root: sudo bash deploy/one-click/rollback.sh'
 command -v docker >/dev/null 2>&1 || fail 'Docker is required'
 command -v readlink >/dev/null 2>&1 || fail 'readlink is required'
+command -v curl >/dev/null 2>&1 || fail 'curl is required'
 [ -L "$CURRENT_LINK" ] || fail "$CURRENT_LINK is not a release symlink"
 [ -f "$RELEASE_ROOT/.env" ] || fail 'Production .env is missing'
 
@@ -29,7 +30,6 @@ done
 [ -n "$previous" ] || fail 'No previous deployable release found'
 
 [ -f "$previous/services/control-plane/docker-compose.yml" ] || fail 'Previous release lacks control-plane Compose manifest'
-[ -f "$previous/deploy/one-click/live.sh" ] || fail 'Previous release lacks canonical live runner'
 [ -f "$previous/deploy/one-click/release-compatibility.sh" ] || fail 'Previous release lacks schema compatibility gate'
 
 chmod 600 "$RELEASE_ROOT/.env"
@@ -42,24 +42,26 @@ set -a
 set +a
 bash "$previous/deploy/one-click/release-compatibility.sh" "$previous"
 
-# Never attempt an automatic database downgrade. Rollback only changes the application
-# release pointer, then starts the previous release against the existing schema.
+# Never attempt an automatic database downgrade. Rollback changes application code
+# and production containers only; the schema remains append-only.
 log 'Database downgrade: NEVER (schema remains append-only)'
 ln -sfn "$previous" "$CURRENT_LINK"
 cd "$previous"
 
-log 'Validating previous release Compose configuration'
 mapfile -t manifests < <(find "$previous" -type f \( -name 'docker-compose.yml' -o -name 'compose.yml' \) \
   -not -path '*/.git/*' -not -path '*/node_modules/*' -print0 | \
   xargs -0 -r grep -El 'FTN_PRODUCTION_STACK=true|x-ftn-production-stack:[[:space:]]*true' | sort)
 ((${#manifests[@]})) || fail 'No production manifests in previous release'
+
+log 'Validating previous release Compose configuration'
 for compose in "${manifests[@]}"; do
   docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" config --quiet
 done
 
-log 'Starting previous application release without database rollback'
+CONTROL_COMPOSE="$previous/services/control-plane/docker-compose.yml"
+log 'Starting previous control-plane release without database downgrade'
 docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" \
-  -f "$previous/services/control-plane/docker-compose.yml" up -d --build --remove-orphans control-plane
+  -f "$CONTROL_COMPOSE" up -d --build --remove-orphans control-plane
 
 ready=0
 for _ in $(seq 1 60); do
@@ -69,6 +71,23 @@ for _ in $(seq 1 60); do
   fi
   sleep 2
 done
-[ "$ready" -eq 1 ] || fail 'Previous release failed readiness after rollback'
+[ "$ready" -eq 1 ] || {
+  docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$CONTROL_COMPOSE" logs --tail=200 control-plane postgres migration-runner >&2 || true
+  fail 'Previous release failed readiness after rollback'
+}
+
+# Restore every other production-marked stack as well. Starting only control-plane
+# leaves DNS, observability, SFU and the Control Center on the failed release.
+for compose in "${manifests[@]}"; do
+  [ "$compose" = "$CONTROL_COMPOSE" ] && continue
+  log "Restoring: ${compose#$previous/}"
+  docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" \
+    -f "$compose" up -d --build --remove-orphans
+ done
+
+log 'Verifying restored production stack state'
+for compose in "${manifests[@]}"; do
+  docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" ps
+ done
 
 log 'Application rollback complete; database schema was not downgraded'
