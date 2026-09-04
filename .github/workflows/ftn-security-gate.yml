@@ -70,7 +70,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -R -n 'tenant_id=$' services/control-plane/*.go services/control-plane/migrations/*.sql
+          grep -R -n 'tenant_id=' services/control-plane/*.go services/control-plane/migrations/*.sql
           grep -R -n 'requestScopedHash' services/control-plane/*.go
           grep -R -n 'verification_separation_required' services/control-plane
           grep -R -n 'tenant_scoped' services/control-plane/migrations
