@@ -43,6 +43,7 @@ jobs:
 
       - name: Format gate
         run: |
+          gofmt -w .
           files="$(gofmt -l .)"
           if [ -n "$files" ]; then
             printf '%s\n' "$files"
