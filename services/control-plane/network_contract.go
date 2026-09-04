@@ -10,11 +10,11 @@ import (
 // device, telemetry and routing adapters. It describes intent only; adapters
 // must perform their own capability and safety validation before execution.
 type NetworkIntegrationRequest struct {
-	DeviceID  string          `json:"device_id,omitempty"`
-	DeviceType string         `json:"device_type,omitempty"`
-	Protocol  string          `json:"protocol,omitempty"`
-	Action    string          `json:"action"`
-	Payload   json.RawMessage `json:"payload,omitempty"`
+	DeviceID   string          `json:"device_id,omitempty"`
+	DeviceType string          `json:"device_type,omitempty"`
+	Protocol   string          `json:"protocol,omitempty"`
+	Action     string          `json:"action"`
+	Payload    json.RawMessage `json:"payload,omitempty"`
 }
 
 type NetworkIntegrationResponse struct {
@@ -35,22 +35,25 @@ func validNetworkProtocol(v string) bool {
 }
 
 func (a *App) networkIntegration(w http.ResponseWriter, r *http.Request) {
-	if !method(w, r, http.MethodPost) {
+	if !method(w, r, http.MethodPost) || !requirePermission(a, "network.intent", w, r) {
 		return
 	}
 	var req NetworkIntegrationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 256<<10)).Decode(&req); err != nil {
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid_json"})
 		return
 	}
-	req.Protocol = strings.ToLower(strings.TrimSpace(req.Protocol))
-	req.Action = strings.TrimSpace(req.Action)
+	req.DeviceID, req.DeviceType, req.Protocol, req.Action = strings.TrimSpace(req.DeviceID), strings.TrimSpace(req.DeviceType), strings.ToLower(strings.TrimSpace(req.Protocol)), strings.TrimSpace(req.Action)
 	if req.Action == "" {
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "action_required"})
 		return
 	}
 	if !validNetworkProtocol(req.Protocol) {
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "unsupported_protocol"})
+		return
+	}
+	if len(req.Payload) > 0 && !json.Valid(req.Payload) {
+		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid_payload"})
 		return
 	}
 	// This endpoint creates an adapter intent only. It never mutates a router,
