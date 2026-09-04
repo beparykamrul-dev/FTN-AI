@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/netip"
 	"sync"
 	"time"
 )
@@ -45,8 +46,14 @@ func NewFTNBGPWatcher(sink FTNBGPEventSink) *FTNBGPWatcher {
 }
 
 func (w *FTNBGPWatcher) UpdatePeer(ctx context.Context, peer string, asn uint32, established bool) error {
+	if w == nil || ctx == nil {
+		return fmt.Errorf("watcher and context are required")
+	}
 	if peer == "" || asn == 0 {
 		return fmt.Errorf("peer and ASN are required")
+	}
+	if _, err := netip.ParseAddr(peer); err != nil {
+		return fmt.Errorf("invalid peer address: %w", err)
 	}
 	w.mu.Lock()
 	previous, exists := w.peers[peer]
@@ -68,6 +75,9 @@ func (w *FTNBGPWatcher) UpdatePeer(ctx context.Context, peer string, asn uint32,
 }
 
 func (w *FTNBGPWatcher) State(peer string) (FTNBGPState, bool) {
+	if w == nil {
+		return FTNBGPState{}, false
+	}
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	s, ok := w.peers[peer]
@@ -75,6 +85,9 @@ func (w *FTNBGPWatcher) State(peer string) (FTNBGPState, bool) {
 }
 
 func (w *FTNBGPWatcher) Snapshot() []FTNBGPState {
+	if w == nil {
+		return nil
+	}
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	out := make([]FTNBGPState, 0, len(w.peers))
