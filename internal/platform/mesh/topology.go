@@ -6,22 +6,6 @@ import (
 	"time"
 )
 
-type Node struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	Address string `json:"address,omitempty"`
-	Role string `json:"role"`
-	Online bool `json:"online"`
-	LastSeen time.Time `json:"last_seen,omitempty"`
-}
-
-type Link struct {
-	From string `json:"from"`
-	To string `json:"to"`
-	Metric uint32 `json:"metric"`
-	Healthy bool `json:"healthy"`
-}
-
 type Topology struct {
 	mu sync.RWMutex
 	nodes map[string]Node
@@ -57,3 +41,5 @@ func (t *Topology) Snapshot() ([]Node, []Link) {
 	links := append([]Link(nil), t.links...)
 	return nodes, links
 }
+
+var _ = time.Time{}
