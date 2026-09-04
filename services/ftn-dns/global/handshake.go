@@ -28,8 +28,22 @@ type Result struct {
 func Probe(ctx context.Context, p ResolverProbe, timeout time.Duration) Result {
 	start := time.Now()
 	result := Result{Name: p.Name, Address: p.Address}
+	if p.Address == "" {
+		result.Error = "resolver address is required"
+		return result
+	}
 	if p.Network == "" {
 		p.Network = "tcp"
+	}
+	if p.Network != "tcp" && p.Network != "udp" {
+		result.Error = fmt.Sprintf("unsupported network: %s", p.Network)
+		return result
+	}
+	if timeout <= 0 {
+		timeout = 5 * time.Second
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 	dialer := net.Dialer{Timeout: timeout}
 	conn, err := dialer.DialContext(ctx, p.Network, p.Address)
@@ -38,7 +52,10 @@ func Probe(ctx context.Context, p ResolverProbe, timeout time.Duration) Result {
 		result.Error = fmt.Sprintf("probe failed: %v", err)
 		return result
 	}
-	_ = conn.Close()
+	if err := conn.Close(); err != nil {
+		result.Error = fmt.Sprintf("probe close failed: %v", err)
+		return result
+	}
 	result.Reachable = true
 	return result
 }
