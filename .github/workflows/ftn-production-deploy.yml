@@ -29,6 +29,7 @@ jobs:
           test -x deploy/one-click/bootstrap.sh
           test -x scripts/preflight.sh
           test -x scripts/validate-repo.sh
+          test -f deploy/one-click/rollback.sh
           test -f services/control-plane/docker-compose.yml
           test -f services/control-plane/schema.sql
           test -f services/control-plane/scripts/validate_migrations.sh
@@ -96,6 +97,7 @@ jobs:
             "$FTN_PRODUCTION_USER@$FTN_PRODUCTION_HOST:$FTN_RELEASE_ROOT/releases/ftn-ai-${GITHUB_SHA}.tar.gz"
 
       - name: Activate through canonical one-click runner
+        id: activate
         env:
           FTN_PRODUCTION_HOST: ${{ secrets.FTN_PRODUCTION_HOST }}
           FTN_PRODUCTION_USER: ${{ secrets.FTN_PRODUCTION_USER }}
@@ -107,11 +109,13 @@ jobs:
              test -f '$FTN_RELEASE_ROOT/.env'; \
              mkdir -p '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}'; \
              tar -xzf '$FTN_RELEASE_ROOT/releases/ftn-ai-${GITHUB_SHA}.tar.gz' -C '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}'; \
+             ln -sfn '$FTN_RELEASE_ROOT/.env' '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}/.env'; \
              ln -sfn '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}' '$FTN_RELEASE_ROOT/current'; \
              cd '$FTN_RELEASE_ROOT/current'; \
              sudo -n bash deploy/one-click/live.sh"
 
       - name: Production health check
+        id: health
         env:
           FTN_PRODUCTION_HOST: ${{ secrets.FTN_PRODUCTION_HOST }}
           FTN_PRODUCTION_USER: ${{ secrets.FTN_PRODUCTION_USER }}
@@ -120,6 +124,17 @@ jobs:
           ssh -i ~/.ssh/ftn_deploy_key -p "$FTN_SSH_PORT" -o BatchMode=yes \
             "$FTN_PRODUCTION_USER@$FTN_PRODUCTION_HOST" \
             'set -euo pipefail; curl --fail --silent --show-error http://127.0.0.1:8080/healthz; curl --fail --silent --show-error http://127.0.0.1:8080/readyz'
+
+      - name: Roll back application release on activation failure
+        if: failure() && steps.activate.outcome == 'failure'
+        env:
+          FTN_PRODUCTION_HOST: ${{ secrets.FTN_PRODUCTION_HOST }}
+          FTN_PRODUCTION_USER: ${{ secrets.FTN_PRODUCTION_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/ftn_deploy_key -p "$FTN_SSH_PORT" -o BatchMode=yes \
+            "$FTN_PRODUCTION_USER@$FTN_PRODUCTION_HOST" \
+            "sudo -n bash '$FTN_RELEASE_ROOT/current/deploy/one-click/rollback.sh'"
 
       - name: Cleanup SSH key
         if: always()
