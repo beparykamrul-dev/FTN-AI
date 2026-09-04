@@ -26,7 +26,7 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  PERFORM pg_advisory_xact_lock(hashtext(COALESCE(NEW.tenant_id::text, '')));
+  PERFORM pg_advisory_xact_lock(hashtextextended(COALESCE(NEW.tenant_id::text, ''), 0));
   SELECT COALESCE(MAX(sequence) + 1, 1)
     INTO next_sequence
     FROM event_journal
