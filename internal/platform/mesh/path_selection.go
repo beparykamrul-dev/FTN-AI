@@ -5,14 +5,6 @@ import (
 	"sort"
 )
 
-type PathCandidate struct {
-	PeerID string `json:"peer_id"`
-	LatencyMS float64 `json:"latency_ms"`
-	LossPct float64 `json:"loss_pct"`
-	CapacityMbps float64 `json:"capacity_mbps"`
-	HealthScore uint8 `json:"health_score"`
-}
-
 type PathPolicy struct {
 	LatencyWeight float64
 	LossWeight float64
