@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/production-compose-env.sh"
 log(){ printf '[FTN][LIVE] %s\n' "$*"; }
 fail(){ printf '[FTN][LIVE][ERROR] %s\n' "$*" >&2; exit 1; }
 trap 'printf "[FTN][LIVE][ERROR] failed at line %s\n" "$LINENO" >&2' ERR
@@ -22,40 +23,42 @@ bash "$ROOT_DIR/scripts/preflight.sh"
 log "Found ${#manifests[@]} production stack(s)"
 for compose in "${manifests[@]}"; do
   log "Validate: ${compose#$ROOT_DIR/}"
-  docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" config --quiet
+  docker compose --env-file "$ENV_FILE" -f "$compose" config --quiet
 done
-[ -f "$ROOT_DIR/scripts/validate-production-storage.sh" ] || fail 'Production storage validator is missing'
-[ -f "$ROOT_DIR/scripts/validate-production-ports.sh" ] || fail 'Production port validator is missing'
-[ -f "$ROOT_DIR/scripts/validate-production-health.sh" ] || fail 'Production health validator is missing'
+for required in validate-production-storage.sh validate-production-ports.sh validate-host-port-ownership.sh validate-production-health.sh; do
+  [ -f "$ROOT_DIR/scripts/$required" ] || fail "Production validator is missing: $required"
+done
 log 'Validating persistent storage ownership'
 bash "$ROOT_DIR/scripts/validate-production-storage.sh"
 log 'Validating production host-port ownership'
 bash "$ROOT_DIR/scripts/validate-production-ports.sh"
+log 'Validating host process port ownership'
+bash "$ROOT_DIR/scripts/validate-host-port-ownership.sh"
 CONTROL_COMPOSE="$ROOT_DIR/services/control-plane/docker-compose.yml"
 if [ -f "$CONTROL_COMPOSE" ]; then
-  mapfile -t control_services < <(docker compose --profile "*" --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" config --services)
+  mapfile -t control_services < <(docker compose --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" config --services)
   for required in postgres migration-runner control-plane; do
     printf '%s\n' "${control_services[@]}" | grep -Fxq "$required" || fail "control-plane Compose service missing: $required"
   done
   log 'Starting PostgreSQL foundation'
-  docker compose --profile "*" --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" up -d postgres
+  docker compose --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" up -d postgres
   log 'Waiting for PostgreSQL health'
   for _ in $(seq 1 60); do
-    health="$(docker compose --profile "*" --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" ps -a --format '{{.Service}} {{.Health}}' 2>/dev/null || true)"
+    health="$(docker compose --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" ps -a --format '{{.Service}} {{.Health}}' 2>/dev/null || true)"
     if printf '%s\n' "$health" | awk '$1=="postgres" && $2=="healthy" {ok=1} END{exit ok?0:1}'; then break; fi
     sleep 2
   done
-  health="$(docker compose --profile "*" --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" ps -a --format '{{.Service}} {{.Health}}' 2>/dev/null || true)"
+  health="$(docker compose --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" ps -a --format '{{.Service}} {{.Health}}' 2>/dev/null || true)"
   printf '%s\n' "$health" | awk '$1=="postgres" && $2=="healthy" {ok=1} END{exit ok?0:1}' || fail 'PostgreSQL did not become healthy'
   log 'Applying database migrations (fail-closed)'
-  docker compose --profile "*" --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" up --force-recreate --abort-on-container-exit --exit-code-from migration-runner migration-runner
+  docker compose --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" up --force-recreate --abort-on-container-exit --exit-code-from migration-runner migration-runner
   log 'Starting control-plane application'
-  docker compose --profile "*" --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" up -d --build --remove-orphans control-plane
+  docker compose --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" up -d --build --remove-orphans control-plane
 fi
 for compose in "${manifests[@]}"; do
   [ "$compose" = "$CONTROL_COMPOSE" ] && continue
   log "Start: ${compose#$ROOT_DIR/}"
-  docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" up -d --build --remove-orphans
+  docker compose --env-file "$ENV_FILE" -f "$compose" up -d --build --remove-orphans
 done
 if [ -f "$CONTROL_COMPOSE" ]; then
   ready=0
@@ -63,11 +66,12 @@ if [ -f "$CONTROL_COMPOSE" ]; then
     if curl -fsS --max-time 3 http://127.0.0.1:8080/readyz >/dev/null 2>&1; then ready=1; break; fi
     sleep 2
   done
-  [ "$ready" -eq 1 ] || { docker compose --profile "*" --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" logs --tail=200 control-plane postgres migration-runner >&2 || true; fail 'Control-plane readiness check failed'; }
+  [ "$ready" -eq 1 ] || { docker compose --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" logs --tail=200 control-plane postgres migration-runner >&2 || true; fail 'Control-plane readiness check failed'; }
   log 'Control-plane readiness: OK'
 fi
 log 'Verifying every production-marked service'
 ENV_FILE="$ENV_FILE" bash "$ROOT_DIR/scripts/validate-production-health.sh"
 log 'Production stack status'
-for compose in "${manifests[@]}"; do docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" ps; done
+for compose in "${manifests[@]}"; do docker compose --env-file "$ENV_FILE" -f "$compose" ps; done
+log "Production Compose profiles: ${COMPOSE_PROFILES:-none}"
 log 'ONE-CLICK LIVE DEPLOYMENT COMPLETE'
