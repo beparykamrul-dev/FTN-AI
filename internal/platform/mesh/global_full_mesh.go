@@ -13,23 +13,6 @@ const (
 	Global Scope = "global"
 )
 
-type Node struct {
-	ID       string `json:"id"`
-	Region   string `json:"region"`
-	Endpoint string `json:"endpoint"`
-	Scope    Scope  `json:"scope"`
-	Enabled  bool   `json:"enabled"`
-}
-
-type Link struct {
-	From      string  `json:"from"`
-	To        string  `json:"to"`
-	RTTMillis float64 `json:"rttMillis"`
-	Loss      float64 `json:"loss"`
-	JitterMs  float64 `json:"jitterMs"`
-	Healthy   bool    `json:"healthy"`
-}
-
 type FullMesh struct {
 	mu    sync.RWMutex
 	nodes map[string]Node
