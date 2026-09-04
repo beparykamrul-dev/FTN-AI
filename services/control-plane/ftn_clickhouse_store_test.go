@@ -2,9 +2,9 @@ package main
 
 import (
     "context"
+    "io"
     "net/http"
     "net/http/httptest"
-    "os"
     "strings"
     "testing"
     "time"
@@ -26,8 +26,8 @@ func TestClickHouseInsertBatchUsesJSONEachRow(t *testing.T) {
     var gotQuery, gotBody string
     server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         gotQuery = r.URL.Query().Get("query")
-        b := make([]byte, r.ContentLength)
-        if r.ContentLength > 0 { n, _ := r.Body.Read(b); gotBody = string(b[:n]) }
+        body, _ := io.ReadAll(r.Body)
+        gotBody = string(body)
         w.WriteHeader(http.StatusNoContent)
     }))
     defer server.Close()
@@ -51,8 +51,4 @@ func TestClickHouseInsertBatchRejectsInvalidRecord(t *testing.T) {
     if err != nil { t.Fatal(err) }
     err = store.InsertBatch(context.Background(), time.Now(), "tenant-a", []FlowRecord{{ExporterID: "r1", Version: 7}}, "", "", "")
     if err == nil { t.Fatal("expected unsupported flow version error") }
-}
-
-func TestClickHouseStoreDoesNotRequireDatabaseDriver(t *testing.T) {
-    if os.Getenv("FTN_CLICKHOUSE_URL") == "__force_driver_check__" { t.Fatal("unreachable") }
 }
