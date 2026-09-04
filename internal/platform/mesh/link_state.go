@@ -14,17 +14,6 @@ const (
 	LinkDegraded LinkState = "degraded"
 )
 
-type Link struct {
-	ID string `json:"id"`
-	From string `json:"from"`
-	To string `json:"to"`
-	State LinkState `json:"state"`
-	LatencyMS float64 `json:"latency_ms"`
-	LossPercent float64 `json:"loss_percent"`
-	Metric uint32 `json:"metric"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
 type LinkStateStore struct {
 	mu sync.RWMutex
 	links map[string]Link
