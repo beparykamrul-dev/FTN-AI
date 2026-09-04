@@ -7,17 +7,21 @@ on:
       - fix/migration-validation-015-023
     paths:
       - 'services/control-plane/migrations/**'
+      - 'services/control-plane/schema.sql'
       - 'services/control-plane/scripts/migrate.sh'
       - 'services/control-plane/scripts/validate_migrations.sh'
       - 'services/control-plane/tests/sql/**'
+      - 'scripts/validate-db-restore.sh'
       - '.github/workflows/ftn-migration-validation-gate.yml'
   pull_request:
     branches: [main]
     paths:
       - 'services/control-plane/migrations/**'
+      - 'services/control-plane/schema.sql'
       - 'services/control-plane/scripts/migrate.sh'
       - 'services/control-plane/scripts/validate_migrations.sh'
       - 'services/control-plane/tests/sql/**'
+      - 'scripts/validate-db-restore.sh'
       - '.github/workflows/ftn-migration-validation-gate.yml'
   workflow_dispatch:
 
@@ -30,7 +34,7 @@ concurrency:
 
 jobs:
   migration-validation:
-    name: PostgreSQL 015-024 migration + execution-integrity validation
+    name: PostgreSQL 015-024 migration + restore + execution-integrity validation
     runs-on: ubuntu-latest
 
     services:
@@ -61,6 +65,9 @@ jobs:
           MIGRATION_VALIDATION_ALLOW_CREATE: '1'
         run: bash services/control-plane/scripts/validate_migrations.sh
 
+      - name: Validate full database backup and restore path
+        run: bash scripts/validate-db-restore.sh
+
       - name: Replay migrations into isolated semantic-test database
         env:
           PGURL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
@@ -70,6 +77,7 @@ jobs:
           cleanup() { psql "$PGURL" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$db\" WITH (FORCE);" >/dev/null || true; }
           trap cleanup EXIT
           psql "$PGURL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$db\";" >/dev/null
+          psql "$PGURL" -d "$db" -X -v ON_ERROR_STOP=1 -f services/control-plane/schema.sql >/dev/null
           mapfile -t migrations < <(find services/control-plane/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort -V)
           last_version=''
           for file in "${migrations[@]}"; do
