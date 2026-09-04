@@ -8,6 +8,16 @@ import (
 	"strings"
 )
 
+type Record struct {
+	ID string `json:"id"`
+	Zone string `json:"zone"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Value string `json:"value"`
+	TTL uint32 `json:"ttl"`
+	Priority uint16 `json:"priority,omitempty"`
+}
+
 type ZoneSnapshot struct {
 	Provider ProviderType `json:"provider"`
 	Zone string `json:"zone"`
