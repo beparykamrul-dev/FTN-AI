@@ -31,6 +31,7 @@ jobs:
           test -x scripts/validate-repo.sh
           test -x scripts/validate-production-storage.sh
           test -f scripts/validate-production-ports.sh
+          test -f scripts/validate-host-port-ownership.sh
           test -f scripts/validate-production-health.sh
           test -x scripts/validate-db-restore.sh
           test -f deploy/one-click/rollback.sh
@@ -57,15 +58,26 @@ jobs:
           KOPIA_SERVER_PASSWORD: ci-only-kopia-server-password
         run: |
           set -euo pipefail
+          ci_env="$RUNNER_TEMP/ftn-compose.env"
+          umask 077
+          {
+            printf 'FTN_DB_PASSWORD=%s\n' "$FTN_DB_PASSWORD"
+            printf 'FTN_API_AUTH_TOKEN=%s\n' "$FTN_API_AUTH_TOKEN"
+            printf 'OPENSEARCH_INITIAL_ADMIN_PASSWORD=%s\n' "$OPENSEARCH_INITIAL_ADMIN_PASSWORD"
+            printf 'KOPIA_PASSWORD=%s\n' "$KOPIA_PASSWORD"
+            printf 'KOPIA_SERVER_USERNAME=%s\n' "$KOPIA_SERVER_USERNAME"
+            printf 'KOPIA_SERVER_PASSWORD=%s\n' "$KOPIA_SERVER_PASSWORD"
+          } > "$ci_env"
           mapfile -t manifests < <(find . -type f \( -name 'docker-compose.yml' -o -name 'compose.yml' \) \
             -not -path './.git/*' -not -path '*/node_modules/*' -print0 | \
             xargs -0 -r grep -El 'FTN_PRODUCTION_STACK=true|x-ftn-production-stack:[[:space:]]*true' | sort)
           test "${#manifests[@]}" -gt 0
           for compose in "${manifests[@]}"; do
             echo "Validating $compose"
-            docker compose --profile '*' --env-file <(env) -f "$compose" config --quiet
+            docker compose --env-file "$ci_env" -f "$compose" config --quiet
           done
-          bash scripts/validate-production-ports.sh
+          ENV_FILE="$ci_env" bash scripts/validate-production-ports.sh
+          ENV_FILE="$ci_env" bash scripts/validate-host-port-ownership.sh
 
       - name: Configure SSH
         env:
