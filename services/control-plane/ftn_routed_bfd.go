@@ -32,6 +32,9 @@ func (r *FTNBFDReconciler) Reconcile(ctx context.Context) error {
 	if r == nil || r.source == nil || r.bridge == nil {
 		return fmt.Errorf("BFD source and event bridge are required")
 	}
+	if ctx == nil {
+		return fmt.Errorf("context is required")
+	}
 	observations, err := r.source.ListBFD(ctx)
 	if err != nil {
 		return err
