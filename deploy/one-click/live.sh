@@ -27,19 +27,42 @@ done
 [ -x "$ROOT_DIR/scripts/validate-production-storage.sh" ] || fail 'Production storage validator is missing or not executable'
 log 'Validating persistent storage ownership'
 bash "$ROOT_DIR/scripts/validate-production-storage.sh"
+
 tmp_ports="$(mktemp)"
 trap 'rm -f "$tmp_ports"' EXIT
 for compose in "${manifests[@]}"; do
-  docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" config --format json | python3 -c 'import json,sys
+  docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" config --format json \
+    | python3 -c 'import json,sys
 x=json.load(sys.stdin)
 for s,v in x.get("services",{}).items():
   for p in v.get("ports",[]) or []:
     if isinstance(p,dict) and p.get("published") is not None:
-      print(f"{p.get(\"published\")}/{p.get(\"protocol\",\"tcp\")} {s}")' >> "$tmp_ports"
+      host_ip=p.get("host_ip") or "*"
+      print(f"{host_ip}\t{p.get(\"published\")}\t{p.get(\"protocol\",\"tcp\")}\t{s}")' >> "$tmp_ports"
 done
-awk '{ key=$1; owner=$0; if (seen[key]++) { print "duplicate host port: " owner; bad=1 } } END { exit bad ? 1 : 0 }' "$tmp_ports" || fail 'Host port collision detected across production Compose stacks'
+python3 - "$tmp_ports" <<'PY'
+import sys
+from collections import defaultdict
+
+seen = defaultdict(list)
+with open(sys.argv[1], encoding="utf-8") as fh:
+    for line in fh:
+        host_ip, port, proto, service = line.rstrip("\n").split("\t", 3)
+        seen[(port, proto)].append((host_ip, service))
+
+for (port, proto), entries in seen.items():
+    if len(entries) < 2:
+        continue
+    wildcard = any(ip in {"*", "0.0.0.0", "::"} for ip, _ in entries)
+    concrete = {ip for ip, _ in entries}
+    if wildcard or len(concrete) < len(entries):
+        raise SystemExit(
+            f"duplicate host port binding: {port}/{proto}: {entries}"
+        )
+PY
 rm -f "$tmp_ports"
 trap - EXIT
+
 CONTROL_COMPOSE="$ROOT_DIR/services/control-plane/docker-compose.yml"
 if [ -f "$CONTROL_COMPOSE" ]; then
   mapfile -t control_services < <(docker compose --profile "*" --env-file "$ENV_FILE" -f "$CONTROL_COMPOSE" config --services)
