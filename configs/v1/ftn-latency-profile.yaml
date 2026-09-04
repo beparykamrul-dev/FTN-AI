@@ -11,9 +11,14 @@ spec:
   transport:
     connectionReuse: true
     keepAlive: true
+    tcpNoDelay: true
     http2WhenSupported: true
     quicWhenSupported: true
     avoidUnnecessaryHandshake: true
+    tcpBuffers:
+      mode: adaptive-bounded
+      receiveMaxBytes: 4194304
+      sendMaxBytes: 4194304
   dns:
     localCache: true
     prewarm: true
