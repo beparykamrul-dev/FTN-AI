@@ -25,20 +25,20 @@ mapfile -t manifests < <(find "$ROOT_DIR" -type f \( -name 'docker-compose.yml' 
 
 ((${#manifests[@]})) || fail 'No production Compose manifest is marked for FTN live deployment'
 
+# Mandatory repository preflight. It is invoked with bash so GitHub-created files
+# do not depend on executable-bit preservation.
+[ -f "$ROOT_DIR/scripts/preflight.sh" ] || fail 'Production preflight script is missing'
+log 'Running repository preflight'
+bash "$ROOT_DIR/scripts/preflight.sh"
+
 log "Found ${#manifests[@]} production stack(s)"
 for compose in "${manifests[@]}"; do
   log "Validate: ${compose#$ROOT_DIR/}"
   docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" config --quiet
- done
+done
 
-# Run repository-level preflight before mutating live services.
-if [ -x "$ROOT_DIR/scripts/preflight.sh" ]; then
-  log 'Running repository preflight'
-  "$ROOT_DIR/scripts/preflight.sh"
-fi
-
-# Compose profiles are explicitly enabled so production services that are grouped
-# under observability/backup/wireless/enterprise/acme profiles are not silently skipped.
+# Compose profiles are explicitly enabled so production services grouped under
+# observability/backup/wireless/enterprise/acme are not silently skipped.
 # The production marker remains the allow-list boundary for which manifests may run.
 if [ -f "$ROOT_DIR/services/control-plane/docker-compose.yml" ]; then
   log 'Starting control-plane database/runtime foundation'
@@ -50,7 +50,7 @@ for compose in "${manifests[@]}"; do
   [ "$compose" = "$ROOT_DIR/services/control-plane/docker-compose.yml" ] && continue
   log "Start: ${compose#$ROOT_DIR/}"
   docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" up -d --build --remove-orphans
- done
+done
 
 # Wait for the control-plane readiness contract when it exists.
 if [ -f "$ROOT_DIR/services/control-plane/docker-compose.yml" ]; then
@@ -70,6 +70,6 @@ fi
 log 'Production stack status'
 for compose in "${manifests[@]}"; do
   docker compose --profile "*" --env-file "$ENV_FILE" -f "$compose" ps
- done
+done
 
 log 'ONE-CLICK LIVE DEPLOYMENT COMPLETE'
