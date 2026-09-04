@@ -20,7 +20,15 @@ for required in \
   services/control-plane/migrations/003_durable_execution.sql \
   services/control-plane/migrations/004_approval_execution.sql \
   services/control-plane/migrations/005_job_integrity_leases.sql \
-  services/control-plane/migrations/006_job_event_automation.sql; do
+  services/control-plane/migrations/006_job_event_automation.sql \
+  services/control-plane/migrations/006_job_event_triggers.sql \
+  services/control-plane/migrations/007_qkd_security.sql \
+  services/control-plane/migrations/008_data_governor.sql \
+  services/control-plane/migrations/009_data_governance_controls.sql \
+  services/control-plane/migrations/010_dns_guard_filtering.sql \
+  services/control-plane/migrations/011_migration_registry.sql \
+  services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
+  services/control-plane/migrations/013_approval_payload_binding.sql; do
   test -f "$required"
 done
 
@@ -46,7 +54,15 @@ for migration in \
   services/control-plane/migrations/003_durable_execution.sql \
   services/control-plane/migrations/004_approval_execution.sql \
   services/control-plane/migrations/005_job_integrity_leases.sql \
-  services/control-plane/migrations/006_job_event_automation.sql; do
+  services/control-plane/migrations/006_job_event_automation.sql \
+  services/control-plane/migrations/006_job_event_triggers.sql \
+  services/control-plane/migrations/007_qkd_security.sql \
+  services/control-plane/migrations/008_data_governor.sql \
+  services/control-plane/migrations/009_data_governance_controls.sql \
+  services/control-plane/migrations/010_dns_guard_filtering.sql \
+  services/control-plane/migrations/011_migration_registry.sql \
+  services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
+  services/control-plane/migrations/013_approval_payload_binding.sql; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
@@ -74,5 +90,14 @@ test "$event_trigger" = "1"
 
 schema_version="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT to_regclass('public.event_journal') IS NOT NULL AND to_regclass('public.durable_jobs') IS NOT NULL;")"
 test "$schema_version" = "t"
+
+registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 13;")"
+test "$registry_count" = "3"
+
+control_nodes_tenant="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='control_nodes' AND column_name='tenant_id');")"
+test "$control_nodes_tenant" = "t"
+
+approval_payload="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='change_approvals' AND column_name='payload_hash');")"
+test "$approval_payload" = "t"
 
 echo "PostgreSQL migration + backup + restore validation passed."
