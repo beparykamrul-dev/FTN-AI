@@ -1,0 +1,11 @@
+version: v1
+kind: FTNProviderCT
+id: silk
+provider_name: SiLK
+category: flow_analysis
+source_repo: https://github.com/bbayles/SiLK
+adapter_kind: analytics-agent
+capabilities: [flow_storage, flow_analysis]
+policy_mode: standard
+agent_transition: [discovered, normalized, validated, approved, agent_ready]
+production_gates: [source_provenance, license_record, vulnerability_scan, healthcheck, signed_policy]

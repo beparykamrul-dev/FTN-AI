@@ -1,0 +1,11 @@
+version: v1
+kind: FTNProviderCT
+id: wireguard
+provider_name: WireGuard
+category: vpn_transport
+source_repo: https://github.com/WireGuard/wireguard-go
+adapter_kind: transport-agent
+capabilities: [encrypted_tunnel, peer_management]
+policy_mode: restricted
+agent_transition: [discovered, normalized, validated, approved, agent_ready]
+production_gates: [source_provenance, license_record, vulnerability_scan, healthcheck, signed_policy, control_panel_approval]

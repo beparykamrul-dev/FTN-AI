@@ -1,0 +1,11 @@
+version: v1
+kind: FTNProviderCT
+id: opentelemetry
+provider_name: OpenTelemetry
+category: observability
+source_repo: https://github.com/open-telemetry/opentelemetry-collector
+adapter_kind: telemetry-agent
+capabilities: [metrics, logs, traces, otlp]
+policy_mode: standard
+agent_transition: [discovered, normalized, validated, approved, agent_ready]
+production_gates: [source_provenance, license_record, vulnerability_scan, healthcheck, signed_policy]
