@@ -3,7 +3,6 @@ package mesh
 import (
 	"errors"
 	"sync"
-	"time"
 )
 
 type Topology struct {
@@ -41,5 +40,3 @@ func (t *Topology) Snapshot() ([]Node, []Link) {
 	links := append([]Link(nil), t.links...)
 	return nodes, links
 }
-
-var _ = time.Time{}
