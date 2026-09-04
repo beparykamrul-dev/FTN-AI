@@ -28,7 +28,7 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  PERFORM pg_advisory_xact_lock(hashtext(tenant));
+  PERFORM pg_advisory_xact_lock(hashtextextended(tenant, 0));
   event_payload := jsonb_build_object(
     'job_id', NEW.id::text,
     'job_type', NEW.job_type,
