@@ -46,20 +46,19 @@ for file in "${files[@]}"; do
   fi
 
   echo "applying migration ${version}: ${name}"
-  # Hold a session-level PostgreSQL advisory lock across both the migration DDL
-  # and its registry write. This prevents two migration runners from applying
-  # the same version concurrently. The lock is released when this psql session exits.
+  # Keep the advisory lock and the migration DDL on the same PostgreSQL
+  # session. A second migration runner waits, rechecks the registry, and skips
+  # the file once the first runner has committed it.
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<SQL
 SELECT pg_advisory_lock(hashtextextended('ftn-control-plane-schema-migrations', 0));
-SELECT CASE WHEN EXISTS (SELECT 1 FROM schema_migrations WHERE version=${version})
-  THEN NULL
-  ELSE 'apply' END;
-\\if :{?ERROR}
-\\endif
+SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version=${version}) AS already_applied \\gset
+\\if :already_applied
+\\else
 \\i '$file'
 INSERT INTO schema_migrations(version, name)
 SELECT ${version}, '${name}'
 WHERE NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version=${version});
+\\endif
 SELECT pg_advisory_unlock(hashtextextended('ftn-control-plane-schema-migrations', 0));
 SQL
 done
