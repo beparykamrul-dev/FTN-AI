@@ -2,13 +2,6 @@ package fiber
 
 import "sort"
 
-type TopologyEdge struct {
-	From string `json:"from"`
-	To string `json:"to"`
-	Kind string `json:"kind"`
-	Source DiscoverySource `json:"source"`
-}
-
 // BuildTopologyEdges derives relationships from discovered parent IDs. It
 // creates a deterministic graph view without changing device configuration.
 func BuildTopologyEdges(snapshot TopologySnapshot) []TopologyEdge {
