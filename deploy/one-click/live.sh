@@ -15,6 +15,13 @@ command -v python3 >/dev/null 2>&1 || fail 'python3 is required'
 ENV_FILE="$ROOT_DIR/.env"
 [ -f "$ENV_FILE" ] || fail '.env is missing; run bootstrap.sh first'
 chmod 600 "$ENV_FILE"
+
+if [ "${FTN_ROUTING_NODE:-0}" = '1' ]; then
+  [ -f "$ROOT_DIR/scripts/configure-routing-kernel.sh" ] || fail 'routing kernel configurator is missing'
+  log 'Applying routing-node kernel profile (rp_filter=2)'
+  bash "$ROOT_DIR/scripts/configure-routing-kernel.sh"
+fi
+
 mapfile -t manifests < <(find "$ROOT_DIR" -type f \( -name 'docker-compose.yml' -o -name 'compose.yml' \) -not -path '*/.git/*' -not -path '*/node_modules/*' -print0 | xargs -0 -r grep -El 'FTN_PRODUCTION_STACK=true|x-ftn-production-stack:[[:space:]]*true' | sort)
 ((${#manifests[@]})) || fail 'No production Compose manifest is marked for FTN live deployment'
 [ -f "$ROOT_DIR/scripts/preflight.sh" ] || fail 'Production preflight script is missing'
