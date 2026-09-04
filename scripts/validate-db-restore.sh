@@ -31,7 +31,8 @@ for required in \
   services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql \
   services/control-plane/migrations/019_tenant_scoped_service_requests.sql \
   services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql \
-  services/control-plane/migrations/021_verification_identity.sql; do test -f "$required"; done
+  services/control-plane/migrations/021_verification_identity.sql \
+  services/control-plane/migrations/022_data_request_idempotency.sql; do test -f "$required"; done
 
 echo "Starting isolated PostgreSQL validation instance"
 docker run -d --name "$NAME" -e POSTGRES_DB=ftn -e POSTGRES_USER=ftn -e POSTGRES_PASSWORD=ci-only-password "$POSTGRES_IMAGE" >/dev/null
@@ -62,7 +63,8 @@ for migration in \
   services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql \
   services/control-plane/migrations/019_tenant_scoped_service_requests.sql \
   services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql \
-  services/control-plane/migrations/021_verification_identity.sql; do
+  services/control-plane/migrations/021_verification_identity.sql \
+  services/control-plane/migrations/022_data_request_idempotency.sql; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
@@ -98,6 +100,27 @@ END $$;
 SQL
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM idempotency_keys WHERE key LIKE '%:shared';")" = "2"
 
+echo "Validating data request idempotency"
+docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
+DO $$
+DECLARE t1 uuid; p1 uuid; a1 uuid; a2 uuid; r1 uuid; r2 uuid;
+BEGIN
+  SELECT id INTO t1 FROM tenants WHERE slug='ci-restore';
+  SELECT id INTO p1 FROM principals WHERE tenant_id=t1 AND subject='ci-p1';
+  INSERT INTO change_approvals(tenant_id,requested_by,action,resource,request_hash,status,expires_at)
+  VALUES(t1,p1,'data.export','data-governor/request','ci-data-hash','pending',now()+interval '1 hour')
+  RETURNING id INTO a1;
+  INSERT INTO data_requests(tenant_id,request_type,status,requested_by,approval_id,request_json,request_hash)
+  VALUES(t1,'export','pending',p1,a1,'{}','ci-data-hash') RETURNING id INTO r1;
+  INSERT INTO data_requests(tenant_id,request_type,status,requested_by,approval_id,request_json,request_hash)
+  VALUES(t1,'export','pending',p1,a1,'{}','ci-data-hash')
+  ON CONFLICT(tenant_id,request_hash) DO UPDATE SET updated_at=data_requests.updated_at
+  RETURNING id INTO r2;
+  IF r1 <> r2 THEN RAISE EXCEPTION 'data request replay created duplicate row'; END IF;
+END $$;
+SQL
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM data_requests WHERE request_hash='ci-data-hash';")" = "1"
+
 echo "Validating verifier identity column"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='durable_jobs' AND column_name='verified_by');")" = "t"
 
@@ -110,7 +133,8 @@ test "$(docker exec "$NAME" psql -At -U ftn -d ftn_restore -c "SELECT count(*) F
 
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_event_journal';")" = "1"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='change_approvals_lifecycle_event';")" = "1"
-test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 21;")" = "11"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 22;")" = "12"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='service_requests_tenant_idx');")" = "t"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='data_requests_tenant_request_hash_uidx');")" = "t"
 
 echo "PostgreSQL migration + backup + restore validation passed."
