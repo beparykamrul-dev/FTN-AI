@@ -23,8 +23,12 @@ jobs:
           cache: true
           cache-dependency-path: services/control-plane/go.sum
       - name: Download dependencies
+        env:
+          GOPROXY: direct
         run: go mod download
       - name: Verify dependencies
+        env:
+          GOPROXY: direct
         run: go mod verify
       - name: Check module consistency
         run: go mod tidy -diff
