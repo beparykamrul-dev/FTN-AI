@@ -1,5 +1,11 @@
 package adapters
 
+import dnsglobal "github.com/beparykamrul-dev/FTN-AI/services/ftn-dns/global"
+
+// DNSSECObservation is the canonical provider-neutral observation shared with
+// the global DNS control-plane layer.
+type DNSSECObservation = dnsglobal.DNSSECObservation
+
 // DNSSECPolicy defines the minimum trust conditions required before a DNS
 // response can be accepted by the FTN DNS control plane.
 type DNSSECPolicy struct {
