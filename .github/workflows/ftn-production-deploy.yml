@@ -13,7 +13,7 @@ concurrency:
 env:
   FTN_RELEASE_ROOT: /opt/ftn-ai
 
-a jobs:
+jobs:
   deploy:
     name: Deploy FTN production release
     runs-on: ubuntu-latest
