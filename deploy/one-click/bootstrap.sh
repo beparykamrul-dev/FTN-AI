@@ -13,7 +13,7 @@ export DEBIAN_FRONTEND=noninteractive
 if command -v apt-get >/dev/null 2>&1; then
   log 'Installing required host dependencies'
   apt-get update
-  apt-get install -y ca-certificates curl git jq openssl postgresql-client
+  apt-get install -y ca-certificates curl git jq openssl postgresql-client procps
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -52,6 +52,9 @@ secret_or_generate FTN_SFU_API_KEY
 secret_or_generate FTN_SFU_API_SECRET
 secret_or_generate FTN_TURN_PASSWORD
 ensure_secret FTN_TURN_USERNAME "ftn"
+
+log 'Applying bounded adaptive TCP performance profile'
+bash "$ROOT_DIR/scripts/configure-tcp-performance.sh"
 
 # All production Compose manifests are discovered and started by one canonical
 # runner. This keeps bootstrap, upgrades and recovery on the same execution path.
