@@ -15,6 +15,7 @@ CREATE INDEX IF NOT EXISTS service_requests_created_at_idx ON service_requests(c
 
 CREATE TABLE IF NOT EXISTS control_nodes (
   id TEXT PRIMARY KEY,
+  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
   provider TEXT NOT NULL,
   region TEXT NOT NULL DEFAULT '',
   services TEXT[] NOT NULL DEFAULT '{}',
@@ -31,3 +32,5 @@ CREATE TABLE IF NOT EXISTS control_nodes (
 CREATE INDEX IF NOT EXISTS control_nodes_provider_idx ON control_nodes(provider);
 CREATE INDEX IF NOT EXISTS control_nodes_region_idx ON control_nodes(region);
 CREATE INDEX IF NOT EXISTS control_nodes_health_idx ON control_nodes(healthy);
+CREATE INDEX IF NOT EXISTS control_nodes_tenant_idx ON control_nodes(tenant_id);
+CREATE INDEX IF NOT EXISTS control_nodes_tenant_health_idx ON control_nodes(tenant_id, healthy);
