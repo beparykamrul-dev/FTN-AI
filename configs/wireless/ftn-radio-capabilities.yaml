@@ -1,0 +1,52 @@
+apiVersion: ftn.network/v1
+kind: RadioWirelessCapabilities
+metadata:
+  name: ftn-radio-sensor-plane
+spec:
+  authorization:
+    required: true
+    scope: ftn-owned-or-managed-assets-only
+    raw_capture_default: false
+  sensors:
+    kismet:
+      enabled: true
+      role: wifi-and-wireless-sensor
+      transports: [wifi, bluetooth, zigbee, ieee802154]
+      telemetry: [device_presence, channel_utilization, signal_quality, packet_metadata]
+    wifi:
+      standards: [802.11a, 802.11b, 802.11g, 802.11n, 802.11ac, 802.11ax]
+      bands: [2.4ghz, 5ghz, 6ghz]
+      source_owner: kismet
+    bluetooth:
+      generations: [ble, bluetooth-classic]
+      source_owner: kismet
+    zigbee:
+      standard: ieee802154
+      source_owner: kismet
+    sdr:
+      enabled: true
+      mode: metadata-and-sensor-telemetry
+      adapters: [rtl-sdr, rtl-433]
+      raw_iq_capture: opt-in-and-authorized
+      source_owner: external-sensor-adapter
+    gps:
+      enabled: true
+      role: sensor-location-metadata
+  collection:
+    default_mode: metadata-only
+    retention_class: operational-telemetry
+    pii_minimization: true
+    raw_radio_capture: disabled-by-default
+  observability:
+    metrics: prometheus
+    events: opensearch
+    audit: event-journal
+  control_plane:
+    mutation_policy: approval-required
+    sensor_configuration_changes: approval-required
+    firmware_or_radio_transmit_changes: approval-required
+  deployment:
+    profiles:
+      wireless: [kismet]
+      sdr: [external-radio-sensor]
+    default_profiles: []
