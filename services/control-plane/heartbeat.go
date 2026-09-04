@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 )
@@ -19,8 +20,14 @@ func (a *App) nodeHeartbeat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var n Node
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 256<<10)).Decode(&n); err != nil {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 256<<10))
+	if err := dec.Decode(&n); err != nil {
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid_json"})
+		return
+	}
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF {
+		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "multiple_json_values"})
 		return
 	}
 	if !validNode(n) {
