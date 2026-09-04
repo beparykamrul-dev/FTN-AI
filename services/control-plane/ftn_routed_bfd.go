@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/netip"
 	"strings"
+	"sync"
 )
 
 type FTNBFDObservation struct {
@@ -19,6 +20,7 @@ type FTNBFDSource interface {
 // FTNBFDReconciler publishes only normalized BFD state transitions. It does
 // not create, delete, or reconfigure BFD sessions.
 type FTNBFDReconciler struct {
+	mu       sync.Mutex
 	source   FTNBFDSource
 	bridge   *FTNRoutedEventBridge
 	previous map[string]FTNBFDState
@@ -35,6 +37,8 @@ func (r *FTNBFDReconciler) Reconcile(ctx context.Context) error {
 	if ctx == nil {
 		return fmt.Errorf("context is required")
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	observations, err := r.source.ListBFD(ctx)
 	if err != nil {
 		return err
