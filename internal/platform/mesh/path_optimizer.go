@@ -2,10 +2,16 @@ package mesh
 
 import "math"
 
-// PathCandidate represents a route produced from the current mesh state.
+// PathCandidate is the canonical route candidate model used by both optimizer
+// and path-selection layers.
 type PathCandidate struct {
-	Nodes []string `json:"nodes"`
-	Cost uint64 `json:"cost"`
+	Nodes []string `json:"nodes,omitempty"`
+	PeerID string `json:"peer_id,omitempty"`
+	Cost uint64 `json:"cost,omitempty"`
+	LatencyMS float64 `json:"latency_ms,omitempty"`
+	LossPct float64 `json:"loss_pct,omitempty"`
+	CapacityMbps float64 `json:"capacity_mbps,omitempty"`
+	HealthScore uint8 `json:"health_score,omitempty"`
 }
 
 // ScoreLink combines routing metric with observed latency and packet loss.
