@@ -157,8 +157,8 @@ jobs:
           set -euo pipefail
           job_id="${{ steps.submit.outputs.job_id }}"
           docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 \
-            -c "select status, attempts, approval_id is not null as has_approval, verified_by is not null as has_verifier from durable_jobs where id='${job_id}'::uuid and status='succeeded';" \
-            | grep -q 'succeeded'
+            -c "select status, attempts, (approval_id is not null) as has_approval, (verified_by is not null) as has_verifier from durable_jobs where id='${job_id}'::uuid;" \
+            | grep -Eq 'succeeded[[:space:]]*\|[[:space:]]*[0-9]+[[:space:]]*\|[[:space:]]*t[[:space:]]*\|[[:space:]]*t'
           docker compose exec -T postgres psql -U ftn -d ftn -v ON_ERROR_STOP=1 \
             -c "select status from execution_attempts where job_id='${job_id}'::uuid and status='succeeded';" \
             | grep -q succeeded
