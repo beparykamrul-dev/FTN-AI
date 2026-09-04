@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,6 +17,31 @@ func TestValidNode(t *testing.T) {
 	base.CPUPercent = 101
 	if validNode(base) {
 		t.Fatal("expected invalid CPU percentage")
+	}
+}
+
+func TestValidNodeRejectsNonFiniteTelemetry(t *testing.T) {
+	base := Node{ID: "node-a", Provider: "provider-a", Healthy: true}
+	cases := []struct {
+		name string
+		set  func(*Node)
+	}{
+		{"cpu_nan", func(n *Node) { n.CPUPercent = math.NaN() }},
+		{"ram_inf", func(n *Node) { n.RAMPercent = math.Inf(1) }},
+		{"ssd_nan", func(n *Node) { n.SSDPercent = math.NaN() }},
+		{"hdd_inf", func(n *Node) { n.HDDPercent = math.Inf(1) }},
+		{"net_nan", func(n *Node) { n.NetMbps = math.NaN() }},
+		{"latency_inf", func(n *Node) { n.LatencyMs = math.Inf(1) }},
+		{"loss_nan", func(n *Node) { n.PacketLoss = math.NaN() }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			n := base
+			tc.set(&n)
+			if validNode(n) {
+				t.Fatal("expected non-finite telemetry to be rejected")
+			}
+		})
 	}
 }
 
