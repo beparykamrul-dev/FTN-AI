@@ -26,18 +26,19 @@ func (s *DeliveryStore) Deliver(ctx context.Context, identityID, localPart, doma
 		identityID, strings.ToLower(localPart), strings.ToLower(domain)).Scan(&mailboxID)
 	if err != nil { return err }
 
-	if err := (&Store{DB: s.DB}).CheckQuota(ctx, mailboxID, int64(len(raw))); err != nil { return err }
-
 	id := uuid.NewString()
 	h := sha256.Sum256(raw)
 	storageKey := fmt.Sprintf("mail/%s/%s-%x.bin", mailboxID, id, h[:8])
 	if err := s.Blobs.Put(ctx, storageKey, raw); err != nil { return err }
 
-	_, err = s.DB.ExecContext(ctx, `
-		INSERT INTO ftn_mail_messages
-		(id, mailbox_id, message_uid, message_id, sender, recipients, size_bytes, storage_key)
-		VALUES ($1,$2,COALESCE((SELECT MAX(message_uid)+1 FROM ftn_mail_messages WHERE mailbox_id=$2),1),$3,$4,$5,$6,$7)`,
-		id, mailboxID, "<"+id+"@"+domain+">", sender, recipients, len(raw), storageKey)
-	if err != nil { return err }
-	return nil
+	message := Message{
+		ID: id,
+		MailboxID: mailboxID,
+		MessageID: "<" + id + "@" + domain + ">",
+		Sender: sender,
+		Recipients: recipients,
+		SizeBytes: int64(len(raw)),
+		StorageKey: storageKey,
+	}
+	return (&Store{DB: s.DB}).AppendMessageWithQuota(ctx, message)
 }
