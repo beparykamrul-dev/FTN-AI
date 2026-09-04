@@ -25,13 +25,20 @@ while IFS= read -r migration; do
   name="$(basename "$migration")"
   version="${name%%_*}"
   [[ "$version" =~ ^[0-9]+$ ]] || continue
-  if ((10#$version >= 15 && 10#$version <= 24)); then
-    if [[ -n "${seen_version[$((10#$version))]:-}" ]]; then
+  numeric=$((10#$version))
+  if ((numeric >= 15 && numeric <= 24)); then
+    if [[ -n "${seen_version[$numeric]:-}" ]]; then
       echo "duplicate critical migration version: $version ($name)" >&2
       exit 1
     fi
-    seen_version[$((10#$version))]="$name"
+    seen_version[$numeric]="$name"
   fi
+  # Match migrate.sh semantics: migration versions are applied once; when
+  # historical duplicate versions exist, the first file in sort -V order wins.
+  if [[ -n "${seen_version[all_$numeric]:-}" ]]; then
+    continue
+  fi
+  seen_version[all_$numeric]="$name"
   ordered+=("$migration")
 done < <(printf '%s\n' "${migrations[@]}" | sort -V)
 
@@ -63,9 +70,11 @@ done
 echo "Writing deterministic restore fixture"
 docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
 INSERT INTO tenants (slug, name) VALUES ('ci-restore', 'CI Restore Validation') ON CONFLICT (slug) DO NOTHING;
-INSERT INTO event_journal (event_type, aggregate_type, aggregate_id, payload)
-SELECT 'ci.restore.fixture', 'tenant', id::text, '{"source":"validate-db-restore"}'::jsonb
-FROM tenants WHERE slug='ci-restore';
+INSERT INTO event_journal (tenant_id, event_type, sequence, correlation_id, causation_id, aggregate_id, payload)
+SELECT t.id, 'ci.restore.fixture',
+       COALESCE((SELECT MAX(e.sequence) + 1 FROM event_journal e WHERE e.tenant_id=t.id), 1),
+       'ci-restore', '', t.id::text, '{"source":"validate-db-restore"}'::jsonb
+FROM tenants t WHERE t.slug='ci-restore';
 SQL
 
 before="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM tenants WHERE slug='ci-restore';")"
