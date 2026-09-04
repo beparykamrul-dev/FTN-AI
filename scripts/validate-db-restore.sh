@@ -29,7 +29,8 @@ for required in \
   services/control-plane/migrations/011_migration_registry.sql \
   services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
   services/control-plane/migrations/013_approval_payload_binding.sql \
-  services/control-plane/migrations/014_tenant_scoped_approval_hash.sql; do
+  services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
+  services/control-plane/migrations/015_approval_event_trigger.sql; do
   test -f "$required"
 done
 
@@ -64,7 +65,8 @@ for migration in \
   services/control-plane/migrations/011_migration_registry.sql \
   services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
   services/control-plane/migrations/013_approval_payload_binding.sql \
-  services/control-plane/migrations/014_tenant_scoped_approval_hash.sql; do
+  services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
+  services/control-plane/migrations/015_approval_event_trigger.sql; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
@@ -90,11 +92,14 @@ test "$after" = "1"
 event_trigger="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_event_journal';")"
 test "$event_trigger" = "1"
 
+approval_event_trigger="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='change_approvals_lifecycle_event';")"
+test "$approval_event_trigger" = "1"
+
 schema_version="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT to_regclass('public.event_journal') IS NOT NULL AND to_regclass('public.durable_jobs') IS NOT NULL;")"
 test "$schema_version" = "t"
 
-registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 14;")"
-test "$registry_count" = "4"
+registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 15;")"
+test "$registry_count" = "5"
 
 control_nodes_tenant="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='control_nodes' AND column_name='tenant_id');")"
 test "$control_nodes_tenant" = "t"
