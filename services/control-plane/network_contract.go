@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -39,8 +40,14 @@ func (a *App) networkIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req NetworkIntegrationRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 256<<10)).Decode(&req); err != nil {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 256<<10))
+	if err := dec.Decode(&req); err != nil {
 		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid_json"})
+		return
+	}
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF {
+		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "multiple_json_values"})
 		return
 	}
 	req.DeviceID, req.DeviceType, req.Protocol, req.Action = strings.TrimSpace(req.DeviceID), strings.TrimSpace(req.DeviceType), strings.ToLower(strings.TrimSpace(req.Protocol)), strings.TrimSpace(req.Action)
