@@ -1,3 +1,5 @@
+x-ftn-production-stack: true
+
 services:
   opensearch:
     image: opensearchproject/opensearch:3.8.0
