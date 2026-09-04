@@ -48,13 +48,20 @@ secret_or_generate(){
   ensure_secret "$key" "$value"
 }
 
+setting_or_default(){
+  local key="$1" default="$2" value
+  value="$(sed -n "s/^${key}=//p" .env | tail -n 1)"
+  [ -n "$value" ] || value="$default"
+  ensure_setting "$key" "$value"
+}
+
 secret_or_generate FTN_DB_PASSWORD
 secret_or_generate FTN_API_AUTH_TOKEN
 secret_or_generate FTN_SFU_API_KEY
 secret_or_generate FTN_SFU_API_SECRET
 secret_or_generate FTN_TURN_PASSWORD
 ensure_secret FTN_TURN_USERNAME "ftn"
-ensure_setting FTN_ROUTING_NODE "${FTN_ROUTING_NODE:-0}"
+setting_or_default FTN_ROUTING_NODE "${FTN_ROUTING_NODE:-0}"
 
 log 'Applying bounded adaptive TCP performance profile'
 bash "$ROOT_DIR/scripts/configure-tcp-performance.sh"
