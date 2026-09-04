@@ -38,35 +38,26 @@ func NewTrafficRuntime() *TrafficRuntime {
         probe := NewTrafficActiveProbe(runtime, interval, timeout)
         if err := probe.Start(context.Background(), trafficProbeTargetsFromEnv); err != nil { log.Printf("FTN active traffic probe disabled: %v", err) } else { runtime.activeProbe = probe; log.Printf("FTN active traffic probe enabled") }
     }
+    if _, enabled := flowListenerConfigFromEnv(); enabled {
+        if err := runtime.StartConfiguredFlowListener(); err != nil { log.Printf("FTN flow telemetry listener disabled: %v", err) }
+    }
     return runtime
 }
 
 // SetSiLKStore attaches the durable normalized-flow sink before the listener is started.
-func (t *TrafficRuntime) SetSiLKStore(store *FTNSiLKStore) {
-    t.mu.Lock()
-    t.silk = store
-    t.mu.Unlock()
-}
+func (t *TrafficRuntime) SetSiLKStore(store *FTNSiLKStore) { t.mu.Lock(); t.silk = store; t.mu.Unlock() }
 
 // StartConfiguredFlowListener starts the UDP collector only after its durable
 // sink has been attached, preventing early packets from bypassing persistence.
 func (t *TrafficRuntime) StartConfiguredFlowListener() error {
     if t == nil { return errors.New("traffic runtime required") }
-    cfg, enabled := flowListenerConfigFromEnv()
-    if !enabled { return nil }
-    listener, err := NewFlowListener(cfg, NewFlowTelemetryCollector(), t)
-    if err != nil { return err }
+    cfg, enabled := flowListenerConfigFromEnv(); if !enabled { return nil }
+    listener, err := NewFlowListener(cfg, NewFlowTelemetryCollector(), t); if err != nil { return err }
     if err := listener.Start(context.Background()); err != nil { return err }
-    t.mu.Lock(); t.listener = listener; t.mu.Unlock()
-    log.Printf("FTN flow telemetry listener active on %s", cfg.Address)
-    return nil
+    t.mu.Lock(); t.listener = listener; t.mu.Unlock(); log.Printf("FTN flow telemetry listener active on %s", cfg.Address); return nil
 }
 
-func (t *TrafficRuntime) StartActiveProbes(ctx context.Context, targets func(context.Context) []TrafficProbeTarget) error {
-    interval := durationFromEnv("FTN_TRAFFIC_PROBE_INTERVAL", trafficProbeDefaultInterval); timeout := durationFromEnv("FTN_TRAFFIC_PROBE_TIMEOUT", trafficProbeDefaultTimeout); probe := NewTrafficActiveProbe(t, interval, timeout)
-    if err := probe.Start(ctx, func() []TrafficProbeTarget { return targets(ctx) }); err != nil { return err }
-    t.mu.Lock(); t.activeProbe = probe; t.mu.Unlock(); return nil
-}
+func (t *TrafficRuntime) StartActiveProbes(ctx context.Context, targets func(context.Context) []TrafficProbeTarget) error { interval := durationFromEnv("FTN_TRAFFIC_PROBE_INTERVAL", trafficProbeDefaultInterval); timeout := durationFromEnv("FTN_TRAFFIC_PROBE_TIMEOUT", trafficProbeDefaultTimeout); probe := NewTrafficActiveProbe(t, interval, timeout); if err := probe.Start(ctx, func() []TrafficProbeTarget { return targets(ctx) }); err != nil { return err }; t.mu.Lock(); t.activeProbe = probe; t.mu.Unlock(); return nil }
 func (t *TrafficRuntime) Close() error { t.mu.RLock(); listener, probe, silkDB := t.listener, t.activeProbe, t.silkDB; t.mu.RUnlock(); var first error; if probe != nil { if err:=probe.Close(); err!=nil { first=err } }; if listener!=nil { if err:=listener.Close(); first==nil { first=err } }; if silkDB!=nil { silkDB.Close() }; return first }
 func durationFromEnv(name string, fallback time.Duration) time.Duration { raw:=strings.TrimSpace(os.Getenv(name)); if raw=="" { return fallback }; d,err:=time.ParseDuration(raw); if err!=nil||d<=0{return fallback}; return d }
 func (t *TrafficRuntime) FlowCount() int { t.mu.RLock(); defer t.mu.RUnlock(); return len(t.flows) }
