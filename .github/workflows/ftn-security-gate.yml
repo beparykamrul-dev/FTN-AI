@@ -44,6 +44,9 @@ jobs:
           set -euo pipefail
           bad=0
           while IFS= read -r file; do
+            # This workflow contains the scanner itself; its regex examples are
+            # not workflow action invocations and must not be self-reported.
+            [[ "$file" == ".github/workflows/ftn-security-gate.yml" ]] && continue
             while IFS= read -r line; do
               if [[ "$line" =~ uses:[[:space:]]*[^[:space:]@]+@[^[:space:]]+ ]] && [[ ! "$line" =~ uses:[[:space:]]*[^[:space:]@]+@[0-9a-f]{40}([[:space:]]|$) ]]; then
                 echo "Unpinned action in $file: $line"
