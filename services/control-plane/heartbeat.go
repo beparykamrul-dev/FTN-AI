@@ -10,7 +10,7 @@ import (
 // nodeHeartbeat accepts a complete, current resource snapshot from an enrolled node.
 // It intentionally does not perform deployment or privileged infrastructure changes.
 func (a *App) nodeHeartbeat(w http.ResponseWriter, r *http.Request) {
-	if !method(w, r, http.MethodPost) {
+	if !method(w, r, http.MethodPost) || !requirePermission(a, "node.manage", w, r) {
 		return
 	}
 	var n Node
