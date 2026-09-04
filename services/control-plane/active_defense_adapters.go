@@ -31,13 +31,15 @@ func BuildActiveDefenseActionPlan(intent ActiveDefenseExecutionIntent) (ActiveDe
 	if intent.DurationSeconds <= 0 || intent.DurationSeconds > 3600 {
 		return ActiveDefenseActionPlan{}, false
 	}
+	// Active-defense mutations are privileged even when an upstream decision
+	// was marked automatic; the execution boundary must remain approval-gated.
 	plan := ActiveDefenseActionPlan{
 		TargetAsset: intent.TargetAsset,
 		DurationSeconds: intent.DurationSeconds,
 		SnapshotRequired: true,
 		VerificationNeeded: true,
 		Automatic: intent.Automatic,
-		RequiresApproval: intent.RequiresApproval,
+		RequiresApproval: true,
 	}
 	switch intent.Action {
 	case WazuhHealthRecover:
