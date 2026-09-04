@@ -2,6 +2,11 @@ name: FTN Production Launch Gate
 
 on:
   workflow_dispatch:
+    inputs:
+      launch_evidence_issue:
+        description: 'Optional GitHub issue number for launch evidence'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -32,6 +37,8 @@ jobs:
           test -f services/control-plane/migrations/004_approval_execution.sql
           test -f services/control-plane/migrations/005_job_integrity_leases.sql
           test -f services/control-plane/migrations/006_job_event_automation.sql
+          test -f services/control-plane/migrations/017_active_defense_execution.sql
+          test -f services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql
 
       - name: Validate repository
         run: bash scripts/validate-repo.sh
@@ -56,7 +63,14 @@ jobs:
       - name: Publish launch evidence
         env:
           GH_TOKEN: ${{ github.token }}
+          EVIDENCE_ISSUE: ${{ inputs.launch_evidence_issue }}
         shell: bash
         run: |
           set -euo pipefail
-          gh issue comment 18 --body "FTN-owned production preflight executed for ${GITHUB_SHA}. TKE deployment parameters remain intentionally deferred. Repository, architecture, Go build/test and Compose preflight were evaluated; real infrastructure launch still requires the FTN-owned deployment target and protected integration/recovery gates."
+          body="FTN-owned production preflight executed for ${GITHUB_SHA}. TKE deployment parameters remain intentionally deferred. Repository, architecture, Go build/test and Compose preflight were evaluated; real infrastructure launch still requires the FTN-owned deployment target and protected integration/recovery gates."
+          if [[ -n "$EVIDENCE_ISSUE" ]]; then
+            [[ "$EVIDENCE_ISSUE" =~ ^[0-9]+$ ]] || { echo 'launch_evidence_issue must be numeric' >&2; exit 1; }
+            gh issue comment "$EVIDENCE_ISSUE" --body "$body"
+          else
+            printf '%s\n' "$body"
+          fi
