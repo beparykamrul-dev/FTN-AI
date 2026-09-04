@@ -19,7 +19,9 @@ func appendEventTx(tx pgx.Tx, ctx context.Context, tenantID, eventType, correlat
 	if strings.TrimSpace(eventType)=="" { return DurableEvent{}, errors.New("event_type_required") }
 	if payload==nil { payload=json.RawMessage(`{}`) }
 	if !json.Valid(payload) { return DurableEvent{}, errors.New("invalid_event_payload") }
-	if _,err:=tx.Exec(ctx,`select pg_advisory_xact_lock(hashtext($1::text))`,tenantID);err!=nil{return DurableEvent{},err}
+	// Use the 64-bit PostgreSQL hash to make the per-tenant serialization lock
+	// substantially less collision-prone than hashtext's 32-bit key.
+	if _,err:=tx.Exec(ctx,`select pg_advisory_xact_lock(hashtextextended($1::text,0))`,tenantID);err!=nil{return DurableEvent{},err}
 	var e DurableEvent
 	err:=tx.QueryRow(ctx,`insert into event_journal(tenant_id,event_type,sequence,correlation_id,causation_id,aggregate_id,payload) values($1::uuid,$2,coalesce((select max(sequence)+1 from event_journal where tenant_id=$1::uuid),1),$3,$4,$5,$6::jsonb) returning id::text,coalesce(tenant_id::text,''),event_type,sequence,correlation_id,causation_id,aggregate_id,payload::text,created_at::text`,tenantID,eventType,correlationID,causationID,aggregateID,string(payload)).Scan(&e.ID,&e.TenantID,&e.Type,&e.Sequence,&e.CorrelationID,&e.CausationID,&e.AggregateID,&e.Payload,&e.CreatedAt)
 	return e,err
