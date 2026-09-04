@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
@@ -21,9 +22,7 @@ type RouterOSAdapter struct { client *http.Client; baseURL string; credentialRef
 func NewRouterOSAdapter(baseURL string, credentialRef RouterOSCredentialRef, serverName string, resolveSecret func(context.Context, RouterOSCredentialRef)(RouterOSSecret,error), timeout time.Duration)(*RouterOSAdapter,error){
 	baseURL=strings.TrimRight(strings.TrimSpace(baseURL),"/");if baseURL==""{return nil,errors.New("routeros base url is required")};u,err:=url.Parse(baseURL);if err!=nil||u.Scheme==""||u.Host==""||u.User!=nil{return nil,errors.New("routeros base url must be an absolute URL without userinfo")};if u.Scheme!="http"&&u.Scheme!="https"{return nil,errors.New("routeros base url scheme must be http or https")};if u.Scheme=="http"&&!isLoopbackHost(u.Hostname()){return nil,errors.New("routeros remote transport must use https")};if credentialRef==""{return nil,errors.New("routeros credential reference is required")};if resolveSecret==nil{return nil,errors.New("routeros secret resolver is required")};if timeout<=0{timeout=10*time.Second};return &RouterOSAdapter{baseURL:baseURL,credentialRef:credentialRef,serverName:serverName,resolveSecret:resolveSecret,client:&http.Client{Timeout:timeout,Transport:&http.Transport{TLSClientConfig:&tls.Config{MinVersion:tls.VersionTLS12,ServerName:serverName}}}},nil
 }
-func isLoopbackHost(host string)bool{ip,err:=netipParseAddr(host);return err==nil&&ip.IsLoopback()}
-// netipParseAddr is kept local so malformed hostnames cannot be treated as loopback.
-func netipParseAddr(host string)(netipAddr,error){return parseNetIP(host)}
+func isLoopbackHost(host string)bool{ip,err:=netip.ParseAddr(host);return err==nil&&ip.IsLoopback()}
 
 func (a *RouterOSAdapter) Protocol()string{return "routeros-api"}
 func(a *RouterOSAdapter)doJSON(ctx context.Context,path string)([]map[string]any,error){secret,err:=a.resolveSecret(ctx,a.credentialRef);if err!=nil{return nil,fmt.Errorf("routeros secret lookup: %w",err)};if secret.Username==""||secret.Password==""{return nil,errors.New("routeros secret is incomplete")};req,err:=http.NewRequestWithContext(ctx,http.MethodGet,a.baseURL+"/rest/"+strings.TrimLeft(path,"/"),nil);if err!=nil{return nil,err};req.SetBasicAuth(secret.Username,secret.Password);req.Header.Set("Accept","application/json");resp,err:=a.client.Do(req);if err!=nil{return nil,err};defer resp.Body.Close();if resp.StatusCode<200||resp.StatusCode>=300{body,_:=io.ReadAll(io.LimitReader(resp.Body,4096));return nil,fmt.Errorf("routeros REST %s: status=%d body=%q",path,resp.StatusCode,strings.TrimSpace(string(body)))};var rows []map[string]any;dec:=json.NewDecoder(io.LimitReader(resp.Body,8<<20));if err:=dec.Decode(&rows);err!=nil{return nil,fmt.Errorf("routeros REST %s: decode: %w",path,err)};var extra any;if err:=dec.Decode(&extra);err!=io.EOF{return nil,fmt.Errorf("routeros REST %s: multiple JSON values",path)};return rows,nil}
