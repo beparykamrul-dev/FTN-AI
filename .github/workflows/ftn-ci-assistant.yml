@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
       - FTN-AI CI
+      - FTN Control Plane CI
       - FTN Security Gate
       - FTN API Boundary Gate
       - FTN Durable Execution Gate
