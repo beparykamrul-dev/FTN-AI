@@ -1,0 +1,97 @@
+apiVersion: ftn.network/v1
+kind: ProviderUpstreamContract
+metadata:
+  name: ftn-provider-upstream
+spec:
+  role: upstream-transit
+  transport:
+    handoff: ethernet
+    ip_version: dual-stack
+    ebgp: true
+  bgp:
+    session:
+      type: ebgp
+      multihop: false
+      graceful_restart: true
+      bfd: required-when-supported
+      hold_time_seconds: 90
+      keepalive_seconds: 30
+    address_families:
+      - ipv4-unicast
+      - ipv6-unicast
+    max_prefixes:
+      ipv4: 1000000
+      ipv6: 100000
+    policy:
+      default_import: reject
+      default_export: reject
+      accept_default_route: explicit
+      accept_provider_routes: explicit
+      accept_customer_routes: false
+      accept_private_rfc1918: false
+      require_rpki_valid_or_notfound: true
+      reject_rpki_invalid: true
+      reject_bogon_prefixes: true
+      reject_too_specific_ipv4: 24
+      reject_too_specific_ipv6: 48
+      prepend_on_degraded_path: true
+  routing:
+    multipath: true
+    local_preference:
+      primary: 200
+      secondary: 150
+      backup: 100
+    communities:
+      preserve_standard: true
+      preserve_large: true
+      strip_provider_private: true
+  health:
+    session_state: required
+    bfd: preferred
+    route_count: required
+    reachability_probe: required
+    latency_loss_probe: required
+    withdraw_on_failure: true
+    stale_route_max_seconds: 30
+  capacity:
+    interface_utilization_warning_percent: 70
+    interface_utilization_critical_percent: 85
+    packet_loss_warning_percent: 1
+    packet_loss_critical_percent: 3
+  failover:
+    enabled: true
+    prefer_healthy: true
+    fastest_healthy: true
+    require_post_change_verification: true
+    automatic_mutation_requires_approval: true
+  security:
+    authentication:
+      bgp_tcp_md5: supported
+      ttl_security: required-for-direct-ebgp
+    rpki: required-when-available
+    flowspec: disabled-by-default
+  telemetry:
+    peer_state: true
+    prefixes: true
+    route_changes: true
+    traffic_counters: true
+    latency_loss: true
+  lifecycle:
+    status: pending-admission
+    required_evidence:
+      - provider_identity
+      - provider_asn
+      - handoff_ips
+      - advertised_prefixes
+      - routing_policy
+      - capacity_commitment
+      - abuse_contact
+      - noc_contact
+      - maintenance_window
+      - security_review
+  safety:
+    no_route_change_without_approval: true
+    no_default_export: true
+    no_customer_route_leak: true
+    no_rpki_invalid_acceptance: true
+    no_unbounded_prefix_acceptance: true
