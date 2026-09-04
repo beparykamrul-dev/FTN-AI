@@ -16,6 +16,7 @@ command -v readlink >/dev/null 2>&1 || fail 'readlink is required'
 command -v curl >/dev/null 2>&1 || fail 'curl is required'
 [ -L "$CURRENT_LINK" ] || fail "$CURRENT_LINK is not a release symlink"
 [ -f "$RELEASE_ROOT/.env" ] || fail 'Production .env is missing'
+[ -f "$ROOT_DIR/scripts/validate-host-port-ownership.sh" ] || fail 'Host port validator is missing from current release'
 
 current="$(readlink -f "$CURRENT_LINK")"
 [ -d "$current" ] || fail "Current release does not exist: $current"
@@ -26,14 +27,7 @@ for release in "${releases[@]}"; do
 done
 [ -n "$previous" ] || fail 'No previous deployable release found'
 
-for path in \
-  services/control-plane/docker-compose.yml \
-  deploy/one-click/release-compatibility.sh \
-  scripts/validate-production-storage.sh \
-  scripts/validate-production-ports.sh \
-  scripts/validate-host-port-ownership.sh \
-  scripts/validate-production-health.sh \
-  scripts/production-compose-env.sh; do
+for path in services/control-plane/docker-compose.yml deploy/one-click/release-compatibility.sh scripts/validate-production-storage.sh scripts/validate-production-ports.sh scripts/validate-production-health.sh; do
   [ -f "$previous/$path" ] || fail "Previous release lacks required artifact: $path"
 done
 
@@ -44,7 +38,6 @@ set -a
 # shellcheck disable=SC1091
 . "$RELEASE_ROOT/.env"
 set +a
-source "$previous/scripts/production-compose-env.sh"
 
 log 'Checking database schema compatibility before rollback'
 bash "$previous/deploy/one-click/release-compatibility.sh" "$previous"
@@ -65,7 +58,7 @@ ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-production-storag
 log 'Validating rollback target host-port ownership'
 ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-production-ports.sh"
 log 'Validating rollback target host process ports'
-ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-host-port-ownership.sh"
+FTN_COMPOSE_ROOT="$previous" ENV_FILE="$RELEASE_ROOT/.env" bash "$ROOT_DIR/scripts/validate-host-port-ownership.sh"
 
 ln -sfn "$previous" "$CURRENT_LINK"
 cd "$previous"
