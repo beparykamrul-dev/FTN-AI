@@ -17,6 +17,11 @@ type Object struct {
     StorageClass string `json:"storage_class"`
     ReplicationClass string `json:"replication_class"`
     Status string `json:"status"`
+    SHA256 string `json:"sha256,omitempty"`
+    Version int64 `json:"version,omitempty"`
+    PrimaryNode string `json:"primary_node,omitempty"`
+    ReplicaNodes []string `json:"replica_nodes,omitempty"`
+    State string `json:"state,omitempty"`
 }
 
 type Manager struct { mu sync.RWMutex; objects map[string]Object }
