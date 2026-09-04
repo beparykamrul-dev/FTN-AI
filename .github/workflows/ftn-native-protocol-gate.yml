@@ -20,4 +20,4 @@ jobs:
         run: bash scripts/ftn-native-protocol-gate.sh
       - name: Test control-plane protocol engine
         working-directory: services/control-plane
-        run: go test ./... -run 'FTNNativeProtocol|FTNDNSDDNS|FTNAnycastDNS'
+        run: go test ./...
