@@ -1,6 +1,7 @@
 package security
 
 import (
+    "encoding/json"
     "net/http"
     "net/http/httptest"
     "os"
@@ -31,6 +32,7 @@ func TestMiddlewareRejectsMissingBearer(t *testing.T) {
     if rr.Code != http.StatusUnauthorized {
         t.Fatalf("expected 401, got %d", rr.Code)
     }
+    assertUnauthorizedJSON(t, rr)
 }
 
 func TestMiddlewareRejectsEmptyBearer(t *testing.T) {
@@ -45,6 +47,7 @@ func TestMiddlewareRejectsEmptyBearer(t *testing.T) {
     if rr.Code != http.StatusUnauthorized {
         t.Fatalf("expected 401 for empty bearer, got %d", rr.Code)
     }
+    assertUnauthorizedJSON(t, rr)
 }
 
 func TestMiddlewareRejectsInvalidBearer(t *testing.T) {
@@ -58,6 +61,18 @@ func TestMiddlewareRejectsInvalidBearer(t *testing.T) {
     h.ServeHTTP(rr, req)
     if rr.Code != http.StatusUnauthorized {
         t.Fatalf("expected 401 for invalid bearer, got %d", rr.Code)
+    }
+    assertUnauthorizedJSON(t, rr)
+}
+
+func assertUnauthorizedJSON(t *testing.T, rr *httptest.ResponseRecorder) {
+    t.Helper()
+    var body map[string]string
+    if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+        t.Fatalf("unauthorized response is not valid JSON: %v; body=%q", err, rr.Body.String())
+    }
+    if body["error"] != "unauthorized" {
+        t.Fatalf("unexpected unauthorized response: %#v", body)
     }
 }
 
