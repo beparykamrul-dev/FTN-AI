@@ -14,13 +14,46 @@ SELECT v, 'legacy-baseline-' || lpad(v::text,3,'0') FROM generate_series(1,11) A
 ON CONFLICT (version) DO NOTHING;
 SQL
 fi
+
 shopt -s nullglob
-for file in "$ROOT"/migrations/*.sql; do
-  name="$(basename "$file")"; version="${name%%_*}"
+files=("$ROOT"/migrations/*.sql)
+
+# A version is the migration identity. Never silently choose one file when two
+# filenames claim the same version; that would make schema state depend on
+# filesystem ordering and can permanently skip a migration.
+declare -A seen_versions=()
+for file in "${files[@]}"; do
+  name="$(basename "$file")"
+  version="${name%%_*}"
   [[ "$version" =~ ^[0-9]+$ ]] || continue
-  if psql "$DATABASE_URL" -Atqc "SELECT 1 FROM schema_migrations WHERE version=${version}" | grep -qx 1; then continue; fi
+  if [[ -n "${seen_versions[$version]:-}" ]]; then
+    echo "duplicate migration version ${version}: ${seen_versions[$version]} and ${name}" >&2
+    exit 1
+  fi
+  seen_versions[$version]="$name"
+done
+
+# Apply in numeric migration order, not filesystem/glob order.
+mapfile -t files < <(printf '%s\n' "${files[@]}" | sort -V)
+for file in "${files[@]}"; do
+  name="$(basename "$file")"
+  version="${name%%_*}"
+  [[ "$version" =~ ^[0-9]+$ ]] || continue
+
+  registered_name="$(psql "$DATABASE_URL" -Atqc "SELECT name FROM schema_migrations WHERE version=${version}" || true)"
+  if [[ -n "$registered_name" ]]; then
+    # For migrations managed by this directory, an existing version must point
+    # at the same filename. Legacy baseline names (001-011) are intentionally
+    # exempt because they are synthetic upgrade markers.
+    if (( 10#$version >= 12 )) && [[ "$registered_name" != "$name" ]]; then
+      echo "migration ${version} is registered as ${registered_name}, expected ${name}" >&2
+      exit 1
+    fi
+    continue
+  fi
+
   echo "applying migration ${version}: ${name}"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO schema_migrations(version,name) VALUES (${version}, '${name}') ON CONFLICT (version) DO NOTHING;"
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO schema_migrations(version, name) VALUES (${version}, '${name}') ON CONFLICT (version) DO NOTHING;"
 done
 echo "FTN migrations complete"
