@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"net/http"
 	"sort"
 	"strings"
@@ -50,10 +51,14 @@ func nodeHasService(n Node, serviceID string) bool {
 }
 
 func validNode(n Node) bool {
-	return strings.TrimSpace(n.ID) != "" && strings.TrimSpace(n.Provider) != "" && n.CPUPercent >= 0 && n.CPUPercent <= 100 &&
-		n.RAMPercent >= 0 && n.RAMPercent <= 100 && n.SSDPercent >= 0 && n.SSDPercent <= 100 &&
-		n.HDDPercent >= 0 && n.HDDPercent <= 100 && n.NetMbps >= 0 && n.LatencyMs >= 0 &&
-		n.PacketLoss >= 0 && n.PacketLoss <= 100
+	finite := func(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
+	return strings.TrimSpace(n.ID) != "" && strings.TrimSpace(n.Provider) != "" &&
+		finite(n.CPUPercent) && n.CPUPercent >= 0 && n.CPUPercent <= 100 &&
+		finite(n.RAMPercent) && n.RAMPercent >= 0 && n.RAMPercent <= 100 &&
+		finite(n.SSDPercent) && n.SSDPercent >= 0 && n.SSDPercent <= 100 &&
+		finite(n.HDDPercent) && n.HDDPercent >= 0 && n.HDDPercent <= 100 &&
+		finite(n.NetMbps) && n.NetMbps >= 0 && finite(n.LatencyMs) && n.LatencyMs >= 0 &&
+		finite(n.PacketLoss) && n.PacketLoss >= 0 && n.PacketLoss <= 100
 }
 
 func serviceExists(catalog []Service, serviceID string) bool {
@@ -69,7 +74,6 @@ func nodeScore(n Node, req PlacementRequest) float64 {
 	if !n.Healthy || !nodeHasService(n, req.ServiceID) {
 		return -1
 	}
-	// ExRouter changes the traffic path only; it never replaces or migrates a service.
 	score := 100.0 - n.CPUPercent*.20 - n.RAMPercent*.20 - n.SSDPercent*.10 - n.HDDPercent*.05 - n.LatencyMs*.50 - n.PacketLoss*2
 	if req.Region != "" && strings.EqualFold(req.Region, n.Region) {
 		score += 20
@@ -221,7 +225,13 @@ func (a *App) placement(w http.ResponseWriter, r *http.Request) {
 			candidates = append(candidates, n)
 		}
 	}
-	sort.SliceStable(candidates, func(i, j int) bool { return nodeScore(candidates[i], req) > nodeScore(candidates[j], req) })
+	sort.SliceStable(candidates, func(i, j int) bool {
+		si, sj := nodeScore(candidates[i], req), nodeScore(candidates[j], req)
+		if si == sj {
+			return candidates[i].ID < candidates[j].ID
+		}
+		return si > sj
+	})
 	if len(candidates) == 0 {
 		jsonResponse(w, 503, map[string]any{"status": "no_eligible_node", "service_id": req.ServiceID})
 		return
