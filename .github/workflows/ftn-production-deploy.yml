@@ -31,6 +31,7 @@ jobs:
           test -x scripts/validate-repo.sh
           test -x scripts/validate-production-storage.sh
           test -f scripts/validate-production-ports.sh
+          test -f scripts/validate-production-health.sh
           test -x scripts/validate-db-restore.sh
           test -f deploy/one-click/rollback.sh
           test -f deploy/one-click/release-compatibility.sh
