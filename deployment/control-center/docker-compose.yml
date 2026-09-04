@@ -1,3 +1,5 @@
+x-ftn-production-stack: true
+
 services:
   control-plane:
     build:
