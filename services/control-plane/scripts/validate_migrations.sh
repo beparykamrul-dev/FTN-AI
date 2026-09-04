@@ -3,11 +3,13 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$ROOT/migrations"
+SCHEMA_FILE="$ROOT/schema.sql"
 START=15
 END=24
 
 fail() { echo "migration-validation: ERROR: $*" >&2; exit 1; }
 command -v psql >/dev/null || fail "psql is required"
+[ -f "$SCHEMA_FILE" ] || fail "schema.sql is required"
 
 mapfile -t all < <(find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort -V)
 ((${#all[@]})) || fail "no SQL migrations found"
@@ -27,10 +29,6 @@ echo "migration-validation: unique 015..024 chain OK"
 base_db="$(psql "$MIGRATION_VALIDATION_DATABASE_URL" -Atqc 'select current_database()')"
 suffix="$(date +%s)-$$"
 validation_db="${base_db}_migration_gate_${suffix}"
-
-# Keep the host/user/password from the supplied connection URL. psql's -d option
-# overrides the connection string database and can silently fall back to a local
-# Unix socket, which breaks CI service-container validation.
 validation_url="${MIGRATION_VALIDATION_DATABASE_URL%/*}/$validation_db"
 [[ "$validation_url" != "$MIGRATION_VALIDATION_DATABASE_URL" ]] || fail "validation URL must include a database name"
 
@@ -42,6 +40,11 @@ trap cleanup EXIT
 
 psql "$MIGRATION_VALIDATION_DATABASE_URL" -v ON_ERROR_STOP=1 \
   -c "CREATE DATABASE \"$validation_db\";" >/dev/null
+
+# A production database is bootstrapped from schema.sql before the numbered
+# migrations. Reproduce that boundary here; otherwise migrations that ALTER
+# schema.sql-owned tables fail falsely in the validation environment.
+psql "$validation_url" -X -v ON_ERROR_STOP=1 -f "$SCHEMA_FILE" >/dev/null
 
 declare -a replay=()
 last_version=""
