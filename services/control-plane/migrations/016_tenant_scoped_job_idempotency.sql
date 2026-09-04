@@ -13,11 +13,12 @@ LANGUAGE plpgsql AS $$
 DECLARE
   prefix TEXT;
 BEGIN
-  IF NEW.tenant_id IS NOT NULL THEN
-    prefix := NEW.tenant_id::text || ':';
-    IF left(NEW.idempotency_key, length(prefix)) <> prefix THEN
-      NEW.idempotency_key := prefix || NEW.idempotency_key;
-    END IF;
+  IF NEW.tenant_id IS NULL THEN
+    RAISE EXCEPTION 'durable-job tenant_id is required';
+  END IF;
+  prefix := NEW.tenant_id::text || ':';
+  IF left(NEW.idempotency_key, length(prefix)) <> prefix THEN
+    NEW.idempotency_key := prefix || NEW.idempotency_key;
   END IF;
   RETURN NEW;
 END;
