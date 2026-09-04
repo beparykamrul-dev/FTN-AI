@@ -43,7 +43,11 @@ jobs:
 
       - name: Format gate
         run: |
-          test -z "$(gofmt -l .)"
+          files="$(gofmt -l .)"
+          if [ -n "$files" ]; then
+            printf '%s\n' "$files"
+            exit 1
+          fi
 
       - name: Static analysis
         run: go vet ./...
