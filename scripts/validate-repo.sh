@@ -57,7 +57,7 @@ mapfile -t modules < <(git ls-files 'go.mod' | sort -u)
 for mod in "${modules[@]}"; do
   dir="$(dirname "$mod")"
   printf 'testing %s\n' "$dir"
-  (cd "$dir" && go test ./...)
+  (cd "$dir" && GOPROXY=direct go test ./...)
 done
 
 printf '%s\n' 'FTN-AI repository validation passed.'
