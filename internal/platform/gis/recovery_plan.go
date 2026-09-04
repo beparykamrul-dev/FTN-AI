@@ -11,13 +11,16 @@ type RecoveryStep struct {
 }
 
 type RecoveryPlan struct {
-	ID string `json:"id"`
-	RootAsset string `json:"root_asset"`
-	Risk string `json:"risk"`
-	Confidence float64 `json:"confidence"`
-	Affected []ImpactNode `json:"affected"`
-	Steps []RecoveryStep `json:"steps"`
-	CreatedAt time.Time `json:"created_at"`
+	ID string `json:"id,omitempty"`
+	RootAsset string `json:"root_asset,omitempty"`
+	FailedAssetID string `json:"failed_asset_id,omitempty"`
+	Risk string `json:"risk,omitempty"`
+	Confidence float64 `json:"confidence,omitempty"`
+	Affected []ImpactNode `json:"affected,omitempty"`
+	Candidates []RecoveryCandidate `json:"candidates,omitempty"`
+	Steps []RecoveryStep `json:"steps,omitempty"`
+	RequiresApproval bool `json:"requires_approval"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
 }
 
 // BuildRecoveryPlan produces an auditable plan only. It does not execute any
@@ -30,5 +33,6 @@ func BuildRecoveryPlan(root string, impact ImpactResult, confidence float64) Rec
 	}
 	risk := "medium"
 	if len(impact.Affected) >= 50 { risk = "high" }
-	return RecoveryPlan{ID:root+"-"+time.Now().UTC().Format("20060102150405"), RootAsset:root, Risk:risk, Confidence:confidence, Affected:impact.Affected, Steps:steps, CreatedAt:time.Now().UTC()}
+	now := time.Now().UTC()
+	return RecoveryPlan{ID:root+"-"+now.Format("20060102150405"), RootAsset:root, Risk:risk, Confidence:confidence, Affected:impact.Affected, Steps:steps, RequiresApproval:true, CreatedAt:now}
 }
