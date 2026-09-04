@@ -31,7 +31,8 @@ for required in \
   services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
   services/control-plane/migrations/015_approval_event_trigger.sql \
   services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql \
-  services/control-plane/migrations/017_active_defense_execution.sql; do
+  services/control-plane/migrations/017_active_defense_execution.sql \
+  services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql; do
   test -f "$required"
 done
 
@@ -68,7 +69,8 @@ for migration in \
   services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
   services/control-plane/migrations/015_approval_event_trigger.sql \
   services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql \
-  services/control-plane/migrations/017_active_defense_execution.sql; do
+  services/control-plane/migrations/017_active_defense_execution.sql \
+  services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
@@ -107,6 +109,26 @@ test "$scoped_jobs" = "2"
 idempotency_trigger="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_scope_idempotency';")"
 test "$idempotency_trigger" = "1"
 
+echo "Validating tenant-scoped active-defense idempotency"
+docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn <<'SQL' >/dev/null
+INSERT INTO active_defense_executions(tenant_id,idempotency_key,alert_hash,target_asset,target_scope,adapter,operation,duration_seconds)
+SELECT id,'ci-defense-key','ci-alert-a','asset-a','ftn-owned-asset','nftables','temporary-containment',60
+FROM tenants WHERE slug='ci-restore';
+INSERT INTO active_defense_executions(tenant_id,idempotency_key,alert_hash,target_asset,target_scope,adapter,operation,duration_seconds)
+SELECT id,'ci-defense-key','ci-alert-b','asset-b','ftn-owned-asset','nftables','temporary-containment',60
+FROM tenants WHERE slug='ci-restore-b';
+SQL
+
+defense_rows="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM active_defense_executions WHERE idempotency_key LIKE '%:ci-defense-key';")"
+test "$defense_rows" = "2"
+
+defense_trigger="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='active_defense_scope_idempotency';")"
+test "$defense_trigger" = "1"
+
+defense_index="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND indexname='active_defense_executions_tenant_idempotency_uq';")"
+test "$defense_index" = "1"
+
+
 echo "Creating custom-format backup"
 docker exec "$NAME" pg_dump -U ftn -d ftn -Fc > "$DUMP"
 test -s "$DUMP"
@@ -126,8 +148,8 @@ test "$approval_event_trigger" = "1"
 schema_version="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT to_regclass('public.event_journal') IS NOT NULL AND to_regclass('public.durable_jobs') IS NOT NULL;")"
 test "$schema_version" = "t"
 
-registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 17;")"
-test "$registry_count" = "7"
+registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 18;")"
+test "$registry_count" = "8"
 
 control_nodes_tenant="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='control_nodes' AND column_name='tenant_id');")"
 test "$control_nodes_tenant" = "t"
