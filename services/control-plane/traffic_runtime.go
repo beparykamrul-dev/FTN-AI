@@ -12,19 +12,31 @@ import (
     "strings"
     "sync"
     "time"
+
+    "github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ManagedEndpoint struct { ServiceID string `json:"service_id"`; CIDR string `json:"cidr"`; Region string `json:"region,omitempty"`; Provider string `json:"provider,omitempty"`; ExpiresAt time.Time `json:"expires_at,omitempty"`; network *net.IPNet }
 type TrafficFlowObservation struct { FlowRecord; ServiceID string `json:"service_id"`; Class TrafficClass `json:"class"`; PathID string `json:"path_id,omitempty"`; Region string `json:"region,omitempty"`; Provider string `json:"provider,omitempty"`; ObservedAt time.Time `json:"observed_at"` }
-type TrafficRuntime struct { mu sync.RWMutex; endpoints []ManagedEndpoint; flows []TrafficFlowObservation; decisions map[string]TrafficDecision; controllers map[string]*TrafficPathController; quality *TrafficQualityStore; listener *FlowListener; activeProbe *TrafficActiveProbe; silk *FTNSiLKStore }
+type TrafficRuntime struct { mu sync.RWMutex; endpoints []ManagedEndpoint; flows []TrafficFlowObservation; decisions map[string]TrafficDecision; controllers map[string]*TrafficPathController; quality *TrafficQualityStore; listener *FlowListener; activeProbe *TrafficActiveProbe; silk *FTNSiLKStore; silkDB *pgxpool.Pool }
 
 func NewTrafficRuntime() *TrafficRuntime {
     runtime := &TrafficRuntime{decisions: make(map[string]TrafficDecision), controllers: make(map[string]*TrafficPathController), quality: NewTrafficQualityStore()}
+    if dsn := strings.TrimSpace(os.Getenv("DATABASE_URL")); dsn != "" {
+        tenantID := strings.TrimSpace(os.Getenv("FTN_SILK_TENANT_ID"))
+        if tenantID != "" {
+            ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+            db, err := pgxpool.New(ctx, dsn)
+            if err == nil { err = db.Ping(ctx) }
+            cancel()
+            if err != nil { if db != nil { db.Close() }; log.Printf("FTN SiLK persistence disabled: database unavailable: %v", err) } else { runtime.silkDB = db; runtime.silk = NewFTNSiLKStore(db, tenantID); log.Printf("FTN SiLK durable flow persistence enabled") }
+        } else { log.Printf("FTN SiLK persistence disabled: FTN_SILK_TENANT_ID is required") }
+    }
     if raw := strings.TrimSpace(os.Getenv("FTN_TRAFFIC_PROBE_TARGETS")); raw != "" {
         interval := durationFromEnv("FTN_TRAFFIC_PROBE_INTERVAL", trafficProbeDefaultInterval)
         timeout := durationFromEnv("FTN_TRAFFIC_PROBE_TIMEOUT", trafficProbeDefaultTimeout)
         probe := NewTrafficActiveProbe(runtime, interval, timeout)
-        if err := probe.Start(context.Background(), trafficProbeTargetsFromEnv); err != nil { log.Printf("FTN active traffic probe disabled: %v") } else { runtime.activeProbe = probe; log.Printf("FTN active traffic probe enabled") }
+        if err := probe.Start(context.Background(), trafficProbeTargetsFromEnv); err != nil { log.Printf("FTN active traffic probe disabled: %v", err) } else { runtime.activeProbe = probe; log.Printf("FTN active traffic probe enabled") }
     }
     return runtime
 }
@@ -55,7 +67,7 @@ func (t *TrafficRuntime) StartActiveProbes(ctx context.Context, targets func(con
     if err := probe.Start(ctx, func() []TrafficProbeTarget { return targets(ctx) }); err != nil { return err }
     t.mu.Lock(); t.activeProbe = probe; t.mu.Unlock(); return nil
 }
-func (t *TrafficRuntime) Close() error { t.mu.RLock(); listener, probe := t.listener, t.activeProbe; t.mu.RUnlock(); var first error; if probe != nil { if err:=probe.Close(); err!=nil { first=err } }; if listener!=nil { if err:=listener.Close(); first==nil { first=err } }; return first }
+func (t *TrafficRuntime) Close() error { t.mu.RLock(); listener, probe, silkDB := t.listener, t.activeProbe, t.silkDB; t.mu.RUnlock(); var first error; if probe != nil { if err:=probe.Close(); err!=nil { first=err } }; if listener!=nil { if err:=listener.Close(); first==nil { first=err } }; if silkDB!=nil { silkDB.Close() }; return first }
 func durationFromEnv(name string, fallback time.Duration) time.Duration { raw:=strings.TrimSpace(os.Getenv(name)); if raw=="" { return fallback }; d,err:=time.ParseDuration(raw); if err!=nil||d<=0{return fallback}; return d }
 func (t *TrafficRuntime) FlowCount() int { t.mu.RLock(); defer t.mu.RUnlock(); return len(t.flows) }
 func (t *TrafficRuntime) UpsertQuality(o TrafficQualityObservation, now time.Time) error { if t.quality==nil{return errors.New("traffic_quality_store_required")}; return t.quality.Upsert(o,now) }
