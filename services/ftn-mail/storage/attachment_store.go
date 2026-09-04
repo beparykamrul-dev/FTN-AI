@@ -2,6 +2,7 @@ package storage
 
 import (
     "context"
+    "crypto/sha256"
     "database/sql"
     "errors"
     "io"
@@ -29,12 +30,17 @@ func (s *Store) GetAttachment(ctx context.Context, identityID, messageID, attach
 }
 
 func (s *Store) StreamAttachment(ctx context.Context, identityID, messageID, attachmentID string, blob *BlobStore, dst io.Writer) (AttachmentMeta, error) {
+    if s == nil || s.DB == nil || blob == nil || dst == nil {
+        return AttachmentMeta{}, errors.New("attachment stream unavailable")
+    }
     a, err := s.GetAttachment(ctx, identityID, messageID, attachmentID)
     if err != nil { return AttachmentMeta{}, err }
-    if blob == nil { return AttachmentMeta{}, errors.New("attachment blob store unavailable") }
     data, err := blob.Get(ctx, a.StorageKey)
     if err != nil { return AttachmentMeta{}, err }
     if int64(len(data)) != a.SizeBytes { return AttachmentMeta{}, errors.New("attachment size integrity check failed") }
+    if len(a.SHA256) != sha256.Size { return AttachmentMeta{}, errors.New("attachment hash metadata invalid") }
+    h := sha256.Sum256(data)
+    if string(h[:]) != string(a.SHA256) { return AttachmentMeta{}, errors.New("attachment hash integrity check failed") }
     if _, err = dst.Write(data); err != nil { return AttachmentMeta{}, err }
     return a, nil
 }
