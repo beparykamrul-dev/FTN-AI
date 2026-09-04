@@ -15,7 +15,8 @@ type rollbackRequest struct {
 }
 
 // rollbackJob schedules the rollback operation; it never mutates network/device state itself.
-// A separate approval is mandatory and must explicitly target this job.
+// A separate approval is mandatory, must explicitly target this job, and must bind
+// the exact rollback payload that will be executed.
 func (a *App) rollbackJob(w http.ResponseWriter, r *http.Request) {
 	if !method(w, r, http.MethodPost) || !requirePermission(a, "job.rollback", w, r) {
 		return
@@ -38,16 +39,17 @@ func (a *App) rollbackJob(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	var jobStatus, approvalStatus, action, approvalAction, approvalResource string
+	var jobStatus, approvalStatus, action, approvalAction, approvalResource, payloadHash string
 	var rollbackPayload []byte
 	err = tx.QueryRow(r.Context(), `
-		select j.status,a.status,j.execution_action,j.rollback_payload::text,a.action,a.resource
+		select j.status,a.status,j.execution_action,j.rollback_payload::text,
+		       a.action,a.resource,coalesce(a.payload_hash,'')
 		from durable_jobs j
 		join change_approvals a on a.id=$3::uuid
 		where j.id=$1::uuid and j.tenant_id=$2::uuid and a.tenant_id=$2::uuid
 		  and a.action='job.rollback' and a.resource=$1::text
 		  and a.status='approved' and (a.expires_at is null or a.expires_at>now())
-	`, id, rc.TenantID, q.ApprovalID).Scan(&jobStatus, &approvalStatus, &action, &rollbackPayload, &approvalAction, &approvalResource)
+	`, id, rc.TenantID, q.ApprovalID).Scan(&jobStatus, &approvalStatus, &action, &rollbackPayload, &approvalAction, &approvalResource, &payloadHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		jsonResponse(w, 404, map[string]string{"error": "job_or_approval_not_found"})
 		return
@@ -66,6 +68,10 @@ func (a *App) rollbackJob(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(rollbackPayload) == 0 {
 		rollbackPayload = []byte(`{}`)
+	}
+	if payloadHash == "" || payloadHash != requestBodyHash(json.RawMessage(rollbackPayload)) {
+		jsonResponse(w, 409, map[string]string{"error": "rollback_payload_mismatch"})
+		return
 	}
 
 	_, err = tx.Exec(r.Context(), `
