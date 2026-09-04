@@ -15,8 +15,10 @@ command -v python3 >/dev/null 2>&1 || fail 'python3 is required'
 ENV_FILE="$ROOT_DIR/.env"
 [ -f "$ENV_FILE" ] || fail '.env is missing; run bootstrap.sh first'
 chmod 600 "$ENV_FILE"
+FTN_ROUTING_NODE="$(sed -n 's/^FTN_ROUTING_NODE=//p' "$ENV_FILE" | tail -n 1)"
+FTN_ROUTING_NODE="${FTN_ROUTING_NODE:-0}"
 
-if [ "${FTN_ROUTING_NODE:-0}" = '1' ]; then
+if [ "$FTN_ROUTING_NODE" = '1' ]; then
   [ -f "$ROOT_DIR/scripts/configure-routing-kernel.sh" ] || fail 'routing kernel configurator is missing'
   log 'Applying routing-node kernel profile (rp_filter=2)'
   bash "$ROOT_DIR/scripts/configure-routing-kernel.sh"
