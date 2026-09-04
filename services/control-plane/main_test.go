@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -39,6 +40,29 @@ func TestServiceRequestValidationRequiresAuthorization(t *testing.T) {
 	a.requests(w, r)
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("expected protected service request endpoint to reject missing authorization context, status=%d", w.Code)
+	}
+}
+
+func TestJSONResponseAlwaysEmitsValidJSON(t *testing.T) {
+	w := httptest.NewRecorder()
+	jsonResponse(w, http.StatusAccepted, map[string]any{
+		"status":        "accepted",
+		"service_id":    "internet",
+		"firmware_push": false,
+		"message":       "request accepted; device changes require authorization",
+	})
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("status=%d", w.Code)
+	}
+	if got := w.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("content type=%q", got)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("response is not valid JSON: %v; body=%q", err, w.Body.String())
+	}
+	if body["status"] != "accepted" || body["service_id"] != "internet" {
+		t.Fatalf("unexpected response body: %#v", body)
 	}
 }
 
