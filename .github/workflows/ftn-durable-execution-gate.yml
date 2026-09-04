@@ -40,14 +40,15 @@ jobs:
           docker compose -f services/control-plane/docker-compose.yml logs control-plane
           exit 1
 
-      - name: Create and approve privileged change
+      - name: Create approval bound to exact job payload
         id: approval
         run: |
           set -euo pipefail
+          payload="{\"source\":\"github-actions\",\"sha\":\"${GITHUB_SHA}\"}"
           approval_body="$(curl --fail --silent --show-error \
             -H "Authorization: Bearer ${FTN_API_AUTH_TOKEN}" \
             -H 'Content-Type: application/json' \
-            -d '{"action":"network.change","resource":"ci/durable-execution","payload":{"source":"github-actions"},"expires_in_seconds":3600}' \
+            -d "{\"action\":\"network.change\",\"resource\":\"ci/durable-execution\",\"payload\":${payload},\"expires_in_seconds\":3600}" \
             http://127.0.0.1:8080/api/v1/approvals)"
           approval_id="$(printf '%s' "$approval_body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["approval_id"])')"
           test -n "$approval_id"
@@ -87,7 +88,7 @@ jobs:
           attempt="$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin)["attempts"])')"
           echo "attempt=$attempt" >> "$GITHUB_OUTPUT"
 
-      - name: Finish job successfully with verification
+      - name: Finish job successfully
         run: |
           set -euo pipefail
           job_id="${{ steps.submit.outputs.job_id }}"
