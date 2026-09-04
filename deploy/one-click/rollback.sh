@@ -33,6 +33,7 @@ done
 [ -f "$previous/deploy/one-click/release-compatibility.sh" ] || fail 'Previous release lacks schema compatibility gate'
 [ -f "$previous/scripts/validate-production-storage.sh" ] || fail 'Previous release lacks production storage validator'
 [ -f "$previous/scripts/validate-production-ports.sh" ] || fail 'Previous release lacks production port validator'
+[ -f "$previous/scripts/validate-production-health.sh" ] || fail 'Previous release lacks production health validator'
 
 chmod 600 "$RELEASE_ROOT/.env"
 log "Current release: $current"
@@ -97,6 +98,8 @@ for compose in "${manifests[@]}"; do
     -f "$compose" up -d --build --remove-orphans
 done
 
+log 'Verifying every restored production service'
+ENV_FILE="$RELEASE_ROOT/.env" bash "$previous/scripts/validate-production-health.sh"
 log 'Verifying restored production stack state'
 for compose in "${manifests[@]}"; do
   docker compose --profile '*' --env-file "$RELEASE_ROOT/.env" -f "$compose" ps
