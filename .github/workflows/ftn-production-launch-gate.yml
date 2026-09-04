@@ -39,6 +39,9 @@ jobs:
           test -f services/control-plane/migrations/006_job_event_automation.sql
           test -f services/control-plane/migrations/017_active_defense_execution.sql
           test -f services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql
+          test -f services/control-plane/migrations/019_tenant_scoped_service_requests.sql
+          test -f services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql
+          test -f services/control-plane/migrations/021_verification_identity.sql
 
       - name: Validate repository
         run: bash scripts/validate-repo.sh
