@@ -1,6 +1,28 @@
 x-ftn-production-stack: true
 
 services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.8
+    restart: unless-stopped
+    profiles: [observability]
+    environment:
+      CLICKHOUSE_DB: ftn_analytics
+      CLICKHOUSE_USER: ${FTN_CLICKHOUSE_USER:-ftn}
+      CLICKHOUSE_PASSWORD: ${FTN_CLICKHOUSE_PASSWORD:?set FTN_CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - ftn-clickhouse:/var/lib/clickhouse
+      - ./clickhouse:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user=$${CLICKHOUSE_USER} --password=$${CLICKHOUSE_PASSWORD} --query='SELECT 1' >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - default
+      - ftn-control-plane
+
   opensearch:
     image: opensearchproject/opensearch:3.8.0
     restart: unless-stopped
@@ -78,6 +100,7 @@ services:
     ports: []
 
 volumes:
+  ftn-clickhouse:
   ftn-opensearch:
   ftn-kopia-config:
   ftn-kopia-cache:
@@ -85,3 +108,8 @@ volumes:
   ftn-kopia-repository:
   ftn-kopia-tmp:
   ftn-kismet-data:
+
+networks:
+  ftn-control-plane:
+    external: true
+    name: ftn-control-plane
