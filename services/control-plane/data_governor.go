@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -48,7 +49,10 @@ func containsSensitiveKey(v any) bool {
 func decodeGovernedJSON(raw json.RawMessage) (map[string]any, error) {
 	if len(bytes.TrimSpace(raw)) == 0 { return map[string]any{}, nil }
 	var v map[string]any
-	if err := json.Unmarshal(raw, &v); err != nil { return nil, err }
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	if err := dec.Decode(&v); err != nil { return nil, err }
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF { return nil, errInvalidGovernedJSON }
 	if containsSensitiveKey(v) { return nil, errSensitiveGovernanceMetadata }
 	return v, nil
 }
@@ -73,8 +77,13 @@ func (a *App) dataGovernor(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) dataRequest(w http.ResponseWriter, r *http.Request) {
 	if !method(w, r, http.MethodPost) { return }
+	const maxDataRequestBody = 256 << 10
+	r.Body = http.MaxBytesReader(w, r.Body, maxDataRequestBody)
 	var req DataRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { jsonResponse(w, http.StatusBadRequest, map[string]string{"error":"invalid_json"}); return }
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&req); err != nil { jsonResponse(w, http.StatusBadRequest, map[string]string{"error":"invalid_json"}); return }
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF { jsonResponse(w, http.StatusBadRequest, map[string]string{"error":"multiple_json_values"}); return }
 	req.AssetID = strings.TrimSpace(req.AssetID)
 	req.RequestType = strings.TrimSpace(req.RequestType)
 	if req.RequestType != "export" && req.RequestType != "deletion" && req.RequestType != "retention_override" && req.RequestType != "classification_change" && req.RequestType != "access" { jsonResponse(w, http.StatusBadRequest, map[string]string{"error":"invalid_request_type"}); return }
@@ -108,5 +117,6 @@ func (a *App) dataRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 var errSensitiveGovernanceMetadata = sensitiveMetadataError{}
+var errInvalidGovernedJSON = errors.New("invalid governed json")
 type sensitiveMetadataError struct{}
 func (s sensitiveMetadataError) Error() string { return "sensitive governance metadata" }
