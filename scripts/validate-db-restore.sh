@@ -31,7 +31,12 @@ docker run -d --name "$NAME" \
   -e POSTGRES_PASSWORD=ci-only-password \
   "$POSTGRES_IMAGE" >/dev/null
 
+ready_deadline=$((SECONDS + 90))
 until docker exec "$NAME" pg_isready -U ftn -d ftn >/dev/null 2>&1; do
+  if (( SECONDS >= ready_deadline )); then
+    echo "PostgreSQL readiness timeout" >&2
+    exit 1
+  fi
   sleep 1
 done
 
@@ -58,9 +63,7 @@ echo "Creating custom-format backup"
 docker exec "$NAME" pg_dump -U ftn -d ftn -Fc > "$DUMP"
 test -s "$DUMP"
 
-# Restore into a clean database in the same isolated PostgreSQL instance.
 docker exec "$NAME" createdb -U ftn ftn_restore
-
 docker exec -i "$NAME" pg_restore -U ftn -d ftn_restore --exit-on-error < "$DUMP"
 
 after="$(docker exec "$NAME" psql -At -U ftn -d ftn_restore -c "SELECT count(*) FROM tenants WHERE slug='ci-restore';")"
