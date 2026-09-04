@@ -7,7 +7,8 @@ import (
 )
 
 // IngestObservations is the timestamp-preserving ingestion path for imported
-// flow sources such as nfcapd. Live collectors may continue using Ingest().
+// flow sources such as nfcapd. Subscriber/main-server identity comes only from
+// the managed endpoint registry; imported payloads cannot override it.
 func (t *TrafficRuntime) IngestObservations(ctx context.Context, observations []FlowObservation) int {
 	if t == nil || len(observations) == 0 { return 0 }
 	if ctx == nil { ctx = context.Background() }
@@ -17,6 +18,10 @@ func (t *TrafficRuntime) IngestObservations(ctx context.Context, observations []
 		obs, ok := t.Classify(o.FlowRecord, o.ObservedAt)
 		if !ok { continue }
 		obs.ObservedAt = o.ObservedAt.UTC()
+		obs.FirstSeen = o.FirstSeen.UTC()
+		obs.LastSeen = o.LastSeen.UTC()
+		if obs.FirstSeen.IsZero() { obs.FirstSeen = obs.ObservedAt }
+		if obs.LastSeen.IsZero() { obs.LastSeen = obs.ObservedAt }
 		accepted = append(accepted, obs)
 	}
 	if len(accepted) == 0 { return 0 }
@@ -33,15 +38,17 @@ func (t *TrafficRuntime) IngestObservations(ctx context.Context, observations []
 	t.mu.Unlock()
 
 	if silk != nil {
-		byService := make(map[string][]FlowObservation)
+		type groupKey struct { serviceID, subscriberID, mainServerID string }
+		groups := make(map[groupKey][]FlowObservation)
 		for _, f := range accepted {
-			o, err := normalizeFlowObservation(f.FlowRecord, f.ObservedAt, time.Time{}, time.Time{})
+			o, err := normalizeFlowObservation(f.FlowRecord, f.ObservedAt, f.FirstSeen, f.LastSeen)
 			if err != nil { continue }
-			byService[f.ServiceID] = append(byService[f.ServiceID], o)
+			key := groupKey{serviceID: f.ServiceID, subscriberID: f.SubscriberID, mainServerID: f.MainServerID}
+			groups[key] = append(groups[key], o)
 		}
-		for serviceID, batch := range byService {
-			if err := silk.InsertBatchObservations(ctx, batch, serviceID, "", ""); err != nil {
-				log.Printf("FTN SiLK imported flow persistence failed for service %s: %v", serviceID, err)
+		for key, batch := range groups {
+			if err := silk.InsertBatchObservations(ctx, batch, key.serviceID, key.subscriberID, key.mainServerID); err != nil {
+				log.Printf("FTN SiLK imported flow persistence failed for service %s: %v", key.serviceID, err)
 			}
 		}
 	}
