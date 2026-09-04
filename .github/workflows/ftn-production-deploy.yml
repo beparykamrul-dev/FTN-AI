@@ -30,6 +30,7 @@ jobs:
           test -x scripts/preflight.sh
           test -x scripts/validate-repo.sh
           test -f deploy/one-click/rollback.sh
+          test -f deploy/one-click/release-compatibility.sh
           test -f services/control-plane/docker-compose.yml
           test -f services/control-plane/schema.sql
           test -f services/control-plane/scripts/validate_migrations.sh
@@ -125,8 +126,8 @@ jobs:
             "$FTN_PRODUCTION_USER@$FTN_PRODUCTION_HOST" \
             'set -euo pipefail; curl --fail --silent --show-error http://127.0.0.1:8080/healthz; curl --fail --silent --show-error http://127.0.0.1:8080/readyz'
 
-      - name: Roll back application release on activation failure
-        if: failure() && steps.activate.outcome == 'failure'
+      - name: Roll back application release on activation or health failure
+        if: failure() && (steps.activate.outcome == 'failure' || steps.health.outcome == 'failure')
         env:
           FTN_PRODUCTION_HOST: ${{ secrets.FTN_PRODUCTION_HOST }}
           FTN_PRODUCTION_USER: ${{ secrets.FTN_PRODUCTION_USER }}
