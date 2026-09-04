@@ -3,7 +3,9 @@
     cache 300
     health :8080
     prometheus :9153
-    forward . ftn-unbound:53
+    forward . ftn-unbound:53 {
+        max_concurrent 1000
+    }
     loop
     reload
 }
