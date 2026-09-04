@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/production-compose-env.sh"
 
 log(){ printf '[FTN][PREFLIGHT] %s\n' "$*"; }
 fail(){ printf '[FTN][PREFLIGHT][ERROR] %s\n' "$*" >&2; exit 1; }
@@ -27,14 +28,18 @@ mapfile -t manifests < <(find "$ROOT_DIR" -type f \( -name 'docker-compose.yml' 
 
 for compose in "${manifests[@]}"; do
   log "Compose syntax/config: ${compose#$ROOT_DIR/}"
-  docker compose --profile '*' --env-file "$ENV_FILE" -f "$compose" config --quiet
-  if grep -Eiq '(password|secret|token|api[_-]?key)[[:space:]]*:[[:space:]]*(["'"']?)([^$][^[:space:]"'"']+)' "$compose"; then
+  docker compose --env-file "$ENV_FILE" -f "$compose" config --quiet
+  if grep -Eiq '(password|secret|token|api[_-]?key)[[:space:]]*:[[:space:]]*([\"'"'"']?)([^$][^[:space:]\"'"'"']+)' "$compose"; then
     fail "possible hard-coded credential in ${compose#$ROOT_DIR/}; use environment substitution"
   fi
 done
 
-# Required migration/deployment primitives must exist before any live mutation.
 for path in \
+  scripts/production-compose-env.sh \
+  scripts/validate-production-storage.sh \
+  scripts/validate-production-ports.sh \
+  scripts/validate-host-port-ownership.sh \
+  scripts/validate-production-health.sh \
   services/control-plane/scripts/migrate.sh \
   services/control-plane/migrations/024_execution_immutability_backfill.sql \
   services/control-plane/tests/sql/024_execution_integrity_state_machine.sql \
@@ -42,5 +47,9 @@ for path in \
   [ -f "$ROOT_DIR/$path" ] || fail "required deployment artifact missing: $path"
 done
 
+log 'Validating production host process port ownership'
+ENV_FILE="$ENV_FILE" bash "$ROOT_DIR/scripts/validate-host-port-ownership.sh"
+
 log "Production manifests: ${#manifests[@]}"
+log "Production Compose profiles: ${COMPOSE_PROFILES:-none}"
 log 'Preflight PASS'
