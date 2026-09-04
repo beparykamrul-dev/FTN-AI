@@ -96,7 +96,7 @@ func (a *App) dataRequest(w http.ResponseWriter, r *http.Request) {
 	approvalPayload := map[string]any{"asset_id": req.AssetID, "request_type": req.RequestType, "request_json": payload}
 	hash := requestScopedHash(r, approvalPayload)
 	var approvalID string
-	err = a.db.QueryRow(r.Context(), `INSERT INTO change_approvals(tenant_id,requested_by,action,resource,request_hash,status,expires_at) VALUES($1,$2,$3,$4,$5,'pending',now()+interval '1 hour') ON CONFLICT(request_hash) DO UPDATE SET updated_at=now() WHERE change_approvals.tenant_id=$1 RETURNING id::text`, rc.TenantID, rc.PrincipalID, approvalAction, approvalResource, hash).Scan(&approvalID)
+	err = a.db.QueryRow(r.Context(), `INSERT INTO change_approvals(tenant_id,requested_by,action,resource,request_hash,status,expires_at) VALUES($1,$2,$3,$4,$5,'pending',now()+interval '1 hour') ON CONFLICT(tenant_id,request_hash) DO UPDATE SET updated_at=now() RETURNING id::text`, rc.TenantID, rc.PrincipalID, approvalAction, approvalResource, hash).Scan(&approvalID)
 	if err != nil { jsonResponse(w, http.StatusInternalServerError, map[string]string{"error":"approval_persist_failed"}); return }
 	encoded, _ := json.Marshal(payload)
 	var id string
