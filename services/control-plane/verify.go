@@ -87,7 +87,7 @@ func (a *App) verifyJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err = tx.Exec(r.Context(), `update durable_jobs set verification_payload=$2::jsonb,last_error='',updated_at=now() where id=$1::uuid and tenant_id=$3::uuid`, id, string(in.Result), rc.TenantID); err != nil {
+	if _, err = tx.Exec(r.Context(), `update durable_jobs set verification_payload=$2::jsonb,verified_by=$3::uuid,last_error='',updated_at=now() where id=$1::uuid and tenant_id=$4::uuid`, id, string(in.Result), rc.PrincipalID, rc.TenantID); err != nil {
 		jsonResponse(w, 500, map[string]string{"error": "verification_update_failed"})
 		return
 	}
