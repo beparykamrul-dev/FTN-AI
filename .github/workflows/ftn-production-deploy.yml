@@ -54,10 +54,37 @@ jobs:
             -not -path './.git/*' -not -path '*/node_modules/*' -print0 | \
             xargs -0 -r grep -El 'FTN_PRODUCTION_STACK=true|x-ftn-production-stack:[[:space:]]*true' | sort)
           test "${#manifests[@]}" -gt 0
+          tmp_ports="$(mktemp)"
+          trap 'rm -f "$tmp_ports"' EXIT
           for compose in "${manifests[@]}"; do
             echo "Validating $compose"
-            docker compose --profile '*' --env-file <(env) -f "$compose" config --quiet
+            rendered="$(mktemp)"
+            docker compose --profile '*' --env-file <(env) -f "$compose" config --format json > "$rendered"
+            python3 - "$rendered" "$compose" <<'PY' >> "$tmp_ports"
+import json, sys
+with open(sys.argv[1], encoding='utf-8') as f:
+    data=json.load(f)
+for service, spec in data.get('services', {}).items():
+    for port in spec.get('ports', []) or []:
+        if isinstance(port, dict) and port.get('published') is not None:
+            host_ip = port.get('host_ip') or '0.0.0.0'
+            print(f"{host_ip}|{port['published']}|{port.get('protocol','tcp')}|{service}|{sys.argv[2]}")
+PY
+            rm -f "$rendered"
           done
+          python3 - "$tmp_ports" <<'PY'
+import sys
+rows=[]
+with open(sys.argv[1], encoding='utf-8') as f:
+    for line in f:
+        parts=line.rstrip('\n').split('|', 4)
+        if len(parts)==5:
+            rows.append(parts)
+for i, a in enumerate(rows):
+    for b in rows[i+1:]:
+        if a[1:] and a[1] == b[1] and a[2] == b[2] and (a[0] == b[0] or a[0] in ('0.0.0.0','::') or b[0] in ('0.0.0.0','::')):
+            raise SystemExit(f"duplicate production host binding: {a[0]}:{a[1]}/{a[2]} ({a[3]} in {a[4]}) conflicts with {b[0]}:{b[1]}/{b[2]} ({b[3]} in {b[4]})")
+PY
 
       - name: Configure SSH
         env:
@@ -106,14 +133,7 @@ jobs:
           set -euo pipefail
           ssh -i ~/.ssh/ftn_deploy_key -p "$FTN_SSH_PORT" -o BatchMode=yes \
             "$FTN_PRODUCTION_USER@$FTN_PRODUCTION_HOST" \
-            "set -euo pipefail; \
-             test -f '$FTN_RELEASE_ROOT/.env'; \
-             mkdir -p '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}'; \
-             tar -xzf '$FTN_RELEASE_ROOT/releases/ftn-ai-${GITHUB_SHA}.tar.gz' -C '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}'; \
-             ln -sfn '$FTN_RELEASE_ROOT/.env' '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}/.env'; \
-             ln -sfn '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}' '$FTN_RELEASE_ROOT/current'; \
-             cd '$FTN_RELEASE_ROOT/current'; \
-             sudo -n bash deploy/one-click/live.sh"
+            "set -euo pipefail; test -f '$FTN_RELEASE_ROOT/.env'; mkdir -p '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}'; tar -xzf '$FTN_RELEASE_ROOT/releases/ftn-ai-${GITHUB_SHA}.tar.gz' -C '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}'; ln -sfn '$FTN_RELEASE_ROOT/.env' '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}/.env'; ln -sfn '$FTN_RELEASE_ROOT/releases/${GITHUB_SHA}' '$FTN_RELEASE_ROOT/current'; cd '$FTN_RELEASE_ROOT/current'; sudo -n bash deploy/one-click/live.sh"
 
       - name: Production health check
         id: health
