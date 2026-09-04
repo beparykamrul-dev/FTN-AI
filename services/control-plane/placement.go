@@ -50,7 +50,7 @@ func nodeHasService(n Node, serviceID string) bool {
 }
 
 func validNode(n Node) bool {
-	return n.ID != "" && n.Provider != "" && n.CPUPercent >= 0 && n.CPUPercent <= 100 &&
+	return strings.TrimSpace(n.ID) != "" && strings.TrimSpace(n.Provider) != "" && n.CPUPercent >= 0 && n.CPUPercent <= 100 &&
 		n.RAMPercent >= 0 && n.RAMPercent <= 100 && n.SSDPercent >= 0 && n.SSDPercent <= 100 &&
 		n.HDDPercent >= 0 && n.HDDPercent <= 100 && n.NetMbps >= 0 && n.LatencyMs >= 0 &&
 		n.PacketLoss >= 0 && n.PacketLoss <= 100
@@ -69,6 +69,7 @@ func nodeScore(n Node, req PlacementRequest) float64 {
 	if !n.Healthy || !nodeHasService(n, req.ServiceID) {
 		return -1
 	}
+	// ExRouter changes the traffic path only; it never replaces or migrates a service.
 	score := 100.0 - n.CPUPercent*.20 - n.RAMPercent*.20 - n.SSDPercent*.10 - n.HDDPercent*.05 - n.LatencyMs*.50 - n.PacketLoss*2
 	if req.Region != "" && strings.EqualFold(req.Region, n.Region) {
 		score += 20
@@ -161,7 +162,7 @@ func (a *App) registerNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var n Node
-	if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 256<<10)).Decode(&n); err != nil {
 		jsonResponse(w, 400, map[string]string{"error": "invalid_json"})
 		return
 	}
@@ -195,7 +196,12 @@ func (a *App) placement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req PlacementRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ServiceID == "" {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10)).Decode(&req); err != nil {
+		jsonResponse(w, 400, map[string]string{"error": "invalid_json"})
+		return
+	}
+	req.ServiceID, req.Region, req.Provider = strings.TrimSpace(req.ServiceID), strings.TrimSpace(req.Region), strings.TrimSpace(req.Provider)
+	if req.ServiceID == "" {
 		jsonResponse(w, 400, map[string]string{"error": "service_id_required"})
 		return
 	}
