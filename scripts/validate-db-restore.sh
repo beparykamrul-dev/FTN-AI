@@ -21,7 +21,6 @@ for required in \
   services/control-plane/migrations/004_approval_execution.sql \
   services/control-plane/migrations/005_job_integrity_leases.sql \
   services/control-plane/migrations/006_job_event_automation.sql \
-  services/control-plane/migrations/006_job_event_triggers.sql \
   services/control-plane/migrations/007_qkd_security.sql \
   services/control-plane/migrations/008_data_governor.sql \
   services/control-plane/migrations/009_data_governance_controls.sql \
@@ -31,7 +30,8 @@ for required in \
   services/control-plane/migrations/013_approval_payload_binding.sql \
   services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
   services/control-plane/migrations/015_approval_event_trigger.sql \
-  services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql; do
+  services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql \
+  services/control-plane/migrations/017_active_defense_execution.sql; do
   test -f "$required"
 done
 
@@ -58,7 +58,6 @@ for migration in \
   services/control-plane/migrations/004_approval_execution.sql \
   services/control-plane/migrations/005_job_integrity_leases.sql \
   services/control-plane/migrations/006_job_event_automation.sql \
-  services/control-plane/migrations/006_job_event_triggers.sql \
   services/control-plane/migrations/007_qkd_security.sql \
   services/control-plane/migrations/008_data_governor.sql \
   services/control-plane/migrations/009_data_governance_controls.sql \
@@ -68,7 +67,8 @@ for migration in \
   services/control-plane/migrations/013_approval_payload_binding.sql \
   services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
   services/control-plane/migrations/015_approval_event_trigger.sql \
-  services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql; do
+  services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql \
+  services/control-plane/migrations/017_active_defense_execution.sql; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
@@ -89,10 +89,17 @@ SELECT id, 'ci-shared-key', 'ci.test', 'ci-restore-a'
 FROM tenants WHERE slug='ci-restore'
 ON CONFLICT DO NOTHING;
 INSERT INTO durable_jobs(tenant_id, idempotency_key, job_type, correlation_id)
+SELECT id, 'ci-shared-key', 'ci.test', 'ci-restore-a-replay'
+FROM tenants WHERE slug='ci-restore'
+ON CONFLICT DO NOTHING;
+INSERT INTO durable_jobs(tenant_id, idempotency_key, job_type, correlation_id)
 SELECT id, 'ci-shared-key', 'ci.test', 'ci-restore-b'
 FROM tenants WHERE slug='ci-restore-b'
 ON CONFLICT DO NOTHING;
 SQL
+
+same_tenant_jobs="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM durable_jobs WHERE tenant_id=(SELECT id FROM tenants WHERE slug='ci-restore') AND idempotency_key LIKE '%:ci-shared-key';")"
+test "$same_tenant_jobs" = "1"
 
 scoped_jobs="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM durable_jobs WHERE idempotency_key LIKE '%:ci-shared-key' AND tenant_id IN (SELECT id FROM tenants WHERE slug IN ('ci-restore','ci-restore-b'));" )"
 test "$scoped_jobs" = "2"
@@ -119,8 +126,8 @@ test "$approval_event_trigger" = "1"
 schema_version="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT to_regclass('public.event_journal') IS NOT NULL AND to_regclass('public.durable_jobs') IS NOT NULL;")"
 test "$schema_version" = "t"
 
-registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 16;")"
-test "$registry_count" = "6"
+registry_count="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 17;")"
+test "$registry_count" = "7"
 
 control_nodes_tenant="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='control_nodes' AND column_name='tenant_id');")"
 test "$control_nodes_tenant" = "t"
@@ -130,5 +137,8 @@ test "$approval_payload" = "t"
 
 approval_scoped_unique="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='change_approvals_tenant_request_hash_uq');")"
 test "$approval_scoped_unique" = "t"
+
+active_defense="$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT to_regclass('public.active_defense_executions') IS NOT NULL;")"
+test "$active_defense" = "t"
 
 echo "PostgreSQL migration + backup + restore validation passed."
