@@ -22,6 +22,9 @@ func NewFTNRoutedEventBridge(sink FTNBGPEventSink) *FTNRoutedEventBridge {
 }
 
 func (b *FTNRoutedEventBridge) PeerState(ctx context.Context, peer string, asn uint32, established bool) error {
+	if b == nil || ctx == nil {
+		return fmt.Errorf("bridge and context are required")
+	}
 	if peer == "" || asn == 0 {
 		return fmt.Errorf("peer and ASN are required")
 	}
@@ -41,8 +44,14 @@ func (b *FTNRoutedEventBridge) PeerState(ctx context.Context, peer string, asn u
 }
 
 func (b *FTNRoutedEventBridge) BFDState(ctx context.Context, peer string, state FTNBFDState) error {
+	if b == nil || ctx == nil {
+		return fmt.Errorf("bridge and context are required")
+	}
 	if peer == "" {
 		return fmt.Errorf("peer is required")
+	}
+	if _, err := netip.ParseAddr(peer); err != nil {
+		return fmt.Errorf("invalid peer address: %w", err)
 	}
 	switch state {
 	case FTNBFDUp, FTNBFDDown, FTNBFDUnknown:
@@ -62,6 +71,9 @@ func (b *FTNRoutedEventBridge) BFDState(ctx context.Context, peer string, state 
 }
 
 func (b *FTNRoutedEventBridge) RouteEvent(ctx context.Context, prefix string, added bool) error {
+	if b == nil || ctx == nil {
+		return fmt.Errorf("bridge and context are required")
+	}
 	p, err := netip.ParsePrefix(prefix)
 	if err != nil {
 		return fmt.Errorf("invalid prefix: %w", err)
@@ -75,6 +87,12 @@ func (b *FTNRoutedEventBridge) RouteEvent(ctx context.Context, prefix string, ad
 }
 
 func (b *FTNRoutedEventBridge) Eligible(peer string) bool {
+	if b == nil {
+		return false
+	}
+	if _, err := netip.ParseAddr(peer); err != nil {
+		return false
+	}
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	bgp, ok := b.peers[peer]
@@ -83,6 +101,9 @@ func (b *FTNRoutedEventBridge) Eligible(peer string) bool {
 }
 
 func (b *FTNRoutedEventBridge) publish(ctx context.Context, event FTNBGPEvent) error {
+	if b == nil || ctx == nil {
+		return fmt.Errorf("bridge and context are required")
+	}
 	if b.sink == nil {
 		return nil
 	}
