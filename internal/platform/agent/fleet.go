@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 )
 
-// Scope identifies who or what an FTN agent is serving.
 type Scope struct {
 	ServiceID string
 	UserID    string
@@ -15,44 +15,35 @@ type Scope struct {
 	TenantID  string
 }
 
-// Mode identifies the agent responsibility without creating separate runtimes.
 type Mode string
 
 const (
-	ModeService    Mode = "service"
-	ModeUser       Mode = "user"
-	ModeDeveloper  Mode = "developer"
-	ModeAssistant  Mode = "assistant"
+	ModeService   Mode = "service"
+	ModeUser      Mode = "user"
+	ModeDeveloper Mode = "developer"
+	ModeAssistant Mode = "assistant"
 )
 
-// Request is the normalized input passed to an agent.
 type Request struct {
 	Scope Scope
 	Mode  Mode
 	Input string
 }
 
-// Response is deliberately provider-neutral so local models can be used without
-// changing the service/user/developer agent layer.
 type Response struct {
-	Text       string
+	Text          string
 	NeedsApproval bool
-	Action     string
+	Action        string
 }
 
-// Runtime is the local/private intelligence boundary. Implementations may use
-// an FTN-hosted model, rules engine, retrieval system, or another approved backend.
 type Runtime interface {
 	Run(ctx context.Context, request Request) (Response, error)
 }
 
-// Policy prevents a conversational agent from silently executing side effects.
 type Policy interface {
 	Allow(ctx context.Context, request Request, response Response) error
 }
 
-// Fleet provides one logical agent identity per service/user scope while sharing
-// the same runtime, policy, memory, and tool infrastructure.
 type Fleet struct {
 	runtime Runtime
 	policy  Policy
@@ -70,8 +61,22 @@ func NewFleet(runtime Runtime, policy Policy) (*Fleet, error) {
 }
 
 func (f *Fleet) Handle(ctx context.Context, request Request) (Response, error) {
+	if f == nil {
+		return Response{}, errors.New("agent fleet is required")
+	}
+	if ctx == nil {
+		return Response{}, errors.New("context is required")
+	}
+	request.Scope.ServiceID = strings.TrimSpace(request.Scope.ServiceID)
+	request.Scope.UserID = strings.TrimSpace(request.Scope.UserID)
+	request.Scope.Role = strings.TrimSpace(request.Scope.Role)
+	request.Scope.TenantID = strings.TrimSpace(request.Scope.TenantID)
 	if request.Scope.ServiceID == "" && request.Scope.UserID == "" {
 		return Response{}, errors.New("service_id or user_id is required")
+	}
+	request.Input = strings.TrimSpace(request.Input)
+	if request.Input == "" {
+		return Response{}, errors.New("input is required")
 	}
 	if request.Mode == "" {
 		request.Mode = ModeAssistant
@@ -80,7 +85,9 @@ func (f *Fleet) Handle(ctx context.Context, request Request) (Response, error) {
 	runtime := f.runtime
 	policy := f.policy
 	f.mu.RUnlock()
-
+	if runtime == nil || policy == nil {
+		return Response{}, errors.New("agent fleet dependencies unavailable")
+	}
 	response, err := runtime.Run(ctx, request)
 	if err != nil {
 		return Response{}, fmt.Errorf("agent runtime: %w", err)
