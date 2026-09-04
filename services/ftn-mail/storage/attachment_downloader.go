@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"io"
 )
@@ -17,7 +18,7 @@ type AttachmentDownloader struct {
 }
 
 func (d *AttachmentDownloader) Stream(ctx context.Context, identityID, messageID, attachmentID string, dst io.Writer) (AttachmentMeta, error) {
-	if d == nil || d.Store == nil || d.Blob == nil {
+	if d == nil || d.Store == nil || d.Blob == nil || dst == nil {
 		return AttachmentMeta{}, errors.New("attachment downloader unavailable")
 	}
 	a, err := d.Store.GetAttachment(ctx, identityID, messageID, attachmentID)
@@ -30,6 +31,13 @@ func (d *AttachmentDownloader) Stream(ctx context.Context, identityID, messageID
 	}
 	if int64(len(data)) != a.SizeBytes {
 		return AttachmentMeta{}, errors.New("attachment size integrity check failed")
+	}
+	if len(a.SHA256) != sha256.Size {
+		return AttachmentMeta{}, errors.New("attachment hash metadata invalid")
+	}
+	h := sha256.Sum256(data)
+	if string(h[:]) != string(a.SHA256) {
+		return AttachmentMeta{}, errors.New("attachment hash integrity check failed")
 	}
 	if _, err := dst.Write(data); err != nil {
 		return AttachmentMeta{}, err
