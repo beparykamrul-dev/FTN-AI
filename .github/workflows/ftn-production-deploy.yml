@@ -44,16 +44,19 @@ jobs:
           FTN_DEPLOY_SSH_KEY: ${{ secrets.FTN_DEPLOY_SSH_KEY }}
           FTN_PRODUCTION_HOST: ${{ secrets.FTN_PRODUCTION_HOST }}
           FTN_PRODUCTION_PORT: ${{ secrets.FTN_PRODUCTION_PORT }}
+          FTN_PRODUCTION_KNOWN_HOSTS: ${{ secrets.FTN_PRODUCTION_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
           test -n "$FTN_DEPLOY_SSH_KEY"
           test -n "$FTN_PRODUCTION_HOST"
+          test -n "$FTN_PRODUCTION_KNOWN_HOSTS"
           port="${FTN_PRODUCTION_PORT:-22}"
           umask 077
           mkdir -p ~/.ssh
           printf '%s\n' "$FTN_DEPLOY_SSH_KEY" > ~/.ssh/ftn_deploy_key
           ssh-keygen -y -f ~/.ssh/ftn_deploy_key >/dev/null
-          ssh-keyscan -p "$port" -H "$FTN_PRODUCTION_HOST" >> ~/.ssh/known_hosts
+          printf '%s\n' "$FTN_PRODUCTION_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh-keygen -F "$FTN_PRODUCTION_HOST" -f ~/.ssh/known_hosts >/dev/null
           echo "FTN_SSH_PORT=$port" >> "$GITHUB_ENV"
 
       - name: Package release
