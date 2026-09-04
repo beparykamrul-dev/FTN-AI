@@ -19,7 +19,7 @@ BEGIN
     ELSE 'approval.state.changed'
   END;
 
-  PERFORM pg_advisory_xact_lock(hashtext(COALESCE(NEW.tenant_id::text, '')));
+  PERFORM pg_advisory_xact_lock(hashtextextended(COALESCE(NEW.tenant_id::text, ''), 0));
 
   INSERT INTO event_journal(
     tenant_id, event_type, sequence, correlation_id, causation_id,
