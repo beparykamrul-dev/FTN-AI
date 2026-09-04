@@ -30,6 +30,7 @@ jobs:
           test -x scripts/preflight.sh
           test -x scripts/validate-repo.sh
           test -x scripts/validate-production-storage.sh
+          test -f scripts/validate-production-ports.sh
           test -x scripts/validate-db-restore.sh
           test -f deploy/one-click/rollback.sh
           test -f deploy/one-click/release-compatibility.sh
@@ -45,7 +46,7 @@ jobs:
       - name: Validate production database restore path
         run: bash scripts/validate-db-restore.sh
 
-      - name: Validate production Compose manifests
+      - name: Validate production Compose manifests and host ports
         env:
           FTN_DB_PASSWORD: ci-only-password
           FTN_API_AUTH_TOKEN: ci-only-token
@@ -59,37 +60,11 @@ jobs:
             -not -path './.git/*' -not -path '*/node_modules/*' -print0 | \
             xargs -0 -r grep -El 'FTN_PRODUCTION_STACK=true|x-ftn-production-stack:[[:space:]]*true' | sort)
           test "${#manifests[@]}" -gt 0
-          tmp_ports="$(mktemp)"
-          trap 'rm -f "$tmp_ports"' EXIT
           for compose in "${manifests[@]}"; do
             echo "Validating $compose"
-            rendered="$(mktemp)"
-            docker compose --profile '*' --env-file <(env) -f "$compose" config --format json > "$rendered"
-            python3 - "$rendered" "$compose" <<'PY' >> "$tmp_ports"
-import json, sys
-with open(sys.argv[1], encoding='utf-8') as f:
-    data=json.load(f)
-for service, spec in data.get('services', {}).items():
-    for port in spec.get('ports', []) or []:
-        if isinstance(port, dict) and port.get('published') is not None:
-            host_ip = port.get('host_ip') or '0.0.0.0'
-            print(f"{host_ip}|{port['published']}|{port.get('protocol','tcp')}|{service}|{sys.argv[2]}")
-PY
-            rm -f "$rendered"
+            docker compose --profile '*' --env-file <(env) -f "$compose" config --quiet
           done
-          python3 - "$tmp_ports" <<'PY'
-import sys
-rows=[]
-with open(sys.argv[1], encoding='utf-8') as f:
-    for line in f:
-        parts=line.rstrip('\n').split('|', 4)
-        if len(parts)==5:
-            rows.append(parts)
-for i, a in enumerate(rows):
-    for b in rows[i+1:]:
-        if a[1] == b[1] and a[2] == b[2] and (a[0] == b[0] or a[0] in ('0.0.0.0','::') or b[0] in ('0.0.0.0','::')):
-            raise SystemExit(f"duplicate production host binding: {a[0]}:{a[1]}/{a[2]} ({a[3]} in {a[4]}) conflicts with {b[0]}:{b[1]}/{b[2]} ({b[3]} in {b[4]})")
-PY
+          bash scripts/validate-production-ports.sh
 
       - name: Configure SSH
         env:
