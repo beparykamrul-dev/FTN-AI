@@ -22,11 +22,13 @@ func NewFTNGoBGPServer() *FTNGoBGPServer {
 }
 
 func (g *FTNGoBGPServer) Start(ctx context.Context, asn uint32, routerID string) error {
+	if ctx == nil { return fmt.Errorf("context is required") }
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	if g.server == nil { return fmt.Errorf("GoBGP server is unavailable") }
 	if g.started { return fmt.Errorf("GoBGP server already started") }
 	if asn == 0 { return fmt.Errorf("local ASN is required") }
-	if _, err := netip.ParseAddr(routerID); err != nil { return fmt.Errorf("invalid router-id: %w", err) }
+	addr, err := netip.ParseAddr(routerID); if err != nil || !addr.Is4() { return fmt.Errorf("invalid IPv4 router-id") }
 	go g.server.Serve()
 	if err := g.server.StartBgp(ctx, &api.StartBgpRequest{Global: &api.Global{Asn: asn, RouterId: routerID}}); err != nil { return err }
 	g.started = true
@@ -35,23 +37,31 @@ func (g *FTNGoBGPServer) Start(ctx context.Context, asn uint32, routerID string)
 
 func (g *FTNGoBGPServer) Stop() error {
 	g.mu.Lock(); defer g.mu.Unlock()
+	if g.server == nil { return fmt.Errorf("GoBGP server is unavailable") }
 	if !g.started { return nil }
-	if err := g.server.StopBgp(context.Background(), &api.StopBgpRequest{}); err != nil { return err }
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := g.server.StopBgp(ctx, &api.StopBgpRequest{}); err != nil { return err }
 	g.started = false
 	return nil
 }
 
 func (g *FTNGoBGPServer) AddPeer(ctx context.Context, address string, asn uint32) error {
 	g.mu.RLock(); defer g.mu.RUnlock()
+	if g.server == nil { return fmt.Errorf("GoBGP server is unavailable") }
 	if !g.started { return fmt.Errorf("GoBGP server is not started") }
-	if _, err := netip.ParseAddr(address); err != nil { return fmt.Errorf("invalid peer address: %w", err) }
+	if ctx == nil { return fmt.Errorf("context is required") }
+	addr, err := netip.ParseAddr(address); if err != nil { return fmt.Errorf("invalid peer address: %w", err) }
+	if !addr.Is4() && !addr.Is6() { return fmt.Errorf("invalid peer address") }
 	if asn == 0 { return fmt.Errorf("peer ASN is required") }
-	return g.server.AddPeer(ctx, &api.AddPeerRequest{Peer: &api.Peer{Conf: &api.PeerConf{NeighborAddress: address, PeerAsn: asn}}})
+	return g.server.AddPeer(ctx, &api.AddPeerRequest{Peer: &api.Peer{Conf: &api.PeerConf{NeighborAddress: addr.String(), PeerAsn: asn}}})
 }
 
 func (g *FTNGoBGPServer) AdvertiseIPv4Prefix(ctx context.Context, prefix string, nextHop string) error {
 	g.mu.RLock(); defer g.mu.RUnlock()
+	if g.server == nil { return fmt.Errorf("GoBGP server is unavailable") }
 	if !g.started { return fmt.Errorf("GoBGP server is not started") }
+	if ctx == nil { return fmt.Errorf("context is required") }
 	p, err := netip.ParsePrefix(prefix); if err != nil { return fmt.Errorf("invalid prefix: %w", err) }
 	p = p.Masked()
 	nh, err := netip.ParseAddr(nextHop); if err != nil { return fmt.Errorf("invalid next-hop: %w", err) }
@@ -68,7 +78,9 @@ func (g *FTNGoBGPServer) AdvertiseIPv4Prefix(ctx context.Context, prefix string,
 // ListIPv4Routes returns a normalized local GoBGP RIB snapshot.
 func (g *FTNGoBGPServer) ListIPv4Routes(ctx context.Context) ([]FTNRoute, error) {
 	g.mu.RLock(); defer g.mu.RUnlock()
+	if g.server == nil { return nil, fmt.Errorf("GoBGP server is unavailable") }
 	if !g.started { return nil, fmt.Errorf("GoBGP server is not started") }
+	if ctx == nil { return nil, fmt.Errorf("context is required") }
 	family := &api.Family{Afi: api.Family_AFI_IP, Safi: api.Family_SAFI_UNICAST}
 	routes := make([]FTNRoute, 0)
 	err := g.server.ListPath(ctx, &api.ListPathRequest{TableType: api.TableType_GLOBAL, Family: family}, func(destination *api.Destination) {
