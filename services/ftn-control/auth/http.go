@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 )
@@ -20,8 +21,18 @@ func SignInHandler(service *Service, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	if service == nil {
+		http.Error(w, "authentication unavailable", http.StatusServiceUnavailable)
+		return
+	}
 	var req SignInRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10)).Decode(&req); err != nil {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10))
+	if err := dec.Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
