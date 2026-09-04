@@ -3,6 +3,7 @@ package builder
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 )
 
@@ -12,8 +13,8 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	if err := dec.Decode(dst); err != nil { return err }
 	var extra any
-	if err := dec.Decode(&extra); err != nil && !errors.Is(err, json.ErrSyntax) && err.Error() != "EOF" { return err }
-	if extra != nil { return errors.New("request must contain one JSON object") }
+	if err := dec.Decode(&extra); err != nil && !errors.Is(err, io.EOF) { return err }
+	if extra != nil { return errors.New("request must contain one JSON value") }
 	return nil
 }
 
