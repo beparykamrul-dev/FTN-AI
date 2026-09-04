@@ -20,15 +20,11 @@ type GlobalPathSample struct {
 	ObservedAt  time.Time
 }
 
-// PathScore is a normalized score where lower is better. The score combines
-// latency, jitter, loss and congestion so DNS is not the only optimization
-// target; application and backbone traffic use the same path-selection model.
 type PathScore struct {
 	Sample GlobalPathSample
 	Score  float64
 }
 
-// GlobalPathRouter maintains recent path observations for the FTN backbone.
 type GlobalPathRouter struct {
 	mu      sync.RWMutex
 	samples map[string][]GlobalPathSample
@@ -51,8 +47,6 @@ func (r *GlobalPathRouter) Observe(s GlobalPathSample) {
 	r.mu.Lock()
 	key := pathKey(s.Source, s.Destination)
 	history := append(r.samples[key], s)
-	// Keep a bounded observation history per source/destination while retaining
-	// enough samples for path ranking and short-lived route diversity.
 	if len(history) > 32 {
 		history = history[len(history)-32:]
 	}
@@ -63,7 +57,6 @@ func (r *GlobalPathRouter) Observe(s GlobalPathSample) {
 func (r *GlobalPathRouter) Candidates(source, destination string, now time.Time) []PathScore {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
 	out := make([]PathScore, 0)
 	for _, s := range r.samples[pathKey(source, destination)] {
 		if !IsUsable(s) {
@@ -74,20 +67,25 @@ func (r *GlobalPathRouter) Candidates(source, destination string, now time.Time)
 		}
 		out = append(out, PathScore{Sample: s, Score: scorePath(s)})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Score < out[j].Score })
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Score != out[j].Score {
+			return out[i].Score < out[j].Score
+		}
+		return pathKey(out[i].Sample.Source, out[i].Sample.Destination) < pathKey(out[j].Sample.Source, out[j].Sample.Destination)
+	})
 	return out
 }
 
 func scorePath(s GlobalPathSample) float64 {
-	// RTT is the dominant term. Jitter, loss and utilization prevent selecting
-	// a path that is fast only when lightly loaded or unstable.
 	rtt := float64(s.RTT.Milliseconds())
 	jitter := float64(s.Jitter.Milliseconds())
 	return rtt + 0.35*jitter + 1000*s.Loss + 200*s.Utilization
 }
 
-// IsUsable rejects obviously degraded paths before they enter the candidate set.
+func finite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
+
 func IsUsable(s GlobalPathSample) bool {
-	return s.Healthy && s.RTT >= 0 && s.Loss >= 0 && s.Loss <= 1 &&
-		s.Utilization >= 0 && s.Utilization <= 1 && !math.IsNaN(float64(s.RTT))
+	return s.Healthy && s.RTT >= 0 && s.Jitter >= 0 &&
+		finite(s.Loss) && s.Loss >= 0 && s.Loss <= 1 &&
+		finite(s.Utilization) && s.Utilization >= 0 && s.Utilization <= 1
 }
