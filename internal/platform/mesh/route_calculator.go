@@ -1,6 +1,7 @@
 package mesh
 
 import (
+	"math"
 	"sort"
 	"strings"
 )
@@ -12,7 +13,8 @@ func CalculateRoutes(source string, links []Link) []Route {
 	if source == "" { return []Route{} }
 	adj := make(map[string][]Link)
 	for _, l := range links {
-		if l.State != LinkUp || strings.TrimSpace(l.From) == "" || strings.TrimSpace(l.To) == "" { continue }
+		l.From, l.To = strings.TrimSpace(l.From), strings.TrimSpace(l.To)
+		if l.State != LinkUp || l.From == "" || l.To == "" || l.From == l.To { continue }
 		adj[l.From] = append(adj[l.From], l)
 	}
 	for node := range adj { sort.SliceStable(adj[node], func(i,j int) bool { if adj[node][i].Metric != adj[node][j].Metric { return adj[node][i].Metric < adj[node][j].Metric }; return adj[node][i].To < adj[node][j].To }) }
@@ -22,6 +24,7 @@ func CalculateRoutes(source string, links []Link) []Route {
 	for len(queue) > 0 {
 		cur := queue[0]; queue = queue[1:]
 		for _, l := range adj[cur.node] {
+			if cur.cost > math.MaxUint32-l.Metric { continue }
 			first := l.To; if cur.first != "" { first = cur.first }
 			candidate := item{node: l.To, cost: cur.cost + l.Metric, hops: cur.hops + 1, first: first}
 			old, ok := best[l.To]
