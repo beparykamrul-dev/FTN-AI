@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -29,20 +30,23 @@ func (a *Audit) Record(ctx context.Context, principal string, scope Scope, categ
 	if a == nil || a.Sink == nil {
 		return nil
 	}
+	if ctx == nil {
+		return context.Canceled
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	now := time.Now()
+	now := time.Now
 	if a.Now != nil {
-		now = a.Now()
+		now = a.Now
 	}
 	return a.Sink.Write(ctx, AuditEvent{
-		Time:       now.UTC(),
-		Principal:  principal,
+		Time:       now().UTC(),
+		Principal:  strings.TrimSpace(principal),
 		Scope:      scope,
 		Category:   category,
-		LayerID:    layerID,
-		Capability: capability,
-		Outcome:    outcome,
+		LayerID:    strings.TrimSpace(layerID),
+		Capability: strings.TrimSpace(capability),
+		Outcome:    strings.TrimSpace(outcome),
 	})
 }
