@@ -14,8 +14,12 @@ type Capability struct {
 func MatchCapabilities(category Category, capabilities []Capability) []Capability {
 	matched := make([]Capability, 0, len(capabilities))
 	for _, c := range capabilities {
-		if c.Category == category { matched = append(matched, c) }
+		if c.Category == category {
+			matched = append(matched, c)
+		}
 	}
-	sort.SliceStable(matched, func(i, j int) bool { return matched[i].Priority < matched[j].Priority })
+	sort.SliceStable(matched, func(i, j int) bool {
+		return matched[i].Priority < matched[j].Priority
+	})
 	return matched
 }
