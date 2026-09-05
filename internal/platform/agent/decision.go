@@ -1,34 +1,4 @@
 package agent
-
-import (
-	"context"
-	"fmt"
-)
-
-// Decision describes why a layer was selected and whether escalation is allowed.
-type Decision struct {
-	LayerID    string
-	Capability string
-	Escalate   bool
-	Reason     string
-}
-
-// Decide keeps routing explainable: FTN can inspect why a layer was selected.
-func Decide(ctx context.Context, registry *LayerRegistry, category Category, capability string, allowEscalation bool) (Decision, error) {
-	if ctx == nil {
-		return Decision{}, fmt.Errorf("context is required")
-	}
-	if err := ctx.Err(); err != nil {
-		return Decision{}, err
-	}
-	layer, err := registry.Resolve(category)
-	if err != nil {
-		return Decision{}, err
-	}
-	return Decision{
-		LayerID:    layer.ID,
-		Capability: capability,
-		Escalate:   allowEscalation,
-		Reason:     "best enabled layer for category",
-	}, nil
-}
+import("context";"fmt";"strings")
+type Decision struct{LayerID string;Capability string;Escalate bool;Reason string}
+func Decide(ctx context.Context,registry *LayerRegistry,category Category,capability string,allowEscalation bool)(Decision,error){if ctx==nil{return Decision{},fmt.Errorf("context is required")};if err:=ctx.Err();err!=nil{return Decision{},err};if registry==nil{return Decision{},fmt.Errorf("layer registry is required")};capability=strings.TrimSpace(capability);if capability==""{return Decision{},fmt.Errorf("capability is required")};layer,err:=registry.Resolve(category);if err!=nil{return Decision{},err};return Decision{LayerID:strings.TrimSpace(layer.ID),Capability:capability,Escalate:allowEscalation,Reason:"best enabled layer for category"},nil}
