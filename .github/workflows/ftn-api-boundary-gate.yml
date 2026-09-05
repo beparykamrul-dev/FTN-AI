@@ -18,6 +18,7 @@ jobs:
   boundary:
     name: Authentication, readiness and metrics boundary
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       FTN_DB_PASSWORD: ci-api-boundary-password
       FTN_API_AUTH_TOKEN: ci-api-boundary-token
@@ -37,13 +38,11 @@ jobs:
         run: |
           set -euo pipefail
           for i in {1..45}; do
-            if curl --fail --silent http://127.0.0.1:8080/readyz >/dev/null; then
-              exit 0
-            fi
+            if curl --fail --silent http://127.0.0.1:8080/readyz >/dev/null; then exit 0; fi
             sleep 2
           done
           docker compose -f services/control-plane/docker-compose.yml ps
-          docker compose -f services/control-plane/docker-compose.yml logs control-plane
+          docker compose -f services/control-plane/docker-compose.yml logs --no-color control-plane
           exit 1
 
       - name: Verify public health and readiness
