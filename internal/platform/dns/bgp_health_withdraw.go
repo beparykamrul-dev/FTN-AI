@@ -1,49 +1,9 @@
 package dns
 
-import (
-	"context"
-	"fmt"
-	"sync"
-	"time"
-)
-
-type BGPHealthState struct {
-	NodeID string `json:"node_id"`
-	Prefix string `json:"prefix"`
-	Healthy bool `json:"healthy"`
-	LastCheck time.Time `json:"last_check"`
-}
-
-// BGPHealthWithdrawal coordinates health state with advertisement withdrawal.
-// The caller supplies the BGP transport, keeping routing credentials outside
-// the DNS domain model.
-type BGPHealthWithdrawal struct {
-	mu sync.RWMutex
-	states map[string]BGPHealthState
-}
-
-func NewBGPHealthWithdrawal() *BGPHealthWithdrawal {
-	return &BGPHealthWithdrawal{states: make(map[string]BGPHealthState)}
-}
-
-func (c *BGPHealthWithdrawal) Update(state BGPHealthState) {
-	c.mu.Lock(); defer c.mu.Unlock()
-	c.states[state.NodeID+"|"+state.Prefix] = state
-}
-
-func (c *BGPHealthWithdrawal) Healthy(nodeID, prefix string) bool {
-	c.mu.RLock(); defer c.mu.RUnlock()
-	s, ok := c.states[nodeID+"|"+prefix]
-	return ok && s.Healthy
-}
-
-func (c *BGPHealthWithdrawal) Reconcile(ctx context.Context, adapter *GoBGPAdapter, advertisements []BGPAdvertisement) error {
-	if adapter == nil { return fmt.Errorf("GoBGP adapter is required") }
-	if err := adapter.Validate(); err != nil { return err }
-	var withdraw []BGPAdvertisement
-	for _, adv := range advertisements {
-		if !c.Healthy(adv.NodeID, adv.Prefix) { withdraw = append(withdraw, adv) }
-	}
-	if len(withdraw) == 0 { return nil }
-	return adapter.Withdraw(ctx, withdraw)
-}
+import("context";"fmt";"strings";"sync";"time")
+type BGPHealthState struct{NodeID string `json:"node_id"`;Prefix string `json:"prefix"`;Healthy bool `json:"healthy"`;LastCheck time.Time `json:"last_check"`}
+type BGPHealthWithdrawal struct{mu sync.RWMutex;states map[string]BGPHealthState}
+func NewBGPHealthWithdrawal()*BGPHealthWithdrawal{return &BGPHealthWithdrawal{states:make(map[string]BGPHealthState)}}
+func(c *BGPHealthWithdrawal)Update(state BGPHealthState){if c==nil{return};state.NodeID=strings.TrimSpace(state.NodeID);state.Prefix=strings.TrimSpace(state.Prefix);if state.NodeID==""||state.Prefix==""||len(state.NodeID)>256||len(state.Prefix)>128{return};c.mu.Lock();defer c.mu.Unlock();if c.states==nil{c.states=make(map[string]BGPHealthState)};c.states[state.NodeID+"|"+state.Prefix]=state}
+func(c *BGPHealthWithdrawal)Healthy(nodeID,prefix string)bool{if c==nil{return false};nodeID=strings.TrimSpace(nodeID);prefix=strings.TrimSpace(prefix);if nodeID==""||prefix==""||len(nodeID)>256||len(prefix)>128{return false};c.mu.RLock();defer c.mu.RUnlock();s,ok:=c.states[nodeID+"|"+prefix];return ok&&s.Healthy}
+func(c *BGPHealthWithdrawal)Reconcile(ctx context.Context,adapter *GoBGPAdapter,advertisements []BGPAdvertisement)error{if c==nil{return fmt.Errorf("BGP health withdrawal controller is required")};if adapter==nil{return fmt.Errorf("GoBGP adapter is required")};if ctx==nil{return context.Canceled};if err:=ctx.Err();err!=nil{return err};if err:=adapter.Validate();err!=nil{return err};if len(advertisements)>10000{return fmt.Errorf("too many BGP advertisements")};var withdraw []BGPAdvertisement;for _,adv:=range advertisements{if err:=ValidateBGPAdvertisement(adv);err!=nil{return err};if !c.Healthy(adv.NodeID,adv.Prefix){withdraw=append(withdraw,adv)}};if len(withdraw)==0{return nil};return adapter.Withdraw(ctx,withdraw)}
