@@ -16,3 +16,5 @@ func Rate(prev, current TrafficSample, elapsed time.Duration) TrafficRate {
 	if current.Packets >= prev.Packets { p = current.Packets - prev.Packets }
 	return TrafficRate{Interface: current.Interface, BPS: float64(b) / seconds, PPS: float64(p) / seconds}
 }
+
+func (r TrafficRate) Valid() bool { return r.Interface != "" && r.BPS >= 0 && r.PPS >= 0 }
