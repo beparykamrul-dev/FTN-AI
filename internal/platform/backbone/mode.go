@@ -26,8 +26,7 @@ func (b Backbone) CanFailover() bool { return b.Valid() && b.Healthy && b.Mode =
 
 // SwitchMode returns a proposed state only. Execution requires policy and approval.
 func (b Backbone) SwitchMode() Mode {
-	if b.Mode == ModeActive {
-		return ModeStandby
-	}
+	if !b.Valid() { return b.Mode }
+	if b.Mode == ModeActive { return ModeStandby }
 	return ModeActive
 }
