@@ -27,11 +27,13 @@ FTN-AI is the private, policy-controlled intelligence and automation layer for t
 
 ## Safety and control boundary
 
-Agent responses may request an action, but privileged execution must pass through the approval/control boundary. Secrets remain server-side and telemetry must not export secrets or private user data.
+Agent responses may request an action, but privileged execution must pass through the approval/control boundary. Secrets remain server-side and telemetry must not export secrets or private user data. CI is validation-only for real infrastructure: it must not mutate routers, OLTs, or production network state.
 
 ## Validation
 
-CI validates shell syntax, YAML, JSON, Go formatting and declared Go modules. The control-plane service is additionally tested, built and container-built by CI.
+The repository gates validate shell syntax, YAML/JSON, Go formatting, control-plane tests/builds, Compose configuration, security boundaries, API authentication, durable execution, recovery behavior, and architecture contracts. Go CI uses the repository's Go 1.24 toolchain where applicable.
+
+Run the affected checks locally before opening a PR. If a check cannot be executed, report that explicitly.
 
 ## Development principle
 
