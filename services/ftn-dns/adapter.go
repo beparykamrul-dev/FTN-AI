@@ -33,13 +33,20 @@ func (h Health) Valid() bool {
 }
 
 func (r Response) Normalized() Response {
-	r.Name = strings.TrimSpace(r.Name)
+	r.Name = strings.TrimSuffix(strings.TrimSpace(r.Name), ".")
 	r.RecordType = strings.ToUpper(strings.TrimSpace(r.RecordType))
 	values := make([]string, 0, len(r.Values))
+	seen := make(map[string]struct{}, len(r.Values))
 	for _, value := range r.Values {
-		if value = strings.TrimSpace(value); value != "" {
-			values = append(values, value)
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
 		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		values = append(values, value)
 	}
 	r.Values = values
 	return r
