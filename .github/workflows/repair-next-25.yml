@@ -1,6 +1,8 @@
 name: FTN Go Repair Next 25
 
 on:
+  push:
+    branches: [repair/next-25]
   pull_request_target:
     branches: [main]
 
@@ -49,12 +51,11 @@ jobs:
           set -euo pipefail
           while IFS= read -r file; do
             [ -z "$file" ] && continue
-            if ! gofmt -d "$file" | grep -q '^'; then
-              continue
+            if [ -n "$(gofmt -d "$file")" ]; then
+              echo "Formatting verification failed: $file"
+              gofmt -d "$file"
+              exit 1
             fi
-            echo "Formatting verification failed: $file"
-            gofmt -d "$file"
-            exit 1
           done < /tmp/ftn-gofmt-batch.txt
 
       - name: Commit repaired batch
