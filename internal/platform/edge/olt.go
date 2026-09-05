@@ -1,6 +1,9 @@
 package edge
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 type OLTState struct {
 	ID           string `json:"id"`
@@ -23,4 +26,12 @@ type OLTDriver interface {
 	Identity(ctx context.Context) (OLTState, error)
 	DiscoverONUs(ctx context.Context) ([]ONUState, error)
 	Apply(ctx context.Context, request ChangeRequest) error
+}
+
+func (s OLTState) Valid() bool {
+	return strings.TrimSpace(s.ID) != "" && strings.TrimSpace(s.Vendor) != "" && strings.TrimSpace(s.ManagementIP) != ""
+}
+
+func (s ONUState) Valid() bool {
+	return strings.TrimSpace(s.ID) != "" && strings.TrimSpace(s.Serial) != "" && strings.TrimSpace(s.PON) != ""
 }
