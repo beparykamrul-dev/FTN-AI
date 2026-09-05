@@ -28,7 +28,11 @@ type NetworkIntent struct {
 func NewIntent(id string, typ IntentType, target, requestedBy string, spec map[string]string) NetworkIntent {
 	copySpec := make(map[string]string, len(spec))
 	for k, v := range spec {
-		copySpec[strings.TrimSpace(k)] = strings.TrimSpace(v)
+		k = strings.TrimSpace(k)
+		if k == "" {
+			continue
+		}
+		copySpec[k] = strings.TrimSpace(v)
 	}
-	return NetworkIntent{ID: strings.TrimSpace(id), Type: typ, Target: strings.TrimSpace(target), RequestedBy: strings.TrimSpace(requestedBy), Spec: copySpec, CreatedAt: time.Now().UTC()}
+	return NetworkIntent{ID: strings.TrimSpace(id), Type: IntentType(strings.TrimSpace(string(typ))), Target: strings.TrimSpace(target), RequestedBy: strings.TrimSpace(requestedBy), Spec: copySpec, CreatedAt: time.Now().UTC()}
 }
