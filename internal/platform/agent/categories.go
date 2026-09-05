@@ -4,13 +4,13 @@ package agent
 type Category string
 
 const (
-	CategoryStudio      Category = "studio"
-	CategoryCallCenter  Category = "call_center"
-	CategoryBilling     Category = "billing_gateway"
-	CategoryNetwork     Category = "network_service"
-	CategoryDeveloper   Category = "developer"
-	CategoryCustomer    Category = "customer"
-	CategoryExecutive   Category = "executive_summary"
+	CategoryStudio     Category = "studio"
+	CategoryCallCenter Category = "call_center"
+	CategoryBilling    Category = "billing_gateway"
+	CategoryNetwork    Category = "network_service"
+	CategoryDeveloper  Category = "developer"
+	CategoryCustomer   Category = "customer"
+	CategoryExecutive  Category = "executive_summary"
 )
 
 type CategoryConfig struct {
