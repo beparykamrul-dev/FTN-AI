@@ -26,8 +26,11 @@ func NewFTNGoBGPPeerWatcher(server *FTNGoBGPServer, bridge *FTNRoutedEventBridge
 }
 
 func (w *FTNGoBGPPeerWatcher) Poll(ctx context.Context) error {
-	if w.server == nil || w.bridge == nil {
+	if w == nil || w.server == nil || w.bridge == nil {
 		return fmt.Errorf("GoBGP server and event bridge are required")
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 	w.server.mu.RLock()
 	started := w.server.started
@@ -67,6 +70,9 @@ func (w *FTNGoBGPPeerWatcher) Poll(ctx context.Context) error {
 func (w *FTNGoBGPPeerWatcher) Run(ctx context.Context) error {
 	if w == nil {
 		return fmt.Errorf("watcher is required")
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
