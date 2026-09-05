@@ -1,10 +1,10 @@
 package monitoring
 
-import "github.com/beparykamrul-dev/FTN-AI/internal/platform/module"
+import (
+	"sort"
+	"strings"
+	"github.com/beparykamrul-dev/FTN-AI/internal/platform/module
+)
 
-func Definition() module.Definition {
-	return module.Definition{
-		Name: "monitoring", Version: "v1",
-		Capabilities: []string{"metrics", "events", "health", "telemetry", "alerts", "observability"},
-	}
-}
+func Definition() module.Definition { caps:=[]string{"metrics","events","health","telemetry","alerts","observability"}; sort.Strings(caps); return module.Definition{Name:"monitoring",Version:"v1",Capabilities:caps} }
+func ValidDefinition(d module.Definition) bool { return strings.TrimSpace(d.Name)=="monitoring" && strings.TrimSpace(d.Version)!="" && len(d.Capabilities)>0 }
