@@ -41,9 +41,6 @@ type cachedRoute struct {
 	at    time.Time
 }
 
-// Router provides a provider-neutral service-to-gateway resolution layer.
-// DNS, VPN, proxy, telemetry and FTN application services can all use the
-// same contract without coupling routing to a particular implementation.
 type Router struct {
 	registry Registry
 	mu       sync.RWMutex
@@ -59,6 +56,13 @@ func New(reg Registry, cacheTTL time.Duration) *Router {
 }
 
 func (r *Router) Resolve(ctx context.Context, service, preferredRegion string) (Route, error) {
+	if r == nil || r.registry == nil {
+		return Route{}, ErrNoRoute
+	}
+	if ctx == nil {
+		return Route{}, errors.New("context is required")
+	}
+	service = service
 	cacheKey := service + "\x00" + preferredRegion
 	now := time.Now()
 	r.mu.RLock()
