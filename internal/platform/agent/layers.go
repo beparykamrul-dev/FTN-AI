@@ -15,25 +15,38 @@ type Layer struct {
 }
 
 // LayerRegistry holds the centrally managed approved layers.
-type LayerRegistry struct { layers map[string]Layer }
+type LayerRegistry struct {
+	layers map[string]Layer
+}
 
 func NewLayerRegistry(layers []Layer) *LayerRegistry {
 	r := &LayerRegistry{layers: make(map[string]Layer, len(layers))}
-	for _, l := range layers { r.layers[l.ID] = l }
+	for _, l := range layers {
+		r.layers[l.ID] = l
+	}
 	return r
 }
 
 func (r *LayerRegistry) Resolve(category Category) (Layer, error) {
 	var candidates []Layer
 	for _, l := range r.layers {
-		if !l.Enabled { continue }
+		if !l.Enabled {
+			continue
+		}
 		for _, c := range l.Categories {
-			if c == category { candidates = append(candidates, l); break }
+			if c == category {
+				candidates = append(candidates, l)
+				break
+			}
 		}
 	}
-	if len(candidates) == 0 { return Layer{}, fmt.Errorf("no enabled layer for category: %s", category) }
+	if len(candidates) == 0 {
+		return Layer{}, fmt.Errorf("no enabled layer for category: %s", category)
+	}
 	sort.SliceStable(candidates, func(i, j int) bool {
-		if candidates[i].Native != candidates[j].Native { return candidates[i].Native }
+		if candidates[i].Native != candidates[j].Native {
+			return candidates[i].Native
+		}
 		return candidates[i].Priority < candidates[j].Priority
 	})
 	return candidates[0], nil
