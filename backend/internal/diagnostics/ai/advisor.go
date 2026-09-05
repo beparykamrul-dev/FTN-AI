@@ -1,34 +1,18 @@
 package ai
 
-import "github.com/beparykamrul-dev/FTN-AI/backend/internal/diagnostics/model"
+import (
+	"math"
+	"strings"
 
-// Recommendation is an advisory result. It is never an execution command.
-type Recommendation struct {
-	Summary    string   `json:"summary"`
-	Action     string   `json:"action,omitempty"`
-	Confidence float64  `json:"confidence"`
-	Evidence   []string `json:"evidence,omitempty"`
-	ApprovalRequired bool `json:"approval_required"`
-}
+	"github.com/beparykamrul-dev/FTN-AI/backend/internal/diagnostics/model"
+)
 
+type Recommendation struct { Summary string `json:"summary"`; Action string `json:"action,omitempty"`; Confidence float64 `json:"confidence"`; Evidence []string `json:"evidence,omitempty"`; ApprovalRequired bool `json:"approval_required"` }
 type Advisor struct{}
-
-// Advise converts a validated diagnosis into a conservative human-readable
-// recommendation. It deliberately does not access infrastructure credentials.
 func (Advisor) Advise(d model.Diagnosis) Recommendation {
-	if d.Cause == "" {
-		return Recommendation{
-			Summary: "Insufficient evidence for a reliable root-cause recommendation.",
-			Confidence: d.Confidence,
-			Evidence: append([]string(nil), d.Evidence...),
-			ApprovalRequired: true,
-		}
-	}
-	return Recommendation{
-		Summary: d.Cause,
-		Action: "Review evidence and apply an approved remediation policy.",
-		Confidence: d.Confidence,
-		Evidence: append([]string(nil), d.Evidence...),
-		ApprovalRequired: true,
-	}
+	confidence:=d.Confidence; if math.IsNaN(confidence)||math.IsInf(confidence,0)||confidence<0||confidence>1{confidence=0}
+	evidence:=make([]string,0,len(d.Evidence)); for _,e:=range d.Evidence{e=strings.TrimSpace(e);if e!=""&&len(e)<=2048{evidence=append(evidence,e)}}
+	if strings.TrimSpace(d.Cause)==""{return Recommendation{Summary:"Insufficient evidence for a reliable root-cause recommendation.",Confidence:confidence,Evidence:evidence,ApprovalRequired:true}}
+	cause:=strings.TrimSpace(d.Cause);if len(cause)>4096{cause=cause[:4096]}
+	return Recommendation{Summary:cause,Action:"Review evidence and apply an approved remediation policy.",Confidence:confidence,Evidence:evidence,ApprovalRequired:true}
 }
