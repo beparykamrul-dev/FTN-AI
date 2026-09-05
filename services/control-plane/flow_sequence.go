@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"sync"
 )
 
@@ -17,7 +18,7 @@ type FlowSequenceState struct {
 }
 
 type FlowSequenceTracker struct {
-	mu    sync.Mutex
+	mu    sync.RWMutex
 	state map[FlowSequenceKey]FlowSequenceState
 }
 
@@ -27,8 +28,13 @@ func NewFlowSequenceTracker() *FlowSequenceTracker {
 
 // Observe records exporter sequence continuity. A wrap-around is treated as normal.
 func (t *FlowSequenceTracker) Observe(exporter string, version uint16, sequence uint32, expected uint32) (gap uint32) {
+	if t == nil { return 0 }
+	exporter = strings.TrimSpace(exporter)
+	if exporter == "" { return 0 }
+	if expected == 0 { expected = 1 }
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if t.state == nil { t.state = make(map[FlowSequenceKey]FlowSequenceState) }
 	key := FlowSequenceKey{Exporter: exporter, Version: version}
 	s := t.state[key]
 	if !s.Initialized {
@@ -50,7 +56,9 @@ func (t *FlowSequenceTracker) Observe(exporter string, version uint16, sequence 
 }
 
 func (t *FlowSequenceTracker) State(exporter string, version uint16) FlowSequenceState {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+	if t == nil { return FlowSequenceState{} }
+	exporter = strings.TrimSpace(exporter)
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.state[FlowSequenceKey{Exporter: exporter, Version: version}]
 }
