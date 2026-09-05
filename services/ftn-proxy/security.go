@@ -1,6 +1,9 @@
 package proxy
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // SecurityPolicy defines fail-closed limits for the FTN proxy data plane.
 type SecurityPolicy struct {
@@ -13,20 +16,17 @@ type SecurityPolicy struct {
 }
 
 func DefaultSecurityPolicy() SecurityPolicy {
-	return SecurityPolicy{
-		MaxConnectionsPerClient: 64,
-		MaxRequestsPerWindow:    600,
-		RateWindow:              time.Minute,
-		RequireTLS:              true,
-		RejectPrivateTargets:    true,
-		MaxHeaderBytes:           32 << 10,
-	}
+	return SecurityPolicy{MaxConnectionsPerClient: 64, MaxRequestsPerWindow: 600, RateWindow: time.Minute, RequireTLS: true, RejectPrivateTargets: true, MaxHeaderBytes: 32 << 10}
 }
 
 // ValidateRequest applies cheap security checks before proxy forwarding.
 // Target classification is deliberately supplied by the caller so this layer
 // does not make assumptions about network topology.
 func (p SecurityPolicy) ValidateRequest(scheme string, connections, requests int, headerBytes int, privateTarget bool) bool {
+	scheme = strings.ToLower(strings.TrimSpace(scheme))
+	if connections < 0 || requests < 0 || headerBytes < 0 {
+		return false
+	}
 	if p.RequireTLS && scheme != "https" {
 		return false
 	}
