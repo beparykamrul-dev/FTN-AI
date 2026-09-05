@@ -29,6 +29,8 @@ func NewAnycastScheduler() *AnycastScheduler { return &AnycastScheduler{} }
 // Run executes the active DNS probe/reconciliation loop. A single scheduler
 // instance owns the loop to prevent duplicate BGP state transitions.
 func (s *AnycastScheduler) Run(ctx context.Context, schedule AnycastSchedule, reconcile func(context.Context, DNSProbeResult) error) error {
+    if s == nil { return fmt.Errorf("anycast scheduler is required") }
+    if ctx == nil { ctx = context.Background() }
     if err := schedule.Validate(); err != nil { return err }
     if reconcile == nil { return fmt.Errorf("reconcile callback is required") }
     s.mu.Lock()
