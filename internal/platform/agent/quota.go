@@ -29,7 +29,6 @@ type Usage struct {
 	ResetAt  time.Time
 }
 
-// QuotaStore is intentionally small; production deployments can back it with Redis/PostgreSQL.
 type QuotaStore interface {
 	Get(ctx context.Context, scope Scope) (Usage, error)
 	Put(ctx context.Context, scope Scope, usage Usage) error
@@ -43,6 +42,12 @@ type QuotaGate struct {
 func (q *QuotaGate) CheckAndConsume(ctx context.Context, scope Scope, plan Plan, tokens int64) error {
 	if q == nil || q.Store == nil {
 		return errors.New("quota store is required")
+	}
+	if ctx == nil {
+		return errors.New("context is required")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	if plan.RequestsPerDay <= 0 || plan.TokensPerDay <= 0 || tokens < 0 {
 		return errors.New("invalid quota")
