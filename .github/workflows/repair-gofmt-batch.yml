@@ -22,11 +22,11 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd35f1bafbb93b9d # v5.2.0
+        uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
 
-      - name: Format next repair batch
+      - name: Format next 25-file repair batch
         run: |
           gofmt -w \
             services/control-plane/events.go \
@@ -48,7 +48,12 @@ jobs:
             services/ftn-mesh/contracts.go \
             services/dns-domain/ptr.go \
             os/ftn-os/runtime/health.go \
-            services/acme/certificate_manager.go
+            services/acme/certificate_manager.go \
+            internal/platform/deploy/plan.go \
+            internal/platform/kernel/wrapper.go \
+            internal/platform/fiber/api.go \
+            services/control-plane/flow_listener.go \
+            internal/platform/ai/workflow.go
 
       - name: Commit repaired files
         run: |
@@ -78,6 +83,11 @@ jobs:
             services/ftn-mesh/contracts.go \
             services/dns-domain/ptr.go \
             os/ftn-os/runtime/health.go \
-            services/acme/certificate_manager.go
-          git commit -m 'chore: repair next Go formatting batch'
+            services/acme/certificate_manager.go \
+            internal/platform/deploy/plan.go \
+            internal/platform/kernel/wrapper.go \
+            internal/platform/fiber/api.go \
+            services/control-plane/flow_listener.go \
+            internal/platform/ai/workflow.go
+          git commit -m 'chore: repair next 25 Go files'
           git push origin HEAD:main
