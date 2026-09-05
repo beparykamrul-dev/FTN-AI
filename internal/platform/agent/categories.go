@@ -1,5 +1,7 @@
 package agent
 
+import "strings"
+
 // Category identifies a specialized FTN AI responsibility.
 type Category string
 
@@ -18,6 +20,10 @@ type CategoryConfig struct {
 	SummaryEnabled bool
 	DetailsEnabled bool
 	ToolScope      string
+}
+
+func (c CategoryConfig) Valid() bool {
+	return strings.TrimSpace(string(c.ID)) != "" && strings.TrimSpace(c.ToolScope) != ""
 }
 
 func DefaultCategories() []CategoryConfig {
