@@ -7,19 +7,17 @@ import (
 	"time"
 )
 
-// Observation is a normalized measurement emitted by an FTN probe.
 type Observation struct {
-	ProbeID     string
-	Target      string
-	Kind        string
-	Transport   string
-	Success     bool
-	Latency     time.Duration
-	ErrorClass  string
-	ObservedAt  time.Time
+	ProbeID    string
+	Target     string
+	Kind       string
+	Transport  string
+	Success    bool
+	Latency    time.Duration
+	ErrorClass string
+	ObservedAt time.Time
 }
 
-// DNSProbe performs a lightweight DNS resolution measurement.
 type DNSProbe struct {
 	Resolver *net.Resolver
 	Timeout  time.Duration
@@ -27,6 +25,11 @@ type DNSProbe struct {
 
 func (p DNSProbe) Resolve(ctx context.Context, probeID, target string) Observation {
 	started := time.Now()
+	probeID = strings.TrimSpace(probeID)
+	target = strings.TrimSpace(target)
+	if ctx == nil {
+		return Observation{ProbeID: probeID, Target: target, Kind: "dns", Transport: "system-resolver", ErrorClass: "invalid_context", ObservedAt: time.Now().UTC()}
+	}
 	resolver := p.Resolver
 	if resolver == nil {
 		resolver = net.DefaultResolver
