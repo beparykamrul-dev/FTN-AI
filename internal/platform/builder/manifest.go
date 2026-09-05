@@ -1,36 +1,7 @@
 package builder
 
-import (
-	"encoding/json"
-	"fmt"
-)
-
-// Manifest is the portable build description used by Web and Android builders.
-type Manifest struct {
-	Name        string            `json:"name"`
-	Template    string            `json:"template"`
-	Backend     string            `json:"backend,omitempty"`
-	Database    string            `json:"database,omitempty"`
-	Environment map[string]string `json:"environment,omitempty"`
-	Features    []string          `json:"features,omitempty"`
-}
-
-func (m Manifest) Validate() error {
-	if m.Name == "" {
-		return fmt.Errorf("name is required")
-	}
-	if m.Template == "" {
-		return fmt.Errorf("template is required")
-	}
-	if _, err := GetTemplate(m.Template); err != nil {
-		return err
-	}
-	return nil
-}
-
-func EncodeManifest(m Manifest) ([]byte, error) {
-	if err := m.Validate(); err != nil {
-		return nil, err
-	}
-	return json.MarshalIndent(m, "", "  ")
-}
+import("encoding/json";"fmt";"strings")
+type Manifest struct{Name string `json:"name"`;Template string `json:"template"`;Backend string `json:"backend,omitempty"`;Database string `json:"database,omitempty"`;Environment map[string]string `json:"environment,omitempty"`;Features []string `json:"features,omitempty"`}
+func(m Manifest)Validate()error{if strings.TrimSpace(m.Name)==""{return fmt.Errorf("name is required")};if strings.TrimSpace(m.Template)==""{return fmt.Errorf("template is required")};if _,err:=GetTemplate(strings.TrimSpace(m.Template));err!=nil{return err};for k:=range m.Environment{if strings.TrimSpace(k)==""{return fmt.Errorf("environment contains empty key")}};return nil}
+func(m Manifest)Normalize()Manifest{m.Name=strings.TrimSpace(m.Name);m.Template=strings.TrimSpace(m.Template);m.Backend=strings.TrimSpace(m.Backend);m.Database=strings.TrimSpace(m.Database);if m.Environment!=nil{env:=make(map[string]string,len(m.Environment));for k,v:=range m.Environment{env[strings.TrimSpace(k)]=strings.TrimSpace(v)};m.Environment=env};seen:=map[string]struct{}{};features:=make([]string,0,len(m.Features));for _,f:=range m.Features{f=strings.TrimSpace(f);if f==""{continue};if _,ok:=seen[f];ok{continue};seen[f]=struct{}{};features=append(features,f)};m.Features=features;return m}
+func EncodeManifest(m Manifest)([]byte,error){m=m.Normalize();if err:=m.Validate();err!=nil{return nil,err};return json.MarshalIndent(m,"","  ")}
