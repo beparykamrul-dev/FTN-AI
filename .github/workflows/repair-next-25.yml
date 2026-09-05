@@ -1,6 +1,8 @@
 name: FTN Go Repair Next 25
 
 on:
+  push:
+    branches: [repair/next-25]
   pull_request_target:
     branches: [main]
 
