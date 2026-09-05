@@ -51,7 +51,9 @@ func (q *QuotaGate) CheckAndConsume(ctx context.Context, scope Scope, plan Plan,
 	defer q.mu.Unlock()
 
 	u, err := q.Store.Get(ctx, scope)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	now := time.Now().UTC()
 	if u.ResetAt.IsZero() || !now.Before(u.ResetAt) {
 		u = Usage{ResetAt: now.Add(24 * time.Hour)}
