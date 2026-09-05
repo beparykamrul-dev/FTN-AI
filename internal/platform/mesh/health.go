@@ -1,100 +1,12 @@
 package mesh
 
-import (
-	"sync"
-	"time"
-)
-
-type PeerHealth struct {
-	PeerID            string    `json:"peer_id"`
-	State             LinkState `json:"state"`
-	Score             uint8     `json:"score"`
-	LastHeartbeat     time.Time `json:"last_heartbeat"`
-	ConsecutiveMisses uint32    `json:"consecutive_misses"`
-}
-
-type HealthPolicy struct {
-	HeartbeatTimeout    time.Duration
-	DegradedAfterMisses uint32
-	DownAfterMisses     uint32
-}
-
-func DefaultHealthPolicy() HealthPolicy {
-	return HealthPolicy{
-		HeartbeatTimeout:    15 * time.Second,
-		DegradedAfterMisses: 2,
-		DownAfterMisses:     4,
-	}
-}
-
-type HealthRegistry struct {
-	mu     sync.RWMutex
-	peers  map[string]PeerHealth
-	policy HealthPolicy
-}
-
-func NewHealthRegistry(policy HealthPolicy) *HealthRegistry {
-	if policy.HeartbeatTimeout <= 0 {
-		policy.HeartbeatTimeout = 15 * time.Second
-	}
-	if policy.DegradedAfterMisses == 0 {
-		policy.DegradedAfterMisses = 2
-	}
-	if policy.DownAfterMisses <= policy.DegradedAfterMisses {
-		policy.DownAfterMisses = policy.DegradedAfterMisses + 2
-	}
-	return &HealthRegistry{peers: make(map[string]PeerHealth), policy: policy}
-}
-
-func (r *HealthRegistry) Observe(peerID string, now time.Time, score uint8) PeerHealth {
-	if score > 100 {
-		score = 100
-	}
-	if now.IsZero() {
-		now = time.Now().UTC()
-	} else {
-		now = now.UTC()
-	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	p := PeerHealth{PeerID: peerID, State: LinkUp, Score: score, LastHeartbeat: now}
-	r.peers[peerID] = p
-	return p
-}
-
-func (r *HealthRegistry) Evaluate(now time.Time) []PeerHealth {
-	if now.IsZero() {
-		now = time.Now().UTC()
-	} else {
-		now = now.UTC()
-	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	out := make([]PeerHealth, 0, len(r.peers))
-	for id, p := range r.peers {
-		if now.Sub(p.LastHeartbeat) > r.policy.HeartbeatTimeout {
-			p.ConsecutiveMisses++
-			if p.ConsecutiveMisses >= r.policy.DownAfterMisses {
-				p.State = LinkDown
-			} else if p.ConsecutiveMisses >= r.policy.DegradedAfterMisses {
-				p.State = LinkDegraded
-			}
-		}
-		r.peers[id] = p
-		out = append(out, p)
-	}
-	return out
-}
-
-func (r *HealthRegistry) Get(peerID string) (PeerHealth, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	p, ok := r.peers[peerID]
-	return p, ok
-}
-
-// Fresh reports whether a peer heartbeat is recent enough to be trusted by a routing decision.
-func (r *HealthRegistry) Fresh(peerID string, now time.Time) bool {
-	p, ok := r.Get(peerID)
-	return ok && !p.LastHeartbeat.IsZero() && !now.Before(p.LastHeartbeat) && now.Sub(p.LastHeartbeat) <= r.policy.HeartbeatTimeout
-}
+import("sort";"strings";"sync";"time")
+type PeerHealth struct{PeerID string `json:"peer_id"`;State LinkState `json:"state"`;Score uint8 `json:"score"`;LastHeartbeat time.Time `json:"last_heartbeat"`;ConsecutiveMisses uint32 `json:"consecutive_misses"`}
+type HealthPolicy struct{HeartbeatTimeout time.Duration;DegradedAfterMisses uint32;DownAfterMisses uint32}
+func DefaultHealthPolicy()HealthPolicy{return HealthPolicy{HeartbeatTimeout:15*time.Second,DegradedAfterMisses:2,DownAfterMisses:4}}
+type HealthRegistry struct{mu sync.RWMutex;peers map[string]PeerHealth;policy HealthPolicy}
+func NewHealthRegistry(policy HealthPolicy)*HealthRegistry{if policy.HeartbeatTimeout<=0{policy.HeartbeatTimeout=15*time.Second};if policy.DegradedAfterMisses==0{policy.DegradedAfterMisses=2};if policy.DownAfterMisses<=policy.DegradedAfterMisses{policy.DownAfterMisses=policy.DegradedAfterMisses+2};return &HealthRegistry{peers:make(map[string]PeerHealth),policy:policy}}
+func(r *HealthRegistry)Observe(peerID string,now time.Time,score uint8)PeerHealth{if r==nil{return PeerHealth{}};peerID=strings.TrimSpace(peerID);if peerID==""{return PeerHealth{}};if score>100{score=100};if now.IsZero(){now=time.Now().UTC()}else{now=now.UTC()};r.mu.Lock();defer r.mu.Unlock();p:=PeerHealth{PeerID:peerID,State:LinkUp,Score:score,LastHeartbeat:now};r.peers[peerID]=p;return p}
+func(r *HealthRegistry)Evaluate(now time.Time)[]PeerHealth{if r==nil{return []PeerHealth{}};if now.IsZero(){now=time.Now().UTC()}else{now=now.UTC()};r.mu.Lock();defer r.mu.Unlock();out:=make([]PeerHealth,0,len(r.peers));for id,p:=range r.peers{if now.Sub(p.LastHeartbeat)>r.policy.HeartbeatTimeout{p.ConsecutiveMisses++;if p.ConsecutiveMisses>=r.policy.DownAfterMisses{p.State=LinkDown}else if p.ConsecutiveMisses>=r.policy.DegradedAfterMisses{p.State=LinkDegraded}};r.peers[id]=p;out=append(out,p)};sort.SliceStable(out,func(i,j int)bool{return out[i].PeerID<out[j].PeerID});return out}
+func(r *HealthRegistry)Get(peerID string)(PeerHealth,bool){if r==nil{return PeerHealth{},false};r.mu.RLock();defer r.mu.RUnlock();p,ok:=r.peers[strings.TrimSpace(peerID)];return p,ok}
+func(r *HealthRegistry)Fresh(peerID string,now time.Time)bool{if r==nil{return false};if now.IsZero(){now=time.Now().UTC()}else{now=now.UTC()};p,ok:=r.Get(peerID);return ok&&!p.LastHeartbeat.IsZero()&&!now.Before(p.LastHeartbeat)&&now.Sub(p.LastHeartbeat)<=r.policy.HeartbeatTimeout}
