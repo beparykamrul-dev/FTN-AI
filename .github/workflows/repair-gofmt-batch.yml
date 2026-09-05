@@ -3,7 +3,7 @@ name: FTN Go Format Repair Batch
 on:
   push:
     branches: [main]
-  pull_request:
+  pull_request_target:
     branches: [main]
 
 permissions:
@@ -18,9 +18,11 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout PR head
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           fetch-depth: 0
 
       - name: Set up Go
