@@ -1,166 +1,18 @@
 package authenticator
 
-import (
-	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/base64"
-	"errors"
-	"fmt"
-	"strings"
-	"time"
-)
-
-var (
-	ErrInvalidCredential = errors.New("invalid credential")
-	ErrInvalidMFA        = errors.New("invalid mfa code")
-	ErrSessionExpired    = errors.New("session expired")
-	ErrUnauthorized      = errors.New("unauthorized")
-)
-
-type Identity struct {
-	ID        string
-	Subject   string
-	Roles     []string
-	Disabled  bool
-	CreatedAt time.Time
-}
-
-type Session struct {
-	ID         string
-	IdentityID string
-	IssuedAt   time.Time
-	ExpiresAt  time.Time
-	AMR        []string
-}
-
-type MFAChallenge struct {
-	ID         string
-	IdentityID string
-	Method     string
-	ExpiresAt  time.Time
-}
-
-type CredentialVerifier interface {
-	Verify(ctx context.Context, identityID, credential string) error
-}
-
-type AuditSink interface {
-	Record(ctx context.Context, event AuditEvent)
-}
-
-type AuditEvent struct {
-	EventID    string
-	IdentityID string
-	Action     string
-	Result     string
-	At         time.Time
-	RequestID  string
-}
-
-// Authenticator is the FTN-native authentication boundary. It deliberately
-// contains no provider SDK or hosted identity dependency.
-type Authenticator struct {
-	credentials CredentialVerifier
-	audit       AuditSink
-	now         func() time.Time
-	macKey      []byte
-}
-
-func New(credentials CredentialVerifier, audit AuditSink, macKey []byte) (*Authenticator, error) {
-	if len(macKey) < 32 {
-		return nil, errors.New("authenticator signing key must be at least 32 bytes")
-	}
-	key := append([]byte(nil), macKey...)
-	return &Authenticator{credentials: credentials, audit: audit, now: time.Now, macKey: key}, nil
-}
-
-func (a *Authenticator) VerifyCredential(ctx context.Context, identityID, credential, requestID string) error {
-	if identityID == "" || credential == "" || a.credentials == nil {
-		return ErrInvalidCredential
-	}
-	if err := a.credentials.Verify(ctx, identityID, credential); err != nil {
-		a.record(ctx, AuditEvent{IdentityID: identityID, Action: "credential.verify", Result: "denied", At: a.now(), RequestID: requestID})
-		return ErrInvalidCredential
-	}
-	a.record(ctx, AuditEvent{IdentityID: identityID, Action: "credential.verify", Result: "allowed", At: a.now(), RequestID: requestID})
-	return nil
-}
-
-// VerifyTOTP validates a six-digit TOTP code for a challenge. The secret must
-// be supplied by the FTN secret boundary; this package never persists it.
-func (a *Authenticator) VerifyTOTP(secret []byte, code string, unixTime int64) error {
-	if len(secret) == 0 || len(code) != 6 {
-		return ErrInvalidMFA
-	}
-	for _, delta := range []int64{-1, 0, 1} {
-		candidate := totp(secret, unixTime/30+delta)
-		if subtle.ConstantTimeCompare([]byte(candidate), []byte(code)) == 1 {
-			return nil
-		}
-	}
-	return ErrInvalidMFA
-}
-
-func totp(secret []byte, counter int64) string {
-	msg := make([]byte, 8)
-	for i := 7; i >= 0; i-- {
-		msg[i] = byte(counter)
-		counter >>= 8
-	}
-	mac := hmac.New(sha256.New, secret)
-	_, _ = mac.Write(msg)
-	sum := mac.Sum(nil)
-	offset := int(sum[len(sum)-1] & 0x0f)
-	value := (uint32(sum[offset])&0x7f)<<24 | uint32(sum[offset+1])<<16 | uint32(sum[offset+2])<<8 | uint32(sum[offset+3])
-	return fmt.Sprintf("%06d", value%1000000)
-}
-
-// SignSession creates an opaque, authenticated session envelope. The token
-// carries no secrets and is intended to be backed by the FTN session store.
-func (a *Authenticator) SignSession(s Session) (string, error) {
-	if s.ID == "" || s.IdentityID == "" || !s.ExpiresAt.After(s.IssuedAt) {
-		return "", ErrUnauthorized
-	}
-	payload := strings.Join([]string{s.ID, s.IdentityID, s.IssuedAt.UTC().Format(time.RFC3339Nano), s.ExpiresAt.UTC().Format(time.RFC3339Nano)}, "|")
-	mac := hmac.New(sha256.New, a.macKey)
-	_, _ = mac.Write([]byte(payload))
-	token := base64.RawURLEncoding.EncodeToString([]byte(payload)) + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
-	return token, nil
-}
-
-func (a *Authenticator) VerifySession(token string) error {
-	parts := strings.Split(token, ".")
-	if len(parts) != 2 {
-		return ErrUnauthorized
-	}
-	payload, err := base64.RawURLEncoding.DecodeString(parts[0])
-	if err != nil {
-		return ErrUnauthorized
-	}
-	sig, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return ErrUnauthorized
-	}
-	mac := hmac.New(sha256.New, a.macKey)
-	_, _ = mac.Write(payload)
-	if subtle.ConstantTimeCompare(sig, mac.Sum(nil)) != 1 {
-		return ErrUnauthorized
-	}
-	fields := strings.Split(string(payload), "|")
-	if len(fields) != 4 {
-		return ErrUnauthorized
-	}
-	expires, err := time.Parse(time.RFC3339Nano, fields[3])
-	if err != nil || !expires.After(a.now()) {
-		return ErrSessionExpired
-	}
-	return nil
-}
-
-func (a *Authenticator) record(ctx context.Context, event AuditEvent) {
-	if a.audit != nil {
-		a.audit.Record(ctx, event)
-	}
-}
+import("context";"crypto/hmac";"crypto/sha256";"crypto/subtle";"encoding/base64";"errors";"fmt";"strings";"time")
+var(ErrInvalidCredential=errors.New("invalid credential");ErrInvalidMFA=errors.New("invalid mfa code");ErrSessionExpired=errors.New("session expired");ErrUnauthorized=errors.New("unauthorized"))
+type Identity struct{ID string;Subject string;Roles []string;Disabled bool;CreatedAt time.Time}
+type Session struct{ID string;IdentityID string;IssuedAt time.Time;ExpiresAt time.Time;AMR []string}
+type MFAChallenge struct{ID string;IdentityID string;Method string;ExpiresAt time.Time}
+type CredentialVerifier interface{Verify(ctx context.Context,identityID,credential string)error}
+type AuditSink interface{Record(ctx context.Context,event AuditEvent)}
+type AuditEvent struct{EventID string;IdentityID string;Action string;Result string;At time.Time;RequestID string}
+type Authenticator struct{credentials CredentialVerifier;audit AuditSink;now func()time.Time;macKey []byte}
+func New(credentials CredentialVerifier,audit AuditSink,macKey []byte)(*Authenticator,error){if len(macKey)<32{return nil,errors.New("authenticator signing key must be at least 32 bytes")};return &Authenticator{credentials:credentials,audit:audit,now:time.Now,macKey:append([]byte(nil),macKey...)},nil}
+func(a *Authenticator)VerifyCredential(ctx context.Context,identityID,credential,requestID string)error{if ctx==nil{return ErrInvalidCredential};identityID=strings.TrimSpace(identityID);if identityID==""||credential==""||a==nil||a.credentials==nil{return ErrInvalidCredential};if err:=ctx.Err();err!=nil{return err};if err:=a.credentials.Verify(ctx,identityID,credential);err!=nil{a.record(ctx,AuditEvent{IdentityID:identityID,Action:"credential.verify",Result:"denied",At:a.now(),RequestID:requestID});return ErrInvalidCredential};a.record(ctx,AuditEvent{IdentityID:identityID,Action:"credential.verify",Result:"allowed",At:a.now(),RequestID:requestID});return nil}
+func(a *Authenticator)VerifyTOTP(secret []byte,code string,unixTime int64)error{if a==nil||len(secret)==0||len(code)!=6{return ErrInvalidMFA};for _,delta:=range []int64{-1,0,1}{candidate:=totp(secret,unixTime/30+delta);if subtle.ConstantTimeCompare([]byte(candidate),[]byte(code))==1{return nil}};return ErrInvalidMFA}
+func totp(secret []byte,counter int64)string{msg:=make([]byte,8);for i:=7;i>=0;i--{msg[i]=byte(counter);counter>>=8};mac:=hmac.New(sha256.New,secret);_,_=mac.Write(msg);sum:=mac.Sum(nil);offset:=int(sum[len(sum)-1]&0x0f);value:=(uint32(sum[offset])&0x7f)<<24|uint32(sum[offset+1])<<16|uint32(sum[offset+2])<<8|uint32(sum[offset+3]);return fmt.Sprintf("%06d",value%1000000)}
+func(a *Authenticator)SignSession(s Session)(string,error){if a==nil||s.ID==""||s.IdentityID==""||!s.ExpiresAt.After(s.IssuedAt){return "",ErrUnauthorized};payload:=strings.Join([]string{s.ID,s.IdentityID,s.IssuedAt.UTC().Format(time.RFC3339Nano),s.ExpiresAt.UTC().Format(time.RFC3339Nano)},"|");mac:=hmac.New(sha256.New,a.macKey);_,_=mac.Write([]byte(payload));return base64.RawURLEncoding.EncodeToString([]byte(payload))+"."+base64.RawURLEncoding.EncodeToString(mac.Sum(nil)),nil}
+func(a *Authenticator)VerifySession(token string)error{if a==nil{return ErrUnauthorized};parts:=strings.Split(token,".");if len(parts)!=2{return ErrUnauthorized};payload,err:=base64.RawURLEncoding.DecodeString(parts[0]);if err!=nil{return ErrUnauthorized};sig,err:=base64.RawURLEncoding.DecodeString(parts[1]);if err!=nil{return ErrUnauthorized};mac:=hmac.New(sha256.New,a.macKey);_,_=mac.Write(payload);if subtle.ConstantTimeCompare(sig,mac.Sum(nil))!=1{return ErrUnauthorized};fields:=strings.Split(string(payload),"|");if len(fields)!=4{return ErrUnauthorized};expires,err:=time.Parse(time.RFC3339Nano,fields[3]);if err!=nil||!expires.After(a.now()){return ErrSessionExpired};return nil}
+func(a *Authenticator)record(ctx context.Context,event AuditEvent){if a!=nil&&a.audit!=nil{a.audit.Record(ctx,event)}}
