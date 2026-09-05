@@ -13,7 +13,7 @@ type Target struct {
 func (t Target) Validate() error {
 	t = t.Normalize()
 	if t.ID == "" || t.Name == "" { return errors.New("target id and name are required") }
-	if len(t.ID) > 256 || len(t.Name) > 512 || len(t.Serial) > 256 || len(t.AgentID) > 256 || len(t.OS) > 128 { return errors.New("target field is too large") }
+	if len(t.ID) > 256 || len(t.Name) > 256 || len(t.Serial) > 256 || len(t.AgentID) > 256 || len(t.OS) > 128 { return errors.New("target field is too large") }
 	if t.IP != "" && net.ParseIP(t.IP) == nil { return errors.New("invalid target IP") }
 	if t.MAC != "" { if _, err := net.ParseMAC(t.MAC); err != nil { return errors.New("invalid target MAC") } }
 	if t.Serial == "" && t.AgentID == "" { return errors.New("serial or authenticated agent id is required") }
