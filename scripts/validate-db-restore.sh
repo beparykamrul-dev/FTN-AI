@@ -110,7 +110,7 @@ test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 F
 
 echo "Validating execution-attempt integrity triggers"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_execution_integrity';")" = "1"
-test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='execution_attempt_state_integrity';")" = "1"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='execution_attempts_job_integrity';")" = "1"
 
 echo "Validating outbound queue lease schema"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ftn_mail_outbound_queue' AND column_name IN ('lease_token','lease_expires_at');")" = "2"
