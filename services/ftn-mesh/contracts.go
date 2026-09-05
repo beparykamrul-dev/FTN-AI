@@ -19,9 +19,12 @@ func (s MeshSnapshot) Validate() error {
 		if _, ok := seen[id]; ok { return errInvalid("duplicate node id: "+id) }
 		seen[id] = struct{}{}
 	}
+	linkSeen := make(map[string]struct{}, len(s.Links))
 	for _, l := range s.Links {
 		id, a, b := strings.TrimSpace(l.ID), strings.TrimSpace(l.A), strings.TrimSpace(l.B)
 		if id == "" || a == "" || b == "" { return errInvalid("link id and endpoints are required") }
+		if _, ok := linkSeen[id]; ok { return errInvalid("duplicate link id: "+id) }
+		linkSeen[id] = struct{}{}
 		if a == b { return errInvalid("self-link is not allowed: "+id) }
 		if _, ok := seen[a]; !ok { return errInvalid("link endpoint node not found: "+a) }
 		if _, ok := seen[b]; !ok { return errInvalid("link endpoint node not found: "+b) }
@@ -29,11 +32,24 @@ func (s MeshSnapshot) Validate() error {
 		if l.LatencyMs < 0 { return errInvalid("link latency cannot be negative: "+id) }
 		if l.LossPct < 0 || l.LossPct > 100 { return errInvalid("link loss must be between 0 and 100: "+id) }
 	}
+	routeSeen := make(map[string]struct{}, len(s.Routes))
 	for _, r := range s.Routes {
 		id, prefix, source := strings.TrimSpace(r.ID), strings.TrimSpace(r.Prefix), strings.TrimSpace(r.Source)
 		if id == "" || prefix == "" || source == "" { return errInvalid("route id, prefix and source are required") }
+		if _, ok := routeSeen[id]; ok { return errInvalid("duplicate route id: "+id) }
+		routeSeen[id] = struct{}{}
 		if _, ok := seen[source]; !ok { return errInvalid("route source node not found: "+source) }
 		if r.Approved && len(r.Targets) == 0 { return errInvalid("approved route requires a target: "+id) }
+		if len(r.Targets) > 0 {
+			targetSeen := make(map[string]struct{}, len(r.Targets))
+			for _, target := range r.Targets {
+				target = strings.TrimSpace(target)
+				if target == "" { return errInvalid("route target cannot be empty: "+id) }
+				if _, ok := seen[target]; !ok { return errInvalid("route target node not found: "+target) }
+				if _, ok := targetSeen[target]; ok { return errInvalid("duplicate route target: "+target) }
+				targetSeen[target] = struct{}{}
+			}
+		}
 	}
 	return nil
 }
