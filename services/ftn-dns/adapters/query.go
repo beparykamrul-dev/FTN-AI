@@ -1,92 +1,12 @@
 package adapters
 
-import (
-	"context"
-	"encoding/binary"
-	"fmt"
-	"net"
-	"strings"
-	"time"
+import("context";"crypto/rand";"encoding/binary";"fmt";"net";"strings";"time";ftndns "github.com/beparykamrul-dev/FTN-AI/services/ftn-dns")
 
-	ftndns "github.com/beparykamrul-dev/FTN-AI/services/ftn-dns"
-)
-
-// QueryDNS performs a minimal DNS-over-TCP exchange. It validates the DNS
-// message framing and response ID, while leaving RR decoding to the adapter.
-func QueryDNS(ctx context.Context, endpoint, name string, qtype uint16, timeout time.Duration) (ftndns.Response, error) {
-	if endpoint == "" || strings.TrimSpace(name) == "" {
-		return ftndns.Response{}, fmt.Errorf("endpoint and name are required")
-	}
-	if timeout <= 0 {
-		timeout = 2 * time.Second
-	}
-	packet, id, err := buildQuery(name, qtype)
-	if err != nil {
-		return ftndns.Response{}, err
-	}
-
-	d := net.Dialer{Timeout: timeout}
-	conn, err := d.DialContext(ctx, "tcp", endpoint)
-	if err != nil {
-		return ftndns.Response{}, fmt.Errorf("dns connect: %w", err)
-	}
-	defer conn.Close()
-	_ = conn.SetDeadline(time.Now().Add(timeout))
-
-	frame := make([]byte, 2+len(packet))
-	binary.BigEndian.PutUint16(frame[:2], uint16(len(packet)))
-	copy(frame[2:], packet)
-	if _, err = conn.Write(frame); err != nil {
-		return ftndns.Response{}, fmt.Errorf("dns write: %w", err)
-	}
-
-	var length [2]byte
-	if _, err = readFull(conn, length[:]); err != nil {
-		return ftndns.Response{}, fmt.Errorf("dns length: %w", err)
-	}
-	respLen := int(binary.BigEndian.Uint16(length[:]))
-	if respLen < 12 || respLen > 65535 {
-		return ftndns.Response{}, fmt.Errorf("invalid dns response length: %d", respLen)
-	}
-	response := make([]byte, respLen)
-	if _, err = readFull(conn, response); err != nil {
-		return ftndns.Response{}, fmt.Errorf("dns response: %w", err)
-	}
-	if binary.BigEndian.Uint16(response[:2]) != id {
-		return ftndns.Response{}, fmt.Errorf("dns response id mismatch")
-	}
-	return ftndns.Response{Name: strings.TrimSuffix(name, ".")}, nil
+func QueryDNS(ctx context.Context,endpoint,name string,qtype uint16,timeout time.Duration)(ftndns.Response,error){
+	endpoint=strings.TrimSpace(endpoint);name=strings.TrimSpace(name);if ctx==nil{return ftndns.Response{},fmt.Errorf("context is required")};if endpoint==""||name==""{return ftndns.Response{},fmt.Errorf("endpoint and name are required")};if qtype==0{return ftndns.Response{},fmt.Errorf("qtype is required")};if timeout<=0{timeout=2*time.Second}
+	packet,id,err:=buildQuery(name,qtype);if err!=nil{return ftndns.Response{},err};d:=net.Dialer{Timeout:timeout};conn,err:=d.DialContext(ctx,"tcp",endpoint);if err!=nil{return ftndns.Response{},fmt.Errorf("dns connect: %w",err)};defer conn.Close();if err:=conn.SetDeadline(time.Now().Add(timeout));err!=nil{return ftndns.Response{},fmt.Errorf("dns deadline: %w",err)}
+	frame:=make([]byte,2+len(packet));binary.BigEndian.PutUint16(frame[:2],uint16(len(packet)));copy(frame[2:],packet);if _,err=conn.Write(frame);err!=nil{return ftndns.Response{},fmt.Errorf("dns write: %w",err)}
+	var length [2]byte;if _,err=readFull(conn,length[:]);err!=nil{return ftndns.Response{},fmt.Errorf("dns length: %w",err)};respLen:=int(binary.BigEndian.Uint16(length[:]));if respLen<12||respLen>65535{return ftndns.Response{},fmt.Errorf("invalid dns response length: %d",respLen)};response:=make([]byte,respLen);if _,err=readFull(conn,response);err!=nil{return ftndns.Response{},fmt.Errorf("dns response: %w",err)};if binary.BigEndian.Uint16(response[:2])!=id{return ftndns.Response{},fmt.Errorf("dns response id mismatch")};return ftndns.Response{Name:strings.TrimSuffix(name,".")},nil
 }
-
-func buildQuery(name string, qtype uint16) ([]byte, uint16, error) {
-	id := uint16(time.Now().UnixNano())
-	labels := strings.Split(strings.TrimSuffix(name, "."), ".")
-	if len(labels) == 0 || labels[0] == "" {
-		return nil, 0, fmt.Errorf("invalid DNS name")
-	}
-	packet := make([]byte, 12)
-	binary.BigEndian.PutUint16(packet[0:2], id)
-	binary.BigEndian.PutUint16(packet[2:4], 0x0100)
-	binary.BigEndian.PutUint16(packet[4:6], 1)
-	for _, label := range labels {
-		if len(label) > 63 {
-			return nil, 0, fmt.Errorf("dns label too long")
-		}
-		packet = append(packet, byte(len(label)))
-		packet = append(packet, label...)
-	}
-	packet = append(packet, 0, byte(qtype>>8), byte(qtype), 0, 1)
-	return packet, id, nil
-}
-
-func readFull(conn net.Conn, buf []byte) (int, error) {
-	total := 0
-	for total < len(buf) {
-		n, err := conn.Read(buf[total:])
-		total += n
-		if err != nil {
-			return total, err
-		}
-	}
-	return total, nil
-}
+func buildQuery(name string,qtype uint16)([]byte,uint16,error){var b [2]byte;if _,err:=rand.Read(b[:]);err!=nil{return nil,0,fmt.Errorf("dns query id: %w",err)};id:=binary.BigEndian.Uint16(b[:]);labels:=strings.Split(strings.TrimSuffix(name,"."),".");if len(labels)==0||labels[0]==""{return nil,0,fmt.Errorf("invalid DNS name")};packet:=make([]byte,12);binary.BigEndian.PutUint16(packet[0:2],id);binary.BigEndian.PutUint16(packet[2:4],0x0100);binary.BigEndian.PutUint16(packet[4:6],1);for _,label:=range labels{if len(label)==0||len(label)>63{return nil,0,fmt.Errorf("invalid dns label length")};packet=append(packet,byte(len(label)));packet=append(packet,label...)};packet=append(packet,0,byte(qtype>>8),byte(qtype),0,1);return packet,id,nil}
+func readFull(conn net.Conn,buf []byte)(int,error){total:=0;for total<len(buf){n,err:=conn.Read(buf[total:]);total+=n;if err!=nil{return total,err};if n==0{return total,fmt.Errorf("empty dns read")}};return total,nil}
