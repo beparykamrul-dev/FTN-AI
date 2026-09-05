@@ -32,3 +32,5 @@ security:
   privileged_operations_approval: true
   external_telemetry_export: false
   secrets_in_telemetry: false
+  fail_closed_on_missing_identity: true
+  fail_closed_on_missing_authorization: true
