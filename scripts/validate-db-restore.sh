@@ -10,31 +10,35 @@ DUMP="$(mktemp)"
 cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; rm -f "$DUMP"; }
 trap cleanup EXIT
 
-for required in \
-  services/control-plane/schema.sql \
-  services/control-plane/migrations/002_platform_foundation.sql \
-  services/control-plane/migrations/003_durable_execution.sql \
-  services/control-plane/migrations/004_approval_execution.sql \
-  services/control-plane/migrations/005_job_integrity_leases.sql \
-  services/control-plane/migrations/006_job_event_automation.sql \
-  services/control-plane/migrations/007_qkd_security.sql \
-  services/control-plane/migrations/008_data_governor.sql \
-  services/control-plane/migrations/009_data_governance_controls.sql \
-  services/control-plane/migrations/010_dns_guard_filtering.sql \
-  services/control-plane/migrations/011_migration_registry.sql \
-  services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
-  services/control-plane/migrations/013_approval_payload_binding.sql \
-  services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
-  services/control-plane/migrations/015_approval_event_trigger.sql \
-  services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql \
-  services/control-plane/migrations/017_active_defense_execution.sql \
-  services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql \
-  services/control-plane/migrations/019_tenant_scoped_service_requests.sql \
-  services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql \
-  services/control-plane/migrations/021_verification_identity.sql \
-  services/control-plane/migrations/022_data_request_idempotency.sql \
-  services/control-plane/migrations/023_execution_attempt_integrity.sql \
-  services/control-plane/migrations/024_outbound_queue_leases.sql; do test -f "$required"; done
+MIGRATIONS=(
+  services/control-plane/schema.sql
+  services/control-plane/migrations/002_platform_foundation.sql
+  services/control-plane/migrations/003_durable_execution.sql
+  services/control-plane/migrations/004_approval_execution.sql
+  services/control-plane/migrations/005_job_integrity_leases.sql
+  services/control-plane/migrations/006_job_event_automation.sql
+  services/control-plane/migrations/007_qkd_security.sql
+  services/control-plane/migrations/008_data_governor.sql
+  services/control-plane/migrations/009_data_governance_controls.sql
+  services/control-plane/migrations/010_dns_guard_filtering.sql
+  services/control-plane/migrations/011_migration_registry.sql
+  services/control-plane/migrations/012_control_nodes_tenant_scope.sql
+  services/control-plane/migrations/013_approval_payload_binding.sql
+  services/control-plane/migrations/014_tenant_scoped_approval_hash.sql
+  services/control-plane/migrations/015_approval_event_trigger.sql
+  services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql
+  services/control-plane/migrations/017_active_defense_execution.sql
+  services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql
+  services/control-plane/migrations/019_tenant_scoped_service_requests.sql
+  services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql
+  services/control-plane/migrations/021_verification_identity.sql
+  services/control-plane/migrations/022_data_request_idempotency.sql
+  services/control-plane/migrations/023_execution_attempt_integrity.sql
+  services/control-plane/migrations/024_outbound_queue_leases.sql
+  services/control-plane/migrations/025_execution_attempt_state_integrity.sql
+)
+
+for required in "${MIGRATIONS[@]}"; do test -f "$required"; done
 
 echo "Starting isolated PostgreSQL validation instance"
 docker run -d --name "$NAME" -e POSTGRES_DB=ftn -e POSTGRES_USER=ftn -e POSTGRES_PASSWORD=ci-only-password "$POSTGRES_IMAGE" >/dev/null
@@ -44,31 +48,7 @@ until docker exec "$NAME" pg_isready -U ftn -d ftn >/dev/null 2>&1; do
   sleep 1
 done
 
-for migration in \
-  services/control-plane/schema.sql \
-  services/control-plane/migrations/002_platform_foundation.sql \
-  services/control-plane/migrations/003_durable_execution.sql \
-  services/control-plane/migrations/004_approval_execution.sql \
-  services/control-plane/migrations/005_job_integrity_leases.sql \
-  services/control-plane/migrations/006_job_event_automation.sql \
-  services/control-plane/migrations/007_qkd_security.sql \
-  services/control-plane/migrations/008_data_governor.sql \
-  services/control-plane/migrations/009_data_governance_controls.sql \
-  services/control-plane/migrations/010_dns_guard_filtering.sql \
-  services/control-plane/migrations/011_migration_registry.sql \
-  services/control-plane/migrations/012_control_nodes_tenant_scope.sql \
-  services/control-plane/migrations/013_approval_payload_binding.sql \
-  services/control-plane/migrations/014_tenant_scoped_approval_hash.sql \
-  services/control-plane/migrations/015_approval_event_trigger.sql \
-  services/control-plane/migrations/016_tenant_scoped_job_idempotency.sql \
-  services/control-plane/migrations/017_active_defense_execution.sql \
-  services/control-plane/migrations/018_tenant_scoped_active_defense_idempotency.sql \
-  services/control-plane/migrations/019_tenant_scoped_service_requests.sql \
-  services/control-plane/migrations/020_tenant_scoped_api_idempotency.sql \
-  services/control-plane/migrations/021_verification_identity.sql \
-  services/control-plane/migrations/022_data_request_idempotency.sql \
-  services/control-plane/migrations/023_execution_attempt_integrity.sql \
-  services/control-plane/migrations/024_outbound_queue_leases.sql; do
+for migration in "${MIGRATIONS[@]}"; do
   echo "Applying $migration"
   docker exec -i "$NAME" psql -v ON_ERROR_STOP=1 -U ftn -d ftn < "$migration" >/dev/null
 done
@@ -128,8 +108,9 @@ test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM data
 echo "Validating verifier identity column"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='durable_jobs' AND column_name='verified_by');")" = "t"
 
-echo "Validating execution-attempt integrity trigger"
+echo "Validating execution-attempt integrity triggers"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_execution_integrity';")" = "1"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='execution_attempt_state_integrity';")" = "1"
 
 echo "Validating outbound queue lease schema"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ftn_mail_outbound_queue' AND column_name IN ('lease_token','lease_expires_at');")" = "2"
@@ -144,7 +125,7 @@ test "$(docker exec "$NAME" psql -At -U ftn -d ftn_restore -c "SELECT count(*) F
 
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_event_journal';")" = "1"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='change_approvals_lifecycle_event';")" = "1"
-test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 24;")" = "14"
+test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 25;")" = "15"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='service_requests_tenant_idx');")" = "t"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='data_requests_tenant_request_hash_uidx');")" = "t"
 
