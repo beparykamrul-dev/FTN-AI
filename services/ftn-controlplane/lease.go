@@ -1,11 +1,6 @@
 package controlplane
 
-import (
-	"errors"
-	"strings"
-	"sync"
-	"time"
-)
+import("errors";"strings";"sync";"time")
 var(ErrLeaseNotFound=errors.New("lease not found");ErrLeaseLost=errors.New("lease lost"))
 type Lease struct{ResourceID string `json:"resource_id"`;OwnerID string `json:"owner_id"`;Fence uint64 `json:"fence"`;ExpiresAt time.Time `json:"expires_at"`}
 type LeaseStore interface{Acquire(resourceID,ownerID string,ttl time.Duration,now time.Time)(Lease,error);Renew(resourceID,ownerID string,fence uint64,ttl time.Duration,now time.Time)(Lease,error);Release(resourceID,ownerID string,fence uint64)error;Validate(resourceID,ownerID string,fence uint64,now time.Time)error}
