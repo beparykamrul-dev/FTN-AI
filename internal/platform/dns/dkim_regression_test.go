@@ -9,5 +9,5 @@ func TestDKIMRejectsUnsupportedKeyType(t *testing.T) {
 
 func TestDKIMFQDNIsCanonical(t *testing.T) {
 	r := DKIMRecord{Domain:" example.com. ",Selector:" selector. ",PublicKey:"abc"}
-	if got := r.FQDN(); got != "selector ._domainkey.example.com" { t.Fatalf("unexpected FQDN: %q", got) }
+	if got := r.FQDN(); got != "selector._domainkey.example.com" { t.Fatalf("unexpected FQDN: %q", got) }
 }
