@@ -22,10 +22,19 @@ type FiberPath struct {
 func BuildImpact(path FiberPath) []ImpactNode {
 	seen := make(map[string]ImpactNode, len(path.Impacted))
 	for _, n := range path.Impacted {
-		if n.ID != "" { seen[n.ID] = n }
+		if n.ID != "" {
+			seen[n.ID] = n
+		}
 	}
 	out := make([]ImpactNode, 0, len(seen))
-	for _, n := range seen { out = append(out, n) }
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	for _, n := range seen {
+		out = append(out, n)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].ID != out[j].ID {
+			return out[i].ID < out[j].ID
+		}
+		return out[i].Kind < out[j].Kind
+	})
 	return out
 }
