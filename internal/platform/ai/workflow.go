@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	ErrWorkflowExists = errors.New("workflow already exists")
-	ErrWorkflowNotFound = errors.New("workflow not found")
+	ErrWorkflowExists     = errors.New("workflow already exists")
+	ErrWorkflowNotFound   = errors.New("workflow not found")
 	ErrWorkflowNotRunnable = errors.New("workflow is not runnable")
 )
 
@@ -52,9 +52,9 @@ type ToolExecutor interface {
 // Engine keeps durable-workflow semantics independent from storage/transport.
 // Persistence can later be backed by FTN's database/replication layer.
 type Engine struct {
-	mu       sync.RWMutex
+	mu        sync.RWMutex
 	workflows map[string]Workflow
-	executor ToolExecutor
+	executor  ToolExecutor
 }
 
 func NewEngine(executor ToolExecutor) *Engine {
@@ -85,6 +85,9 @@ func (e *Engine) Create(w Workflow) error {
 func (e *Engine) Resume(ctx context.Context, id string) error {
 	if e.executor == nil {
 		return errors.New("workflow executor is not configured")
+	}
+	if ctx == nil {
+		return errors.New("context is required")
 	}
 
 	for {
@@ -144,8 +147,12 @@ func (e *Engine) Pause(id string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	w, ok := e.workflows[id]
-	if !ok { return ErrWorkflowNotFound }
-	if w.State == WorkflowSucceeded || w.State == WorkflowCancelled { return ErrWorkflowNotRunnable }
+	if !ok {
+		return ErrWorkflowNotFound
+	}
+	if w.State == WorkflowSucceeded || w.State == WorkflowCancelled {
+		return ErrWorkflowNotRunnable
+	}
 	w.State = WorkflowPaused
 	w.Revision++
 	w.UpdatedAt = time.Now().UTC()
@@ -157,7 +164,9 @@ func (e *Engine) Get(id string) (Workflow, bool) {
 	e.mu.RLock()
 	w, ok := e.workflows[id]
 	e.mu.RUnlock()
-	if !ok { return Workflow{}, false }
+	if !ok {
+		return Workflow{}, false
+	}
 	return cloneWorkflow(w), true
 }
 
@@ -171,8 +180,12 @@ func cloneWorkflow(w Workflow) Workflow {
 }
 
 func cloneMap(in map[string]any) map[string]any {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	out := make(map[string]any, len(in))
-	for k, v := range in { out[k] = v }
+	for k, v := range in {
+		out[k] = v
+	}
 	return out
 }
