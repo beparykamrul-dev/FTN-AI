@@ -5,35 +5,30 @@ import (
 	"strings"
 )
 
-type CORS struct {
-	AllowedOrigins []string
-}
+type CORS struct { AllowedOrigins []string }
 
 func (c CORS) Middleware(next http.Handler) http.Handler {
-	allowed := map[string]bool{}
+	allowed := make(map[string]struct{}, len(c.AllowedOrigins))
 	for _, origin := range c.AllowedOrigins {
 		origin = strings.TrimSpace(origin)
-		if origin != "" {
-			allowed[origin] = true
-		}
+		if origin != "" { allowed[origin] = struct{}{} }
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if origin != "" && allowed[origin] {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Vary", "Origin")
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		if r == nil { w.WriteHeader(http.StatusBadRequest); return }
+		origin := strings.TrimSpace(r.Header.Get("Origin"))
+		if origin != "" {
+			if _, ok := allowed[origin]; ok {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Add("Vary", "Origin")
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID")
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			} else if strings.EqualFold(r.Method, http.MethodOptions) {
+				w.WriteHeader(http.StatusForbidden); return
+			}
 		}
-		if strings.EqualFold(r.Method, http.MethodOptions) {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		if next == nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
+		if strings.EqualFold(r.Method, http.MethodOptions) { w.WriteHeader(http.StatusNoContent); return }
+		if next == nil { w.WriteHeader(http.StatusNotFound); return }
 		next.ServeHTTP(w, r)
 	})
 }
