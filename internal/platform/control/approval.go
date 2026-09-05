@@ -1,5 +1,4 @@
 package control
-
 import("errors";"strings";"sync";"time")
 type ApprovalStatus string
 const(Pending ApprovalStatus="pending";Approved ApprovalStatus="approved";Rejected ApprovalStatus="rejected")
