@@ -71,3 +71,4 @@ jobs:
           git add -- '*.go'
           git commit -m 'chore: repair next 25 Go files'
           git push origin "HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          echo 'Batch repair completed.'
