@@ -30,7 +30,7 @@ func NewFailoverController() *FailoverController {
 }
 
 func (c *FailoverController) Upsert(node FailoverNode) {
-	if node.ID == "" {
+	if c == nil || node.ID == "" || node.Address == "" {
 		return
 	}
 	c.mu.Lock()
@@ -39,6 +39,9 @@ func (c *FailoverController) Upsert(node FailoverNode) {
 }
 
 func (c *FailoverController) Plan(zone string) FailoverPlan {
+	if c == nil {
+		return FailoverPlan{Zone: zone}
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	nodes := make([]FailoverNode, 0, len(c.nodes))
@@ -48,10 +51,10 @@ func (c *FailoverController) Plan(zone string) FailoverPlan {
 		}
 	}
 	sort.Slice(nodes, func(i, j int) bool {
-		if nodes[i].Priority == nodes[j].Priority {
-			return nodes[i].ID < nodes[j].ID
+		if nodes[i].Priority != nodes[j].Priority {
+			return nodes[i].Priority < nodes[j].Priority
 		}
-		return nodes[i].Priority < nodes[j].Priority
+		return nodes[i].ID < nodes[j].ID
 	})
 	plan := FailoverPlan{Zone: zone}
 	if len(nodes) == 0 {
