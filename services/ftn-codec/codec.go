@@ -10,10 +10,15 @@ type Job struct { CapabilityID string `json:"capability_id"`; InputURI string `j
 type Result struct { JobID string `json:"job_id"`; Status string `json:"status"`; OutputURI string `json:"output_uri,omitempty"`; InputSHA256 string `json:"input_sha256,omitempty"`; OutputSHA256 string `json:"output_sha256,omitempty"`; BytesIn int64 `json:"bytes_in,omitempty"`; BytesOut int64 `json:"bytes_out,omitempty"` }
 
 func (c Capability) Valid() bool { return strings.TrimSpace(c.ID) != "" && strings.TrimSpace(c.Class) != "" }
+
 func (j Job) Valid() error {
 	if strings.TrimSpace(j.CapabilityID) == "" { return fmt.Errorf("capability_id is required") }
 	if strings.TrimSpace(j.InputURI) == "" { return fmt.Errorf("input_uri is required") }
 	if j.OutputURI != "" && strings.TrimSpace(j.OutputURI) == "" { return fmt.Errorf("output_uri is invalid") }
+	for k, v := range j.Options {
+		if strings.TrimSpace(k) == "" { return fmt.Errorf("option key is invalid") }
+		if len(v) > 16384 { return fmt.Errorf("option %q is too large", k) }
+	}
 	return nil
 }
 
