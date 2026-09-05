@@ -48,7 +48,25 @@ func (r SPFRecord) TXTValue() (string, error) {
 		}
 	}
 	if r.All != "" {
-		parts = append(parts, "~all")
+		parts = append(parts, r.AllQualifier())
 	}
 	return strings.Join(parts, " "), nil
+}
+
+func (r SPFRecord) AllQualifier() string {
+	if r.All == "" {
+		return ""
+	}
+	switch r.All {
+	case "pass":
+		return "+all"
+	case "fail":
+		return "-all"
+	case "softfail":
+		return "~all"
+	case "neutral":
+		return "?all"
+	default:
+		return ""
+	}
 }
