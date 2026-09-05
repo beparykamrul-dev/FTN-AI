@@ -1,6 +1,6 @@
 package gis
 
-import("encoding/json";"fmt";"sync")
+import("encoding/json";"fmt";"strings";"sync")
 type Event struct{Type string `json:"type"`;Node *MapNode `json:"node,omitempty"`;Edge *MapEdge `json:"edge,omitempty"`}
 type Subscriber chan []byte
 type Hub struct{mu sync.RWMutex;subs map[Subscriber]struct{}}
