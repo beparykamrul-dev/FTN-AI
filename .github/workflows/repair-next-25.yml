@@ -1,79 +1,36 @@
 name: FTN Go Repair Next 25
 
 on:
-  pull_request_target:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: ftn-go-repair-next-25-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  group: ftn-go-repair-next-25-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   repair:
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up Go
-        uses: actions/setup-go@3041bf56c941b39c61721a86cd64f0c5d6a506f # v5.2.0
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          go-version: '1.24.x'
-
-      - name: Repair next 25 Go files through GitHub API
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          BRANCH: ${{ github.event.pull_request.head.ref }}
+          go-version: '1.24'
+      - name: Check Go formatting across repository
         shell: bash
         run: |
           set -euo pipefail
-          files=(
-            apps/ftn-social/realtime/protocol.go
-            apps/ftn-social/realtime/transport.go
-            backend/internal/diagnostics/ai/advisor.go
-            backend/internal/diagnostics/model/dependency.go
-            backend/internal/diagnostics/rootcause/analyzer.go
-            contracts/v1/camera_service.go
-            contracts/v1/ftnftp.go
-            contracts/v1/local_media.go
-            contracts/v1/local_media_platform.go
-            contracts/v1/managed_device.go
-            internal/platform/agent/adapter_registry.go
-            internal/platform/agent/audit.go
-            internal/platform/agent/capability.go
-            internal/platform/agent/categories.go
-            internal/platform/agent/decision.go
-            internal/platform/agent/device_identity.go
-            internal/platform/agent/health.go
-            internal/platform/agent/heartbeat.go
-            internal/platform/agent/layers.go
-            internal/platform/agent/quota.go
-            internal/platform/agent/router.go
-            internal/platform/agent/summary.go
-            internal/platform/ai/workflow.go
-            internal/platform/authenticator/iam.go
-            internal/platform/authenticator/key_rotation.go
-          )
-          : > /tmp/ftn-gofmt-changed.txt
+          mapfile -t files < <(git ls-files '*.go' | sort)
+          bad=()
           for file in "${files[@]}"; do
-            tmp=$(mktemp)
-            meta=$(mktemp)
-            gh api "repos/$REPO/contents/$file?ref=$BRANCH" > "$meta"
-            jq -r '.content' "$meta" | tr -d '\n' | base64 -d > "$tmp"
-            if [ -n "$(gofmt -d "$tmp")" ]; then
-              gofmt -w "$tmp"
-              content=$(base64 -w0 "$tmp")
-              sha=$(jq -r '.sha' "$meta")
-              gh api --method PUT "repos/$REPO/contents/$file" \
-                -f message='chore: repair next 25 Go files' \
-                -f content="$content" \
-                -f sha="$sha" \
-                -f branch="$BRANCH" >/dev/null
-              echo "$file" | tee -a /tmp/ftn-gofmt-changed.txt
-            fi
-            rm -f "$tmp" "$meta"
+            if [[ -n "$(gofmt -l "$file")" ]]; then bad+=("$file"); fi
           done
-          echo 'Formatted files:'
-          cat /tmp/ftn-gofmt-changed.txt || true
+          if ((${#bad[@]})); then
+            printf 'Unformatted Go files:\n%s\n' "${bad[@]}"
+            exit 1
+          fi
+          echo "All ${#files[@]} tracked Go files are gofmt-clean."
