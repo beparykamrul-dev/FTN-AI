@@ -2,12 +2,10 @@ package dns
 
 import (
 	"context"
+	"math"
 	"strings"
 )
 
-// Adapter is the common contract for FTN-owned and external DNS backends.
-// Implementations must keep credentials outside this interface and return only
-// normalized operational data to the FTN DNS control plane.
 type Adapter interface {
 	Name() string
 	Health(ctx context.Context) (Health, error)
@@ -17,11 +15,13 @@ type Adapter interface {
 type Health struct { Reachable bool; Secure bool; LatencyMS int64; LossRatio float64 }
 type Response struct { Name string; RecordType string; Values []string; Secure bool }
 
-func (h Health) Valid() bool { return h.LatencyMS >= 0 && h.LossRatio >= 0 && h.LossRatio <= 1 }
+func (h Health) Valid() bool {
+	return h.LatencyMS >= 0 && !math.IsNaN(h.LossRatio) && !math.IsInf(h.LossRatio, 0) && h.LossRatio >= 0 && h.LossRatio <= 1
+}
 
 func (r Response) Valid() bool {
-	if strings.TrimSpace(r.Name) == "" || strings.TrimSpace(r.RecordType) == "" { return false }
-	return len(r.Values) > 0
+	n := r.Normalized()
+	return n.Name != "" && n.RecordType != "" && len(n.Values) > 0
 }
 
 func (r Response) Normalized() Response {
