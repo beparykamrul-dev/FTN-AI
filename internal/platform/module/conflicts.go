@@ -3,6 +3,7 @@ package module
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 func (r *Registry) CapabilityConflicts() map[string][]string {
@@ -12,8 +13,12 @@ func (r *Registry) CapabilityConflicts() map[string][]string {
 	owners := make(map[string][]string)
 	for name, m := range r.modules {
 		if m == nil { continue }
+		name = strings.TrimSpace(name)
+		if name == "" { continue }
+		seen := make(map[string]struct{})
 		for _, capability := range m.Definition().Capabilities {
-			if capability != "" { owners[capability] = append(owners[capability], name) }
+			capability = strings.TrimSpace(capability)
+			if capability != "" { if _, ok := seen[capability]; !ok { owners[capability] = append(owners[capability], name); seen[capability] = struct{}{} } }
 		}
 	}
 	r.mu.RUnlock()
