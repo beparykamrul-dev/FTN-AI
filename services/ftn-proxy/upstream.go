@@ -26,8 +26,12 @@ func RankUpstreams(items []Upstream) []Upstream {
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].LatencyMS != out[j].LatencyMS { return out[i].LatencyMS < out[j].LatencyMS }
-		if out[i].Load != out[j].Load { return out[i].Load < out[j].Load }
+		if out[i].LatencyMS != out[j].LatencyMS {
+			return out[i].LatencyMS < out[j].LatencyMS
+		}
+		if out[i].Load != out[j].Load {
+			return out[i].Load < out[j].Load
+		}
 		return out[i].ID < out[j].ID
 	})
 	return out
