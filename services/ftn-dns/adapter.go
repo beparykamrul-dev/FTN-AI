@@ -14,22 +14,14 @@ type Adapter interface {
 	Query(ctx context.Context, name, recordType string) (Response, error)
 }
 
-type Health struct {
-	Reachable bool
-	Secure    bool
-	LatencyMS int64
-	LossRatio float64
-}
+type Health struct { Reachable bool; Secure bool; LatencyMS int64; LossRatio float64 }
+type Response struct { Name string; RecordType string; Values []string; Secure bool }
 
-type Response struct {
-	Name       string
-	RecordType string
-	Values     []string
-	Secure     bool
-}
+func (h Health) Valid() bool { return h.LatencyMS >= 0 && h.LossRatio >= 0 && h.LossRatio <= 1 }
 
-func (h Health) Valid() bool {
-	return h.LatencyMS >= 0 && h.LossRatio >= 0 && h.LossRatio <= 1
+func (r Response) Valid() bool {
+	if strings.TrimSpace(r.Name) == "" || strings.TrimSpace(r.RecordType) == "" { return false }
+	return len(r.Values) > 0
 }
 
 func (r Response) Normalized() Response {
@@ -39,12 +31,8 @@ func (r Response) Normalized() Response {
 	seen := make(map[string]struct{}, len(r.Values))
 	for _, value := range r.Values {
 		value = strings.TrimSpace(value)
-		if value == "" {
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
+		if value == "" { continue }
+		if _, ok := seen[value]; ok { continue }
 		seen[value] = struct{}{}
 		values = append(values, value)
 	}
