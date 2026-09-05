@@ -8,38 +8,7 @@ import (
 )
 
 type Topology struct { mu sync.RWMutex; nodes map[string]Node; links []Link }
-
 func NewTopology() *Topology { return &Topology{nodes: make(map[string]Node)} }
-
-func (t *Topology) UpsertNode(n Node) error {
-	if t == nil { return errors.New("mesh topology is required") }
-	n.ID = strings.TrimSpace(n.ID)
-	if n.ID == "" { return errors.New("mesh node id is required") }
-	t.mu.Lock(); defer t.mu.Unlock()
-	if t.nodes == nil { t.nodes = make(map[string]Node) }
-	t.nodes[n.ID] = n
-	return nil
-}
-
-func (t *Topology) SetLink(l Link) error {
-	if t == nil { return errors.New("mesh topology is required") }
-	l.From, l.To = strings.TrimSpace(l.From), strings.TrimSpace(l.To)
-	if l.From == "" || l.To == "" || l.From == l.To { return errors.New("invalid mesh link") }
-	t.mu.Lock(); defer t.mu.Unlock()
-	for i, x := range t.links {
-		if (x.From == l.From && x.To == l.To) || (x.From == l.To && x.To == l.From) { t.links[i] = l; return nil }
-	}
-	t.links = append(t.links, l)
-	return nil
-}
-
-func (t *Topology) Snapshot() ([]Node, []Link) {
-	if t == nil { return nil, nil }
-	t.mu.RLock(); defer t.mu.RUnlock()
-	nodes := make([]Node, 0, len(t.nodes))
-	for _, n := range t.nodes { nodes = append(nodes, n) }
-	links := append([]Link(nil), t.links...)
-	sort.Slice(nodes, func(i,j int) bool { return nodes[i].ID < nodes[j].ID })
-	sort.Slice(links, func(i,j int) bool { if links[i].From != links[j].From { return links[i].From < links[j].From }; return links[i].To < links[j].To })
-	return nodes, links
-}
+func (t *Topology) UpsertNode(n Node) error { if t == nil { return errors.New("mesh topology is required") }; n.ID = strings.TrimSpace(n.ID); if n.ID == "" { return errors.New("mesh node id is required") }; t.mu.Lock(); defer t.mu.Unlock(); if t.nodes == nil { t.nodes = make(map[string]Node) }; t.nodes[n.ID] = n; return nil }
+func (t *Topology) SetLink(l Link) error { if t == nil { return errors.New("mesh topology is required") }; l.From, l.To = strings.TrimSpace(l.From), strings.TrimSpace(l.To); if l.From == "" || l.To == "" || l.From == l.To { return errors.New("invalid mesh link") }; t.mu.Lock(); defer t.mu.Unlock(); for i, x := range t.links { if (x.From == l.From && x.To == l.To) || (x.From == l.To && x.To == l.From) { t.links[i] = l; return nil } }; t.links = append(t.links, l); return nil }
+func (t *Topology) Snapshot() ([]Node, []Link) { if t == nil { return nil, nil }; t.mu.RLock(); defer t.mu.RUnlock(); nodes := make([]Node, 0, len(t.nodes)); for _, n := range t.nodes { nodes = append(nodes, n) }; links := append([]Link(nil), t.links...); sort.Slice(nodes, func(i,j int) bool { return nodes[i].ID < nodes[j].ID }); sort.Slice(links, func(i,j int) bool { a,b:=links[i],links[j]; if a.From!=b.From{return a.From<b.From}; if a.To!=b.To{return a.To<b.To}; return a.ID<b.ID }); return nodes, links }
