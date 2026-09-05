@@ -12,7 +12,9 @@ type IPAM struct {
 	assets map[string]IPAsset
 }
 
-func NewIPAM() *IPAM { return &IPAM{assets: make(map[string]IPAsset)} }
+func NewIPAM() *IPAM {
+	return &IPAM{assets: make(map[string]IPAsset)}
+}
 
 func (i *IPAM) Upsert(asset IPAsset) error {
 	if asset.ID == "" || asset.IP == "" {
@@ -39,6 +41,8 @@ func (i *IPAM) List() []IPAsset {
 	for _, a := range i.assets {
 		out = append(out, a)
 	}
-	sort.Slice(out, func(a, b int) bool { return out[a].IP < out[b].IP })
+	sort.Slice(out, func(a, b int) bool {
+		return out[a].IP < out[b].IP
+	})
 	return out
 }
