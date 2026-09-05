@@ -19,8 +19,12 @@ type Lifecycle struct {
 func NewLifecycle() *Lifecycle { return &Lifecycle{states: make(map[string]State)} }
 
 func (l *Lifecycle) Set(name string, state State) error {
-	if name == "" { return fmt.Errorf("module name is required") }
-	if state == "" { return fmt.Errorf("module state is required") }
+	if name == "" {
+		return fmt.Errorf("module name is required")
+	}
+	if state == "" {
+		return fmt.Errorf("module state is required")
+	}
 	l.states[name] = state
 	return nil
 }
