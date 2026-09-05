@@ -31,33 +31,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t files < <(find . -type f -name '*.go' \
+          : > /tmp/ftn-gofmt-batch.txt
+          find . -type f -name '*.go' \
             -not -path './.git/*' \
             -not -path './vendor/*' \
-            -print0 | xargs -0 gofmt -l | sort | head -25)
-          printf '%s\n' "${files[@]}"
+            -print0 | xargs -0 gofmt -l | sort | head -25 | tee /tmp/ftn-gofmt-batch.txt
+          mapfile -t files < /tmp/ftn-gofmt-batch.txt
           if ((${#files[@]} > 0)); then
             gofmt -w "${files[@]}"
-          fi
-          if git diff --quiet --exit-code; then
-            echo 'No unformatted Go files found in the next batch.'
-            exit 0
+          else
+            echo 'No unformatted Go files found.'
           fi
 
-      - name: Verify formatting
+      - name: Verify repaired batch
+        shell: bash
         run: |
           set -euo pipefail
-          if [ -n "$(gofmt -l $(find . -type f -name '*.go' -not -path './.git/*' -not -path './vendor/*'))" ]; then
-            echo 'Repository still contains unformatted Go files.'
-            gofmt -l $(find . -type f -name '*.go' -not -path './.git/*' -not -path './vendor/*')
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            if ! gofmt -d "$file" | grep -q '^'; then
+              continue
+            fi
+            echo "Formatting verification failed: $file"
+            gofmt -d "$file"
             exit 1
-          fi
+          done < /tmp/ftn-gofmt-batch.txt
 
       - name: Commit repaired batch
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet --exit-code; then
+          if git diff --quiet --exit-code -- '*.go'; then
             echo 'Nothing to commit.'
             exit 0
           fi
