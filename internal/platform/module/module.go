@@ -24,7 +24,7 @@ type Registry struct {
 func NewRegistry() *Registry { return &Registry{modules: make(map[string]Module)} }
 
 func (r *Registry) Register(m Module) {
-	if m == nil {
+	if r == nil || m == nil {
 		return
 	}
 	d := m.Definition()
@@ -37,6 +37,9 @@ func (r *Registry) Register(m Module) {
 }
 
 func (r *Registry) Get(name string) (Module, bool) {
+	if r == nil {
+		return nil, false
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	m, ok := r.modules[name]
@@ -44,6 +47,9 @@ func (r *Registry) Get(name string) (Module, bool) {
 }
 
 func (r *Registry) List() []Definition {
+	if r == nil {
+		return nil
+	}
 	r.mu.RLock()
 	out := make([]Definition, 0, len(r.modules))
 	for _, m := range r.modules {
@@ -55,6 +61,9 @@ func (r *Registry) List() []Definition {
 }
 
 func (r *Registry) Has(name string) bool {
+	if r == nil {
+		return false
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	_, ok := r.modules[name]
@@ -63,6 +72,9 @@ func (r *Registry) Has(name string) bool {
 
 // DependenciesReady verifies that every declared module dependency is loaded.
 func (r *Registry) DependenciesReady(d Definition) bool {
+	if r == nil {
+		return false
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	for _, dep := range d.Dependencies {
