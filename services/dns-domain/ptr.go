@@ -23,6 +23,9 @@ type PTRStore interface {
 }
 
 func ValidatePTR(record PTRRecord) error {
+	if strings.TrimSpace(record.ID) == "" {
+		return fmt.Errorf("PTR id is required")
+	}
 	address := strings.TrimSpace(record.Address)
 	hostname := strings.TrimSuffix(strings.TrimSpace(record.Hostname), ".")
 	if address == "" || hostname == "" {
