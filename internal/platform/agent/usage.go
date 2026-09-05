@@ -18,12 +18,20 @@ type UsageGate struct {
 func NewUsageGate(plans []Plan) *UsageGate {
 	m := make(map[string]Plan, len(plans))
 	for _, p := range plans {
-		m[p.ID] = p
+		if p.ID != "" {
+			m[p.ID] = p
+		}
 	}
 	return &UsageGate{plans: m, usage: make(map[string]Usage), now: time.Now}
 }
 
 func (g *UsageGate) CheckAndConsume(ctx context.Context, principal, planID string, tokens int64) error {
+	if g == nil {
+		return fmt.Errorf("usage gate is required")
+	}
+	if ctx == nil {
+		return fmt.Errorf("context is required")
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -39,10 +47,14 @@ func (g *UsageGate) CheckAndConsume(ctx context.Context, principal, planID strin
 	if p.RequestsPerDay <= 0 || p.TokensPerDay <= 0 {
 		return fmt.Errorf("invalid plan: %s", planID)
 	}
-	now := g.now()
+	now := g.now
+	if now == nil {
+		now = time.Now
+	}
+	current := now()
 	u := g.usage[principal]
-	if u.ResetAt.IsZero() || !now.Before(u.ResetAt) {
-		u = Usage{ResetAt: now.UTC().Truncate(24 * time.Hour).Add(24 * time.Hour)}
+	if u.ResetAt.IsZero() || !current.Before(u.ResetAt) {
+		u = Usage{ResetAt: current.UTC().Truncate(24 * time.Hour).Add(24 * time.Hour)}
 	}
 	if u.Requests >= p.RequestsPerDay {
 		return fmt.Errorf("request quota exceeded")
