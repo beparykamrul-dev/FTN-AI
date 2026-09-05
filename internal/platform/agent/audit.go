@@ -29,6 +29,9 @@ func (a *Audit) Record(ctx context.Context, principal string, scope Scope, categ
 	if a == nil || a.Sink == nil {
 		return nil
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	now := time.Now()
 	if a.Now != nil {
 		now = a.Now()
