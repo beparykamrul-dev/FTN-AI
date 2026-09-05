@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -42,7 +43,10 @@ func NormalizeCoreNetworkEndpoints(endpoints []TunnelEndpoint) []TunnelEndpoint 
 	out := append([]TunnelEndpoint(nil), endpoints...)
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Healthy != out[j].Healthy { return out[i].Healthy }
-		if out[i].LatencyMS != out[j].LatencyMS { return out[i].LatencyMS < out[j].LatencyMS }
+		iFinite := !math.IsNaN(out[i].LatencyMS) && !math.IsInf(out[i].LatencyMS, 0) && out[i].LatencyMS >= 0
+		jFinite := !math.IsNaN(out[j].LatencyMS) && !math.IsInf(out[j].LatencyMS, 0) && out[j].LatencyMS >= 0
+		if iFinite != jFinite { return iFinite }
+		if iFinite && out[i].LatencyMS != out[j].LatencyMS { return out[i].LatencyMS < out[j].LatencyMS }
 		return strings.TrimSpace(out[i].ID) < strings.TrimSpace(out[j].ID)
 	})
 	return out
