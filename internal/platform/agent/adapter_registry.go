@@ -8,7 +8,7 @@ type Adapter interface {
 }
 
 type AdapterRegistry struct {
-	mu      sync.RWMutex
+	mu       sync.RWMutex
 	adapters map[DeviceKind]Adapter
 }
 
@@ -17,12 +17,18 @@ func NewAdapterRegistry() *AdapterRegistry {
 }
 
 func (r *AdapterRegistry) Register(a Adapter) {
+	if r == nil || a == nil {
+		return
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.adapters[a.Kind()] = a
 }
 
 func (r *AdapterRegistry) Get(kind DeviceKind) (Adapter, bool) {
+	if r == nil {
+		return nil, false
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	a, ok := r.adapters[kind]
@@ -30,6 +36,9 @@ func (r *AdapterRegistry) Get(kind DeviceKind) (Adapter, bool) {
 }
 
 func (r *AdapterRegistry) Kinds() []DeviceKind {
+	if r == nil {
+		return nil
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]DeviceKind, 0, len(r.adapters))
