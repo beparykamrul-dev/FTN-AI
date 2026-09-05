@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"testing"
 )
 
@@ -24,4 +25,15 @@ func TestNormalizeCoreNetworkEndpoints(t *testing.T) {
 	in := []TunnelEndpoint{{ID:"z", Healthy:false, LatencyMS:1},{ID:"b", Healthy:true, LatencyMS:20},{ID:"a", Healthy:true, LatencyMS:10}}
 	out := NormalizeCoreNetworkEndpoints(in)
 	if out[0].ID != "a" || out[1].ID != "b" || out[2].ID != "z" { t.Fatalf("unexpected order: %+v", out) }
+}
+
+func TestNormalizeCoreNetworkEndpointsRejectsNonFiniteLatencyOrdering(t *testing.T) {
+	in := []TunnelEndpoint{
+		{ID:"nan", Healthy:true, LatencyMS:math.NaN()},
+		{ID:"inf", Healthy:true, LatencyMS:math.Inf(1)},
+		{ID:"valid", Healthy:true, LatencyMS:5},
+		{ID:"negative", Healthy:true, LatencyMS:-1},
+	}
+	out := NormalizeCoreNetworkEndpoints(in)
+	if out[0].ID != "valid" { t.Fatalf("finite valid endpoint must sort first: %+v", out) }
 }
