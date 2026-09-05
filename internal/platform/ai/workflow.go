@@ -10,13 +10,12 @@ import (
 )
 
 var (
-	ErrWorkflowExists       = errors.New("workflow already exists")
-	ErrWorkflowNotFound     = errors.New("workflow not found")
-	ErrWorkflowNotRunnable  = errors.New("workflow is not runnable")
+	ErrWorkflowExists = errors.New("workflow already exists")
+	ErrWorkflowNotFound = errors.New("workflow not found")
+	ErrWorkflowNotRunnable = errors.New("workflow is not runnable")
 )
 
 type WorkflowState string
-
 const (
 	WorkflowPending WorkflowState = "PENDING"
 	WorkflowRunning WorkflowState = "RUNNING"
@@ -30,87 +29,13 @@ type WorkflowStep struct { ID string; ToolID string; Input map[string]any; Requi
 type Workflow struct { ID string; Revision uint64; State WorkflowState; CurrentStep int; Steps []WorkflowStep; CreatedAt time.Time; UpdatedAt time.Time; LastError string }
 type ToolExecutor interface { Execute(context.Context, WorkflowStep) error }
 type Engine struct { mu sync.RWMutex; workflows map[string]Workflow; executor ToolExecutor }
-
 func NewEngine(executor ToolExecutor) *Engine { return &Engine{workflows: make(map[string]Workflow), executor: executor} }
-
-func validWorkflowState(s WorkflowState) bool {
-	switch s { case WorkflowPending, WorkflowRunning, WorkflowPaused, WorkflowSucceeded, WorkflowFailed, WorkflowCancelled: return true }
-	return false
-}
-
-func canTransitionWorkflow(from, to WorkflowState) bool {
-	if from == to { return true }
-	switch from {
-	case WorkflowPending: return to == WorkflowRunning || to == WorkflowCancelled
-	case WorkflowRunning: return to == WorkflowPaused || to == WorkflowSucceeded || to == WorkflowFailed || to == WorkflowCancelled
-	case WorkflowPaused: return to == WorkflowRunning || to == WorkflowCancelled
-	case WorkflowFailed: return to == WorkflowRunning || to == WorkflowCancelled
-	case WorkflowSucceeded, WorkflowCancelled: return false
-	}
-	return false
-}
-
-func normalizeWorkflow(w Workflow) (Workflow, error) {
-	w.ID = strings.TrimSpace(w.ID)
-	if w.ID == "" || len(w.Steps) == 0 { return Workflow{}, errors.New("workflow id and steps are required") }
-	if w.CurrentStep < 0 || w.CurrentStep > len(w.Steps) { return Workflow{}, errors.New("workflow current step out of range") }
-	if w.State == "" { w.State = WorkflowPending }
-	w.State = WorkflowState(strings.ToUpper(strings.TrimSpace(string(w.State))))
-	if !validWorkflowState(w.State) { return Workflow{}, errors.New("invalid workflow state") }
-	seen := map[string]struct{}{}
-	for i := range w.Steps {
-		w.Steps[i].ID = strings.TrimSpace(w.Steps[i].ID)
-		w.Steps[i].ToolID = strings.TrimSpace(w.Steps[i].ToolID)
-		if w.Steps[i].ID == "" || w.Steps[i].ToolID == "" { return Workflow{}, errors.New("workflow steps require id and tool id") }
-		if _, ok := seen[w.Steps[i].ID]; ok { return Workflow{}, errors.New("duplicate workflow step id") }
-		seen[w.Steps[i].ID] = struct{}{}
-	}
-	if w.CreatedAt.IsZero() { w.CreatedAt = time.Now().UTC() } else { w.CreatedAt = w.CreatedAt.UTC() }
-	if w.UpdatedAt.IsZero() { w.UpdatedAt = w.CreatedAt } else { w.UpdatedAt = w.UpdatedAt.UTC() }
-	return w, nil
-}
-
-func (e *Engine) Create(w Workflow) error {
-	if e == nil { return errors.New("workflow engine is required") }
-	var err error
-	w, err = normalizeWorkflow(w)
-	if err != nil { return err }
-	e.mu.Lock(); defer e.mu.Unlock()
-	if e.workflows == nil { e.workflows = make(map[string]Workflow) }
-	if _, ok := e.workflows[w.ID]; ok { return ErrWorkflowExists }
-	e.workflows[w.ID] = cloneWorkflow(w)
-	return nil
-}
-
-func (e *Engine) Resume(ctx context.Context, id string) error {
-	if e == nil { return errors.New("workflow engine is required") }
-	if e.executor == nil { return errors.New("workflow executor is not configured") }
-	if ctx == nil { return errors.New("context is required") }
-	id = strings.TrimSpace(id); if id == "" { return ErrWorkflowNotFound }
-	for {
-		select { case <-ctx.Done(): return ctx.Err(); default: }
-		e.mu.Lock(); w, ok := e.workflows[id]
-		if !ok { e.mu.Unlock(); return ErrWorkflowNotFound }
-		if !canTransitionWorkflow(w.State, WorkflowRunning) { e.mu.Unlock(); return ErrWorkflowNotRunnable }
-		w.State = WorkflowRunning; w.Revision++; w.UpdatedAt = time.Now().UTC()
-		if w.CurrentStep >= len(w.Steps) { w.State = WorkflowSucceeded; w.Revision++; e.workflows[id] = cloneWorkflow(w); e.mu.Unlock(); return nil }
-		step := w.Steps[w.CurrentStep]; e.workflows[id] = cloneWorkflow(w); e.mu.Unlock()
-		if err := e.executor.Execute(ctx, step); err != nil {
-			e.mu.Lock(); w = e.workflows[id]; w.State = WorkflowPaused; w.LastError = fmt.Sprintf("step %s: %v", step.ID, err); w.Revision++; w.UpdatedAt = time.Now().UTC(); e.workflows[id] = cloneWorkflow(w); e.mu.Unlock(); return err
-		}
-		e.mu.Lock(); w = e.workflows[id]; w.CurrentStep++; w.LastError = ""; w.Revision++; w.UpdatedAt = time.Now().UTC(); if w.CurrentStep >= len(w.Steps) { w.State = WorkflowSucceeded }; e.workflows[id] = cloneWorkflow(w); done := w.State == WorkflowSucceeded; e.mu.Unlock(); if done { return nil }
-	}
-}
-
-func (e *Engine) Pause(id string) error {
-	if e == nil { return errors.New("workflow engine is required") }
-	id = strings.TrimSpace(id); if id == "" { return ErrWorkflowNotFound }
-	e.mu.Lock(); defer e.mu.Unlock(); w, ok := e.workflows[id]; if !ok { return ErrWorkflowNotFound }
-	if !canTransitionWorkflow(w.State, WorkflowPaused) { return ErrWorkflowNotRunnable }
-	w.State = WorkflowPaused; w.Revision++; w.UpdatedAt = time.Now().UTC(); e.workflows[id] = cloneWorkflow(w); return nil
-}
-
-func (e *Engine) Get(id string) (Workflow, bool) { if e == nil { return Workflow{}, false }; id = strings.TrimSpace(id); e.mu.RLock(); w, ok := e.workflows[id]; e.mu.RUnlock(); if !ok { return Workflow{}, false }; return cloneWorkflow(w), true }
-
-func cloneWorkflow(w Workflow) Workflow { out := w; out.Steps = append([]WorkflowStep(nil), w.Steps...); for i := range out.Steps { out.Steps[i].Input = cloneMap(w.Steps[i].Input) }; return out }
-func cloneMap(in map[string]any) map[string]any { if in == nil { return nil }; out := make(map[string]any, len(in)); for k, v := range in { out[k] = v }; return out }
+func validWorkflowState(s WorkflowState) bool { switch s { case WorkflowPending,WorkflowRunning,WorkflowPaused,WorkflowSucceeded,WorkflowFailed,WorkflowCancelled:return true }; return false }
+func canTransitionWorkflow(from,to WorkflowState) bool { switch from { case WorkflowPending:return to==WorkflowRunning||to==WorkflowCancelled; case WorkflowRunning:return to==WorkflowPaused||to==WorkflowSucceeded||to==WorkflowFailed||to==WorkflowCancelled; case WorkflowPaused:return to==WorkflowRunning||to==WorkflowCancelled; case WorkflowFailed:return to==WorkflowRunning||to==WorkflowCancelled; default:return false } }
+func normalizeWorkflow(w Workflow)(Workflow,error){w.ID=strings.TrimSpace(w.ID);if w.ID==""||len(w.Steps)==0{return Workflow{},errors.New("workflow id and steps are required")};if w.CurrentStep<0||w.CurrentStep>len(w.Steps){return Workflow{},errors.New("workflow current step out of range")};if w.State==""{w.State=WorkflowPending};w.State=WorkflowState(strings.ToUpper(strings.TrimSpace(string(w.State))));if !validWorkflowState(w.State){return Workflow{},errors.New("invalid workflow state")};seen:=map[string]struct{}{};for i:=range w.Steps{w.Steps[i].ID=strings.TrimSpace(w.Steps[i].ID);w.Steps[i].ToolID=strings.TrimSpace(w.Steps[i].ToolID);if w.Steps[i].ID==""||w.Steps[i].ToolID==""{return Workflow{},errors.New("workflow steps require id and tool id")};if _,ok:=seen[w.Steps[i].ID];ok{return Workflow{},errors.New("duplicate workflow step id")};seen[w.Steps[i].ID]=struct{}{}};if w.CreatedAt.IsZero(){w.CreatedAt=time.Now().UTC()}else{w.CreatedAt=w.CreatedAt.UTC()};if w.UpdatedAt.IsZero(){w.UpdatedAt=w.CreatedAt}else{w.UpdatedAt=w.UpdatedAt.UTC()};return w,nil}
+func(e *Engine)Create(w Workflow)error{if e==nil{return errors.New("workflow engine is required")};var err error;w,err=normalizeWorkflow(w);if err!=nil{return err};e.mu.Lock();defer e.mu.Unlock();if e.workflows==nil{e.workflows=make(map[string]Workflow)};if _,ok:=e.workflows[w.ID];ok{return ErrWorkflowExists};e.workflows[w.ID]=cloneWorkflow(w);return nil}
+func(e *Engine)Resume(ctx context.Context,id string)error{if e==nil{return errors.New("workflow engine is required")};if e.executor==nil{return errors.New("workflow executor is not configured")};if ctx==nil{return errors.New("context is required")};id=strings.TrimSpace(id);if id==""{return ErrWorkflowNotFound};for{select{case<-ctx.Done():return ctx.Err();default:};e.mu.Lock();w,ok:=e.workflows[id];if !ok{e.mu.Unlock();return ErrWorkflowNotFound};if !canTransitionWorkflow(w.State,WorkflowRunning){e.mu.Unlock();return ErrWorkflowNotRunnable};w.State=WorkflowRunning;w.Revision++;w.UpdatedAt=time.Now().UTC();if w.CurrentStep>=len(w.Steps){w.State=WorkflowSucceeded;w.Revision++;e.workflows[id]=cloneWorkflow(w);e.mu.Unlock();return nil};step:=w.Steps[w.CurrentStep];e.workflows[id]=cloneWorkflow(w);e.mu.Unlock();if err:=e.executor.Execute(ctx,step);err!=nil{e.mu.Lock();w=e.workflows[id];w.State=WorkflowPaused;w.LastError=fmt.Sprintf("step %s: %v",step.ID,err);w.Revision++;w.UpdatedAt=time.Now().UTC();e.workflows[id]=cloneWorkflow(w);e.mu.Unlock();return err};e.mu.Lock();w=e.workflows[id];w.CurrentStep++;w.LastError="";w.Revision++;w.UpdatedAt=time.Now().UTC();if w.CurrentStep>=len(w.Steps){w.State=WorkflowSucceeded};e.workflows[id]=cloneWorkflow(w);done:=w.State==WorkflowSucceeded;e.mu.Unlock();if done{return nil}}}
+func(e *Engine)Pause(id string)error{if e==nil{return errors.New("workflow engine is required")};id=strings.TrimSpace(id);if id==""{return ErrWorkflowNotFound};e.mu.Lock();defer e.mu.Unlock();w,ok:=e.workflows[id];if !ok{return ErrWorkflowNotFound};if !canTransitionWorkflow(w.State,WorkflowPaused){return ErrWorkflowNotRunnable};w.State=WorkflowPaused;w.Revision++;w.UpdatedAt=time.Now().UTC();e.workflows[id]=cloneWorkflow(w);return nil}
+func(e *Engine)Get(id string)(Workflow,bool){if e==nil{return Workflow{},false};id=strings.TrimSpace(id);e.mu.RLock();w,ok:=e.workflows[id];e.mu.RUnlock();if !ok{return Workflow{},false};return cloneWorkflow(w),true}
+func cloneWorkflow(w Workflow)Workflow{out:=w;out.Steps=append([]WorkflowStep(nil),w.Steps...);for i:=range out.Steps{out.Steps[i].Input=cloneMap(w.Steps[i].Input)};return out}
+func cloneMap(in map[string]any)map[string]any{if in==nil{return nil};out:=make(map[string]any,len(in));for k,v:=range in{out[k]=v};return out}
