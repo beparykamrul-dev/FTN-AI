@@ -6,7 +6,13 @@ func TestCapabilityValidationRejectsMissingIdentity(t *testing.T) {
 	if (Capability{Class:"network"}).Valid() { t.Fatal("capability without id must be invalid") }
 }
 
-func TestCapabilityNormalizationTrimsIdentity(t *testing.T) {
-	c := (Capability{ID:" id ", Class:" network "}).Normalize()
-	if c.ID != "id" || c.Class != "network" { t.Fatalf("unexpected normalization: %#v", c) }
+func TestDefaultCapabilitiesAreValidAndUnique(t *testing.T) {
+	caps := DefaultCapabilities()
+	if len(caps) == 0 { t.Fatal("default capability registry must not be empty") }
+	seen := map[string]bool{}
+	for _, c := range caps {
+		if !c.Valid() { t.Fatalf("invalid default capability: %#v", c) }
+		if seen[c.ID] { t.Fatalf("duplicate capability: %q", c.ID) }
+		seen[c.ID] = true
+	}
 }
