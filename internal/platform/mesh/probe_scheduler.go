@@ -23,7 +23,8 @@ func NewProbeScheduler(store *LinkStateStore, interval time.Duration, probe Prob
 // The scheduler is transport-neutral; ICMP, TCP, agent or synthetic probes can
 // be supplied by the caller.
 func (s *ProbeScheduler) Run(ctx context.Context) {
-	if s.store == nil || s.probe == nil { return }
+	if s == nil || s.store == nil || s.probe == nil { return }
+	if ctx == nil { ctx = context.Background() }
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 	for {
@@ -36,6 +37,7 @@ func (s *ProbeScheduler) Run(ctx context.Context) {
 }
 
 func (s *ProbeScheduler) probeAll(ctx context.Context) {
+	if s == nil || s.store == nil || s.probe == nil || ctx == nil { return }
 	links := s.store.Snapshot()
 	var wg sync.WaitGroup
 	for _, link := range links {
