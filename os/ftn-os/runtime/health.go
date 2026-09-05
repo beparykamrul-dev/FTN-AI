@@ -39,6 +39,8 @@ func CheckHealth(ctx context.Context, manager *ServiceManager) []HealthResult {
 		}
 		results = append(results, result)
 	}
-	sort.Slice(results, func(i, j int) bool { return results[i].Service < results[j].Service })
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Service < results[j].Service
+	})
 	return results
 }
