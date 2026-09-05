@@ -1,29 +1,21 @@
 package gis
 
-import "time"
+import (
+	"sort"
+	"strings"
+	"time"
+)
 
-type VerificationResult struct {
-	PlanID       string    `json:"plan_id"`
-	Status       string    `json:"status"`
-	Recovered    []string  `json:"recovered,omitempty"`
-	StillAffected []string `json:"still_affected,omitempty"`
-	VerifiedAt   time.Time `json:"verified_at"`
-}
+type VerificationResult struct { PlanID string `json:"plan_id"`; Status string `json:"status"`; Recovered []string `json:"recovered,omitempty"`; StillAffected []string `json:"still_affected,omitempty"`; VerifiedAt time.Time `json:"verified_at"` }
 
-// Verification is observation-only. An authorized executor/collector supplies
-// the observed asset state; this layer determines whether the planned recovery
-// appears to have restored modeled service state.
 func VerifyRecovery(plan RecoveryPlan, observed map[string]string) VerificationResult {
-	r := VerificationResult{PlanID: plan.ID, Status: "verified", VerifiedAt: time.Now().UTC()}
+	r := VerificationResult{PlanID: strings.TrimSpace(plan.ID), Status: "verified", VerifiedAt: time.Now().UTC()}
+	seenRecovered := make(map[string]struct{}); seenAffected := make(map[string]struct{})
 	for _, step := range plan.Steps {
-		if observed[step.Target] == "healthy" {
-			r.Recovered = append(r.Recovered, step.Target)
-		} else {
-			r.StillAffected = append(r.StillAffected, step.Target)
-		}
+		target := strings.TrimSpace(step.Target); if target == "" { continue }
+		if strings.EqualFold(strings.TrimSpace(observed[target]), "healthy") { if _, ok := seenRecovered[target]; !ok { r.Recovered = append(r.Recovered, target); seenRecovered[target] = struct{}{} } } else { if _, ok := seenAffected[target]; !ok { r.StillAffected = append(r.StillAffected, target); seenAffected[target] = struct{}{} } }
 	}
-	if len(r.StillAffected) > 0 {
-		r.Status = "partial"
-	}
+	sort.Strings(r.Recovered); sort.Strings(r.StillAffected)
+	if len(r.StillAffected) > 0 { r.Status = "partial" }
 	return r
 }
