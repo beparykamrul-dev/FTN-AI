@@ -15,32 +15,23 @@ const (
 )
 
 type HealthResult struct {
-	Service   string
-	State     HealthState
+	Service string
+	State HealthState
 	CheckedAt time.Time
-	Error     string
+	Error string
 }
 
 func CheckHealth(ctx context.Context, manager *ServiceManager) []HealthResult {
-	if ctx == nil || manager == nil {
-		return []HealthResult{}
-	}
-	if err := ctx.Err(); err != nil {
-		return []HealthResult{{State: HealthUnknown, CheckedAt: time.Now().UTC(), Error: err.Error()}}
-	}
+	if ctx == nil || manager == nil { return []HealthResult{} }
+	if err := ctx.Err(); err != nil { return []HealthResult{{State: HealthUnknown, CheckedAt: time.Now().UTC(), Error: err.Error()}} }
 	health := manager.Health(ctx)
 	results := make([]HealthResult, 0, len(health))
 	now := time.Now().UTC()
 	for name, err := range health {
 		result := HealthResult{Service: name, State: HealthHealthy, CheckedAt: now}
-		if err != nil {
-			result.State = HealthFailed
-			result.Error = err.Error()
-		}
+		if err != nil { result.State = HealthFailed; result.Error = err.Error() }
 		results = append(results, result)
 	}
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Service < results[j].Service
-	})
+	sort.Slice(results, func(i, j int) bool { return results[i].Service < results[j].Service })
 	return results
 }
