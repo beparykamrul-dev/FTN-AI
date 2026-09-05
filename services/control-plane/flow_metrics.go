@@ -3,20 +3,20 @@ package main
 import "sync/atomic"
 
 type FlowRuntimeMetrics struct {
-	Packets uint64 `json:"packets"`
-	Accepted uint64 `json:"accepted"`
-	Rejected uint64 `json:"rejected"`
-	Records uint64 `json:"records"`
-	QueueDrops uint64 `json:"queue_drops"`
+	Packets      uint64 `json:"packets"`
+	Accepted     uint64 `json:"accepted"`
+	Rejected     uint64 `json:"rejected"`
+	Records      uint64 `json:"records"`
+	QueueDrops   uint64 `json:"queue_drops"`
 	SequenceGaps uint64 `json:"sequence_gaps"`
 }
 
 type FlowMetrics struct {
-	packets uint64
-	accepted uint64
-	rejected uint64
-	records uint64
-	queueDrops uint64
+	packets      uint64
+	accepted     uint64
+	rejected     uint64
+	records      uint64
+	queueDrops   uint64
 	sequenceGaps uint64
 }
 
