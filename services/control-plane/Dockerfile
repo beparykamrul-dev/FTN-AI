@@ -1,5 +1,6 @@
 FROM golang:1.24-alpine AS build
 WORKDIR /src
+RUN apk add --no-cache git ca-certificates
 COPY services/control-plane/go.mod services/control-plane/go.sum ./
 RUN GOPROXY=direct go mod download
 COPY services/control-plane/*.go ./
