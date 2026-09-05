@@ -1,0 +1,83 @@
+name: FTN Go Format Repair Batch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ftn-gofmt-repair-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd35f1bafbb93b9d # v5.2.0
+        with:
+          go-version: '1.24.x'
+
+      - name: Format next repair batch
+        run: |
+          gofmt -w \
+            services/control-plane/events.go \
+            services/control-plane/dns_guard.go \
+            services/control-plane/qkd_contract.go \
+            services/control-plane/ftn_routed_bgp_live.go \
+            services/control-plane/exrouter.go \
+            services/control-plane/ftn_native_protocol_engine.go \
+            services/control-plane/verify.go \
+            services/control-plane/approvals.go \
+            services/control-plane/wazuh_pipeline.go \
+            services/control-plane/foundation.go \
+            services/control-plane/jobs.go \
+            services/ftn-mail/outbound/smtp_sender.go \
+            services/ftn-mail/transport/smtp_session.go \
+            services/ftn-controlplane/event_journal_remote.go \
+            services/ftn-proxy/policy.go \
+            services/ftn-codec/codec.go \
+            services/ftn-mesh/contracts.go \
+            services/dns-domain/ptr.go \
+            os/ftn-os/runtime/health.go \
+            services/acme/certificate_manager.go
+
+      - name: Commit repaired files
+        run: |
+          if git diff --quiet; then
+            echo 'No formatting changes required in this batch.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            services/control-plane/events.go \
+            services/control-plane/dns_guard.go \
+            services/control-plane/qkd_contract.go \
+            services/control-plane/ftn_routed_bgp_live.go \
+            services/control-plane/exrouter.go \
+            services/control-plane/ftn_native_protocol_engine.go \
+            services/control-plane/verify.go \
+            services/control-plane/approvals.go \
+            services/control-plane/wazuh_pipeline.go \
+            services/control-plane/foundation.go \
+            services/control-plane/jobs.go \
+            services/ftn-mail/outbound/smtp_sender.go \
+            services/ftn-mail/transport/smtp_session.go \
+            services/ftn-controlplane/event_journal_remote.go \
+            services/ftn-proxy/policy.go \
+            services/ftn-codec/codec.go \
+            services/ftn-mesh/contracts.go \
+            services/dns-domain/ptr.go \
+            os/ftn-os/runtime/health.go \
+            services/acme/certificate_manager.go
+          git commit -m 'chore: repair next Go formatting batch'
+          git push origin HEAD:main
