@@ -6,21 +6,21 @@ import (
     "net/http"
 )
 
-type FiberAPI struct {
-    Map *FiberMap
-    Hub *Hub
-}
+type FiberAPI struct { Map *FiberMap; Hub *Hub }
 
 func (a *FiberAPI) Assets(w http.ResponseWriter, r *http.Request) {
+    if w==nil||r==nil{return}
+    if a==nil||a.Map==nil { http.Error(w, "fiber map unavailable", http.StatusServiceUnavailable); return }
     if r.Method != http.MethodGet { http.Error(w, "method not allowed", http.StatusMethodNotAllowed); return }
-    if a.Map == nil { http.Error(w, "fiber map unavailable", http.StatusServiceUnavailable); return }
     w.Header().Set("Content-Type", "application/json")
     if err := json.NewEncoder(w).Encode(a.Map.List()); err != nil { return }
 }
 
 func (a *FiberAPI) Upsert(w http.ResponseWriter, r *http.Request) {
+    if w==nil||r==nil{return}
+    if a==nil||a.Map==nil { http.Error(w, "fiber map unavailable", http.StatusServiceUnavailable); return }
     if r.Method != http.MethodPost && r.Method != http.MethodPut { http.Error(w, "method not allowed", http.StatusMethodNotAllowed); return }
-    if a.Map == nil { http.Error(w, "fiber map unavailable", http.StatusServiceUnavailable); return }
+    if r.Body==nil { http.Error(w, "request body required", http.StatusBadRequest); return }
     r.Body = http.MaxBytesReader(w, r.Body, 256<<10)
     var asset FiberAsset
     dec := json.NewDecoder(r.Body)
