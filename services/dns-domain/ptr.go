@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"strings"
 )
 
 type PTRRecord struct {
-	ID        string `json:"id"`
-	Address   string `json:"address"`
-	Hostname  string `json:"hostname"`
-	TTL       uint32 `json:"ttl"`
-	Status    string `json:"status"`
+	ID       string `json:"id"`
+	Address  string `json:"address"`
+	Hostname string `json:"hostname"`
+	TTL      uint32 `json:"ttl"`
+	Status   string `json:"status"`
 }
 
 type PTRStore interface {
@@ -22,10 +23,10 @@ type PTRStore interface {
 }
 
 func ValidatePTR(record PTRRecord) error {
-	if record.Address == "" || record.Hostname == "" {
+	if strings.TrimSpace(record.Address) == "" || strings.TrimSpace(record.Hostname) == "" {
 		return fmt.Errorf("PTR address and hostname are required")
 	}
-	if _, err := netip.ParseAddr(record.Address); err != nil {
+	if _, err := netip.ParseAddr(strings.TrimSpace(record.Address)); err != nil {
 		return fmt.Errorf("invalid PTR address: %w", err)
 	}
 	if record.TTL == 0 {
