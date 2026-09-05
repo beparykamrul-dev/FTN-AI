@@ -1,16 +1,4 @@
 package fiber
-
-import (
-	"math"
-	"strings"
-	"time"
-)
-
-type CURBRecord struct { ID string `json:"id"`; Type string `json:"type"`; NodeID string `json:"node_id,omitempty"`; LinkID string `json:"link_id,omitempty"`; Latitude float64 `json:"latitude"`; Longitude float64 `json:"longitude"`; Status string `json:"status"`; ObservedAt time.Time `json:"observed_at"` }
-
-func BuildCURBRecord(id, typ, nodeID, linkID string, lat, lon float64, status string, observedAt time.Time) CURBRecord {
-	if math.IsNaN(lat) || math.IsInf(lat, 0) { lat = 0 }
-	if math.IsNaN(lon) || math.IsInf(lon, 0) { lon = 0 }
-	if observedAt.IsZero() { observedAt = time.Now().UTC() } else { observedAt = observedAt.UTC() }
-	return CURBRecord{ID: strings.TrimSpace(id), Type: strings.TrimSpace(typ), NodeID: strings.TrimSpace(nodeID), LinkID: strings.TrimSpace(linkID), Latitude: lat, Longitude: lon, Status: strings.TrimSpace(status), ObservedAt: observedAt}
-}
+import("math";"strings";"time")
+type CURBRecord struct{ID string `json:"id"`;Type string `json:"type"`;NodeID string `json:"node_id,omitempty"`;LinkID string `json:"link_id,omitempty"`;Latitude float64 `json:"latitude"`;Longitude float64 `json:"longitude"`;Status string `json:"status"`;ObservedAt time.Time `json:"observed_at"`}
+func BuildCURBRecord(id,typ,nodeID,linkID string,lat,lon float64,status string,observedAt time.Time)CURBRecord{if math.IsNaN(lat)||math.IsInf(lat,0){lat=0};if math.IsNaN(lon)||math.IsInf(lon,0){lon=0};if lat>90{lat=90};if lat< -90{lat=-90};if lon>180{lon=180};if lon< -180{lon=-180};if observedAt.IsZero(){observedAt=time.Now().UTC()}else{observedAt=observedAt.UTC()};return CURBRecord{ID:strings.TrimSpace(id),Type:strings.TrimSpace(typ),NodeID:strings.TrimSpace(nodeID),LinkID:strings.TrimSpace(linkID),Latitude:lat,Longitude:lon,Status:strings.TrimSpace(status),ObservedAt:observedAt}}
