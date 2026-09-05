@@ -1,6 +1,9 @@
 package gis
 
-import "sync"
+import (
+	"sort"
+	"sync"
+)
 
 type TopologyLink struct {
 	ID     string `json:"id"`
@@ -20,7 +23,7 @@ func NewTopologyGraph() *TopologyGraph {
 }
 
 func (g *TopologyGraph) Upsert(l TopologyLink) {
-	if l.ID == "" {
+	if g == nil || l.ID == "" {
 		return
 	}
 	g.mu.Lock()
@@ -29,16 +32,23 @@ func (g *TopologyGraph) Upsert(l TopologyLink) {
 }
 
 func (g *TopologyGraph) List() []TopologyLink {
+	if g == nil {
+		return nil
+	}
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	out := make([]TopologyLink, 0, len(g.links))
 	for _, l := range g.links {
 		out = append(out, l)
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
 
 func (g *TopologyGraph) Neighbors(id string) []TopologyLink {
+	if g == nil || id == "" {
+		return nil
+	}
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	out := make([]TopologyLink, 0)
@@ -47,5 +57,6 @@ func (g *TopologyGraph) Neighbors(id string) []TopologyLink {
 			out = append(out, l)
 		}
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
