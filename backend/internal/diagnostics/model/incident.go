@@ -15,9 +15,7 @@ type Incident struct {
 	EvidenceIDs []string `json:"evidence_ids,omitempty"`
 }
 
-func (i Incident) Valid() bool {
-	return strings.TrimSpace(i.ID) != "" && strings.TrimSpace(i.Severity) != ""
-}
+func (i Incident) Valid() bool { return i.Normalize().ID != "" && i.Normalize().Severity != "" }
 
 func (i Incident) Normalize() Incident {
 	i.ID = strings.TrimSpace(i.ID)
@@ -30,7 +28,13 @@ func (i Incident) Normalize() Incident {
 	i.PathID = strings.TrimSpace(i.PathID)
 	seen := make(map[string]struct{}, len(i.EvidenceIDs))
 	ids := make([]string, 0, len(i.EvidenceIDs))
-	for _, id := range i.EvidenceIDs { id = strings.TrimSpace(id); if id == "" { continue }; if _, ok := seen[id]; ok { continue }; seen[id] = struct{}{}; ids = append(ids, id) }
+	for _, id := range i.EvidenceIDs {
+		id = strings.TrimSpace(id)
+		if id == "" { continue }
+		if _, ok := seen[id]; ok { continue }
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
 	i.EvidenceIDs = ids
 	return i
 }
