@@ -16,6 +16,9 @@ type HealthChecker interface {
 }
 
 func CheckLayer(ctx context.Context, layer Layer, checker HealthChecker) LayerHealth {
+	if ctx == nil {
+		return LayerHealth{LayerID: layer.ID, Reason: "context is required"}
+	}
 	if err := ctx.Err(); err != nil {
 		return LayerHealth{LayerID: layer.ID, Reason: err.Error()}
 	}
