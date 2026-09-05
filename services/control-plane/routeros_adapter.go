@@ -28,5 +28,5 @@ func(a *RouterOSAdapter)CollectRoutingState(ctx context.Context,device NetworkDe
 func validateRouterOSDevice(d NetworkDevice)error{if strings.TrimSpace(d.ID)==""||strings.TrimSpace(d.Address)==""{return errors.New("routeros device id and address are required")};if !isFTNDeviceKind(d.Kind){return errors.New("routeros target ownership is not verified")};return nil}
 func stringValue(v any)string{s,_:=v.(string);return strings.TrimSpace(s)}
 func boolValue(v any)bool{b,_:=v.(bool);return b}
-func uint64Value(v any)uint64{switch n:=v.(type){case float64:if n>=1&&n<=float64(^uint64(0))&&!math.IsNaN(n)&&!math.IsInf(n,0){return uint64(n)};case json.Number:if value,err:=n.Int64();err==nil&&value>0{return uint64(value)};case string:var value uint64;if _,err:=fmt.Sscan(strings.TrimSpace(n),&value);err==nil{return value}};return 0}
+func uint64Value(v any)uint64{switch n:=v.(type){case float64:if n>=1&&n<18446744073709551616&&!math.IsNaN(n)&&!math.IsInf(n,0){return uint64(n)};case json.Number:if value,err:=n.Int64();err==nil&&value>0{return uint64(value)};case string:var value uint64;if _,err:=fmt.Sscan(strings.TrimSpace(n),&value);err==nil{return value}};return 0}
 func uint32Value(v any)uint32{value:=uint64Value(v);if value>^uint32(0){return ^uint32(0)};return uint32(value)}
