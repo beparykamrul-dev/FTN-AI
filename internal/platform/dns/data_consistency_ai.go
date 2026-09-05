@@ -1,15 +1,9 @@
 package dns
 
-import (
-	"context"
-	"fmt"
-	"sort"
-	"strings"
-)
-
-type ConsistencyIssue struct { Zone string `json:"zone"`; Record string `json:"record"`; Kind string `json:"kind"`; Severity string `json:"severity"`; Details string `json:"details"` }
-type ConsistencyReport struct { Consistent bool `json:"consistent"`; Issues []ConsistencyIssue `json:"issues,omitempty"` }
+import("context";"fmt";"sort";"strings")
+type ConsistencyIssue struct{Zone string `json:"zone"`;Record string `json:"record"`;Kind string `json:"kind"`;Severity string `json:"severity"`;Details string `json:"details"`}
+type ConsistencyReport struct{Consistent bool `json:"consistent"`;Issues []ConsistencyIssue `json:"issues,omitempty"`}
 type DNSConsistencyAI struct{}
 func NewDNSConsistencyAI()*DNSConsistencyAI{return &DNSConsistencyAI{}}
-func(a *DNSConsistencyAI)Analyze(ctx context.Context,zones map[string][]Record)(ConsistencyReport,error){if ctx==nil{return ConsistencyReport{},fmt.Errorf("context is nil")};if zones==nil{return ConsistencyReport{Consistent:true,Issues:[]ConsistencyIssue{}},nil};select{case<-ctx.Done():return ConsistencyReport{},ctx.Err();default:};report:=ConsistencyReport{Consistent:true,Issues:[]ConsistencyIssue{}};for zone,records:=range zones{zone=strings.TrimSpace(zone);seen:=make(map[string]string);for _,r:=range records{name:=strings.ToLower(strings.TrimSuffix(strings.TrimSpace(r.Name),"."));typ:=strings.ToUpper(strings.TrimSpace(r.Type));key:=name+"|"+typ;value:=strings.TrimSpace(r.Value);if previous,ok:=seen[key];ok&&previous!=value{report.Consistent=false;report.Issues=append(report.Issues,ConsistencyIssue{Zone:zone,Record:key,Kind:"conflicting_values",Severity:"high",Details:"multiple values observed for the same normalized record key"})}else{seen[key]=value}}};sort.SliceStable(report.Issues,func(i,j int)bool{if report.Issues[i].Zone!=report.Issues[j].Zone{return report.Issues[i].Zone<report.Issues[j].Zone};if report.Issues[i].Record!=report.Issues[j].Record{return report.Issues[i].Record<report.Issues[j].Record};return report.Issues[i].Kind<report.Issues[j].Kind});return report,nil}
+func(a *DNSConsistencyAI)Analyze(ctx context.Context,zones map[string][]Record)(ConsistencyReport,error){if a==nil{return ConsistencyReport{},fmt.Errorf("consistency AI is required")};if ctx==nil{return ConsistencyReport{},fmt.Errorf("context is nil")};if zones==nil{return ConsistencyReport{Consistent:true,Issues:[]ConsistencyIssue{}},nil};select{case<-ctx.Done():return ConsistencyReport{},ctx.Err();default:};report:=ConsistencyReport{Consistent:true,Issues:[]ConsistencyIssue{}};for zone,records:=range zones{zone=strings.TrimSpace(zone);if zone==""{continue};seen:=make(map[string]string);for _,r:=range records{name:=strings.ToLower(strings.TrimSuffix(strings.TrimSpace(r.Name),"."));typ:=strings.ToUpper(strings.TrimSpace(r.Type));if name==""||typ==""{continue};key:=name+"|"+typ;value:=strings.TrimSpace(r.Value);if previous,ok:=seen[key];ok&&previous!=value{report.Consistent=false;report.Issues=append(report.Issues,ConsistencyIssue{Zone:zone,Record:key,Kind:"conflicting_values",Severity:"high",Details:"multiple values observed for the same normalized record key"})}else{seen[key]=value}}};sort.SliceStable(report.Issues,func(i,j int)bool{if report.Issues[i].Zone!=report.Issues[j].Zone{return report.Issues[i].Zone<report.Issues[j].Zone};if report.Issues[i].Record!=report.Issues[j].Record{return report.Issues[i].Record<report.Issues[j].Record};return report.Issues[i].Kind<report.Issues[j].Kind});return report,nil}
 func(a *DNSConsistencyAI)ValidateReport(report ConsistencyReport)error{if report.Consistent&&len(report.Issues)>0{return fmt.Errorf("consistent report cannot contain issues")};return nil}
