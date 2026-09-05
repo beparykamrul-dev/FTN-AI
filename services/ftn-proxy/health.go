@@ -19,7 +19,12 @@ type HealthCheck struct {
 }
 
 func DefaultHealthCheck() HealthCheck {
-	return HealthCheck{Interval: 10 * time.Second, Timeout: 3 * time.Second, FailureLimit: 3, SuccessLimit: 2}
+	return HealthCheck{
+		Interval:     10 * time.Second,
+		Timeout:      3 * time.Second,
+		FailureLimit: 3,
+		SuccessLimit: 2,
+	}
 }
 
 type HealthTracker struct {
