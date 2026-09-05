@@ -46,6 +46,12 @@ func NewRegistry(tools ...Tool) (*Registry, error) {
 }
 
 func (r *Registry) Execute(ctx context.Context, request ToolRequest) (ToolResult, error) {
+	if r == nil {
+		return ToolResult{}, errors.New("kernel registry is required")
+	}
+	if ctx == nil {
+		return ToolResult{}, errors.New("context is required")
+	}
 	if request.Tool == "" || request.Operation == "" {
 		return ToolResult{}, errors.New("tool and operation are required")
 	}
