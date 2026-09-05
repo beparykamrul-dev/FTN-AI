@@ -7,21 +7,21 @@ import (
 )
 
 type FailoverNode struct {
-	ID string `json:"id"`
-	Address string `json:"address"`
-	Priority uint32 `json:"priority"`
-	Healthy bool `json:"healthy"`
+	ID        string    `json:"id"`
+	Address   string    `json:"address"`
+	Priority  uint32    `json:"priority"`
+	Healthy   bool      `json:"healthy"`
 	LastCheck time.Time `json:"last_check"`
 }
 
 type FailoverPlan struct {
-	Zone string `json:"zone"`
-	Primary string `json:"primary"`
+	Zone    string   `json:"zone"`
+	Primary string   `json:"primary"`
 	Backups []string `json:"backups"`
 }
 
 type FailoverController struct {
-	mu sync.RWMutex
+	mu    sync.RWMutex
 	nodes map[string]FailoverNode
 }
 
@@ -30,21 +30,36 @@ func NewFailoverController() *FailoverController {
 }
 
 func (c *FailoverController) Upsert(node FailoverNode) {
-	c.mu.Lock(); defer c.mu.Unlock()
+	if node.ID == "" {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.nodes[node.ID] = node
 }
 
 func (c *FailoverController) Plan(zone string) FailoverPlan {
-	c.mu.RLock(); defer c.mu.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	nodes := make([]FailoverNode, 0, len(c.nodes))
-	for _, n := range c.nodes { if n.Healthy { nodes = append(nodes, n) } }
+	for _, n := range c.nodes {
+		if n.Healthy && n.Address != "" {
+			nodes = append(nodes, n)
+		}
+	}
 	sort.Slice(nodes, func(i, j int) bool {
-		if nodes[i].Priority == nodes[j].Priority { return nodes[i].ID < nodes[j].ID }
+		if nodes[i].Priority == nodes[j].Priority {
+			return nodes[i].ID < nodes[j].ID
+		}
 		return nodes[i].Priority < nodes[j].Priority
 	})
 	plan := FailoverPlan{Zone: zone}
-	if len(nodes) == 0 { return plan }
+	if len(nodes) == 0 {
+		return plan
+	}
 	plan.Primary = nodes[0].ID
-	for _, n := range nodes[1:] { plan.Backups = append(plan.Backups, n.ID) }
+	for _, n := range nodes[1:] {
+		plan.Backups = append(plan.Backups, n.ID)
+	}
 	return plan
 }
