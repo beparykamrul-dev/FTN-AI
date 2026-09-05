@@ -1,41 +1,9 @@
 package contracts
 
+import "strings"
 // FTNFTP is the provider-neutral file/object delivery contract used by FTN.
-// It supports classic file-transfer semantics while keeping storage and edge
-// implementations replaceable.
-type FTNFTPObject struct {
-	ID               string `json:"id"`
-	TenantID         string `json:"tenant_id"`
-	Bucket           string `json:"bucket"`
-	Key              string `json:"key"`
-	Size             int64  `json:"size"`
-	ContentType      string `json:"content_type,omitempty"`
-	ETag             string `json:"etag,omitempty"`
-	Checksum         string `json:"checksum,omitempty"`
-	OriginNode       string `json:"origin_node,omitempty"`
-	StorageClass     string `json:"storage_class"`
-	ReplicationClass string `json:"replication_class"`
-	Status           string `json:"status"`
-}
-
-type FTNFTPTransfer struct {
-	ID            string `json:"id"`
-	ObjectID      string `json:"object_id"`
-	Direction     string `json:"direction"`
-	Protocol      string `json:"protocol"`
-	EdgeNode      string `json:"edge_node,omitempty"`
-	Bytes         int64  `json:"bytes"`
-	ThroughputBps int64  `json:"throughput_bps"`
-	State         string `json:"state"`
-	Error         string `json:"error,omitempty"`
-}
-
-type FTNFTPPolicy struct {
-	Resume         bool `json:"resume"`
-	IntegrityCheck bool `json:"integrity_check"`
-	LocalFirst     bool `json:"local_first"`
-	EdgeCache      bool `json:"edge_cache"`
-	Replicate      bool `json:"replicate"`
-	EncryptAtRest  bool `json:"encrypt_at_rest"`
-	Versioning     bool `json:"versioning"`
-}
+type FTNFTPObject struct{ID string `json:"id"`;TenantID string `json:"tenant_id"`;Bucket string `json:"bucket"`;Key string `json:"key"`;Size int64 `json:"size"`;ContentType string `json:"content_type,omitempty"`;ETag string `json:"etag,omitempty"`;Checksum string `json:"checksum,omitempty"`;OriginNode string `json:"origin_node,omitempty"`;StorageClass string `json:"storage_class"`;ReplicationClass string `json:"replication_class"`;Status string `json:"status"`}
+type FTNFTPTransfer struct{ID string `json:"id"`;ObjectID string `json:"object_id"`;Direction string `json:"direction"`;Protocol string `json:"protocol"`;EdgeNode string `json:"edge_node,omitempty"`;Bytes int64 `json:"bytes"`;ThroughputBps int64 `json:"throughput_bps"`;State string `json:"state"`;Error string `json:"error,omitempty"`}
+type FTNFTPPolicy struct{Resume bool `json:"resume"`;IntegrityCheck bool `json:"integrity_check"`;LocalFirst bool `json:"local_first"`;EdgeCache bool `json:"edge_cache"`;Replicate bool `json:"replicate"`;EncryptAtRest bool `json:"encrypt_at_rest"`;Versioning bool `json:"versioning"`}
+func(o FTNFTPObject)Valid()bool{return strings.TrimSpace(o.ID)!=""&&len(o.ID)<=256&&strings.TrimSpace(o.TenantID)!=""&&len(o.TenantID)<=256&&strings.TrimSpace(o.Bucket)!=""&&len(o.Bucket)<=256&&strings.TrimSpace(o.Key)!=""&&len(o.Key)<=2048&&o.Size>=0&&o.Size<=1<<50&&len(o.ContentType)<=256&&len(o.ETag)<=512&&len(o.Checksum)<=512&&len(o.OriginNode)<=256&&len(o.StorageClass)<=128&&len(o.ReplicationClass)<=128&&len(o.Status)<=64}
+func(t FTNFTPTransfer)Valid()bool{return strings.TrimSpace(t.ID)!=""&&len(t.ID)<=256&&strings.TrimSpace(t.ObjectID)!=""&&len(t.ObjectID)<=256&&strings.TrimSpace(t.Direction)!=""&&len(t.Direction)<=32&&strings.TrimSpace(t.Protocol)!=""&&len(t.Protocol)<=64&&len(t.EdgeNode)<=256&&t.Bytes>=0&&t.ThroughputBps>=0&&len(t.State)<=64&&len(t.Error)<=4096}
