@@ -1,6 +1,7 @@
 package mesh
 
 import (
+	"sort"
 	"sync"
 	"time"
 )
@@ -27,12 +28,18 @@ func NewRuntimeRegistry() *RuntimeRegistry {
 }
 
 func (r *RuntimeRegistry) Upsert(n RuntimeNode) {
+	if r == nil || n.ID == "" {
+		return
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.nodes[n.ID] = n
 }
 
 func (r *RuntimeRegistry) Get(id string) (RuntimeNode, bool) {
+	if r == nil {
+		return RuntimeNode{}, false
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	n, ok := r.nodes[id]
@@ -40,9 +47,15 @@ func (r *RuntimeRegistry) Get(id string) (RuntimeNode, bool) {
 }
 
 func (r *RuntimeRegistry) Snapshot() []RuntimeNode {
+	if r == nil {
+		return nil
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]RuntimeNode, 0, len(r.nodes))
-	for _, n := range r.nodes { out = append(out, n) }
+	for _, n := range r.nodes {
+		out = append(out, n)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
