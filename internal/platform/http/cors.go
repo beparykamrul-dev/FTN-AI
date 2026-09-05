@@ -12,7 +12,10 @@ type CORS struct {
 func (c CORS) Middleware(next http.Handler) http.Handler {
 	allowed := map[string]bool{}
 	for _, origin := range c.AllowedOrigins {
-		allowed[origin] = true
+		origin = strings.TrimSpace(origin)
+		if origin != "" {
+			allowed[origin] = true
+		}
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -25,6 +28,10 @@ func (c CORS) Middleware(next http.Handler) http.Handler {
 		}
 		if strings.EqualFold(r.Method, http.MethodOptions) {
 			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if next == nil {
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		next.ServeHTTP(w, r)
