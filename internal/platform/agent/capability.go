@@ -1,6 +1,9 @@
 package agent
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 // Capability describes a task a layer can perform.
 type Capability struct {
@@ -9,17 +12,21 @@ type Capability struct {
 	Priority int
 }
 
-// MatchCapabilities orders capabilities for a requested category without binding
-// FTN's API to a particular model/provider.
+// MatchCapabilities returns only usable capabilities in deterministic order.
 func MatchCapabilities(category Category, capabilities []Capability) []Capability {
 	matched := make([]Capability, 0, len(capabilities))
 	for _, c := range capabilities {
-		if c.Category == category {
-			matched = append(matched, c)
+		c.Name = strings.TrimSpace(c.Name)
+		if c.Name == "" || c.Category != category {
+			continue
 		}
+		matched = append(matched, c)
 	}
 	sort.SliceStable(matched, func(i, j int) bool {
-		return matched[i].Priority < matched[j].Priority
+		if matched[i].Priority != matched[j].Priority {
+			return matched[i].Priority < matched[j].Priority
+		}
+		return matched[i].Name < matched[j].Name
 	})
 	return matched
 }
