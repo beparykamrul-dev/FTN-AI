@@ -14,7 +14,7 @@ type rollbackRequest struct { ApprovalID string `json:"approval_id"`; Reason str
 
 // rollbackJob schedules the rollback operation; it never mutates network/device state itself.
 // A separate approval is mandatory, must explicitly target this job, and must bind
-// the exact rollback payload that will be executed.
+// the exact rollback payload that will be executed. The approval is consumed atomically.
 func (a *App) rollbackJob(w http.ResponseWriter, r *http.Request) {
 	if !method(w, r, http.MethodPost) || !requirePermission(a, "job.rollback", w, r) { return }
 	if a.db == nil { jsonResponse(w, 503, map[string]string{"error": "database_required"}); return }
@@ -60,6 +60,15 @@ func (a *App) rollbackJob(w http.ResponseWriter, r *http.Request) {
 	`, id, q.ApprovalID, string(rollbackPayload), rc.CorrelationID, rc.TenantID)
 	if err != nil { jsonResponse(w, 500, map[string]string{"error": "rollback_schedule_failed"}); return }
 	if res.RowsAffected() != 1 { jsonResponse(w, 409, map[string]string{"error": "rollback_schedule_race"}); return }
+
+	approvalRes, err := tx.Exec(r.Context(), `
+		update change_approvals
+		set status='executed',executed_at=now(),updated_at=now()
+		where id=$1::uuid and tenant_id=$2::uuid and status='approved'
+	`, q.ApprovalID, rc.TenantID)
+	if err != nil { jsonResponse(w, 500, map[string]string{"error": "rollback_approval_consume_failed"}); return }
+	if approvalRes.RowsAffected() != 1 { jsonResponse(w, 409, map[string]string{"error": "rollback_approval_consume_race"}); return }
+
 	if err = tx.Commit(r.Context()); err != nil { jsonResponse(w, 500, map[string]string{"error": "rollback_commit_failed"}); return }
 	a.audit(r, "job.rollback.schedule", id, "queued", map[string]any{"approval_id": q.ApprovalID, "reason": q.Reason, "previous_action": action})
 	jsonResponse(w, 202, map[string]any{"job_id": id, "status": "queued", "rollback": true, "approval_id": q.ApprovalID})
