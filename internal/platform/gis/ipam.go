@@ -17,6 +17,9 @@ func NewIPAM() *IPAM {
 }
 
 func (i *IPAM) Upsert(asset IPAsset) error {
+	if i == nil {
+		return fmt.Errorf("ipam is required")
+	}
 	if asset.ID == "" || asset.IP == "" {
 		return fmt.Errorf("id and ip are required")
 	}
@@ -35,6 +38,9 @@ func (i *IPAM) Upsert(asset IPAsset) error {
 }
 
 func (i *IPAM) List() []IPAsset {
+	if i == nil {
+		return nil
+	}
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	out := make([]IPAsset, 0, len(i.assets))
@@ -42,7 +48,10 @@ func (i *IPAM) List() []IPAsset {
 		out = append(out, a)
 	}
 	sort.Slice(out, func(a, b int) bool {
-		return out[a].IP < out[b].IP
+		if out[a].IP != out[b].IP {
+			return out[a].IP < out[b].IP
+		}
+		return out[a].ID < out[b].ID
 	})
 	return out
 }
