@@ -1,6 +1,9 @@
 package agent
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type DeviceKind string
 
@@ -33,5 +36,8 @@ type DeviceIdentity struct {
 }
 
 func (d DeviceIdentity) HasStableIdentity() bool {
-	return d.ID != "" || d.AgentID != "" || d.Serial != "" || d.MAC != ""
+	return strings.TrimSpace(d.ID) != "" ||
+		strings.TrimSpace(d.AgentID) != "" ||
+		strings.TrimSpace(d.Serial) != "" ||
+		strings.TrimSpace(d.MAC) != ""
 }
