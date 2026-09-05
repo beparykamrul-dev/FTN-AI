@@ -1,36 +1,14 @@
 package main
 
-import (
-	"encoding/json"
-	"io"
-	"net/http"
-	"strings"
-)
-
-const (
-	qkdReadPermission = "qkd.read"
-	qkdChangePermission = "qkd.change"
-)
-
-type QKDNode struct { ID string `json:"id"`; Name string `json:"name"`; Role string `json:"role"`; Vendor string `json:"vendor,omitempty"`; Model string `json:"model,omitempty"`; EndpointRef string `json:"endpoint_ref,omitempty"`; KMSRef string `json:"kms_ref,omitempty"`; Status string `json:"status"` }
-type QKDLink struct { ID string `json:"id"`; SourceNodeID string `json:"source_node_id"`; TargetNodeID string `json:"target_node_id"`; QuantumChannel string `json:"quantum_channel"`; ClassicalChannel string `json:"classical_channel"`; Authenticated bool `json:"authenticated"`; Status string `json:"status"` }
-type QKDStatus struct { NodeID string `json:"node_id"`; KMSRef string `json:"kms_ref,omitempty"`; PoolState string `json:"pool_state"`; AvailableKeys uint64 `json:"available_keys"`; GenerationRateBps uint64 `json:"generation_rate_bps"`; ConsumptionRateBps uint64 `json:"consumption_rate_bps"`; Healthy bool `json:"healthy"`; FallbackMode string `json:"fallback_mode"` }
-type QKDIntent struct { Action string `json:"action"`; NodeID string `json:"node_id,omitempty"`; Consumer string `json:"consumer,omitempty"`; Policy string `json:"policy,omitempty"`; KMSRef string `json:"kms_ref,omitempty"` }
-
-func (a *App) qkdNodes(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"nodes":[]QKDNode{}})}
-func (a *App) qkdLinks(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"links":[]QKDLink{}})}
-func (a *App) qkdStatus(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"status":[]QKDStatus{}})}
-func (a *App) qkdKMS(w http.ResponseWriter,r *http.Request){if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"kms":[]map[string]any{}})}
-
-func validQKDAction(action string) bool {
-	switch action { case "provision", "rotate", "revoke", "bind", "unbind", "failover": return true; default: return false }
-}
-
-func (a *App) qkdIntent(w http.ResponseWriter,r *http.Request){
-	if !method(w,r,http.MethodPost)||!requirePermission(a,qkdChangePermission,w,r){return}
-	var req QKDIntent
-	dec:=json.NewDecoder(http.MaxBytesReader(w,r.Body,64<<10));if err:=dec.Decode(&req);err!=nil{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"invalid_json"});return};var extra any;if err:=dec.Decode(&extra);err!=io.EOF{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"multiple_json_values"});return}
-	req.Action=strings.ToLower(strings.TrimSpace(req.Action));req.NodeID=strings.TrimSpace(req.NodeID);req.Consumer=strings.TrimSpace(req.Consumer);req.Policy=strings.TrimSpace(req.Policy);req.KMSRef=strings.TrimSpace(req.KMSRef)
-	if !validQKDAction(req.Action){jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"unsupported_action"});return};if req.KMSRef==""&&req.NodeID==""{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"node_or_kms_required"});return}
-	a.audit(r,"qkd.intent",req.NodeID,"accepted",req);jsonResponse(w,http.StatusAccepted,map[string]any{"status":"intent_accepted","execution":"approval_gated","raw_key_material":false})
-}
+import("encoding/json";"io";"net/http";"strings")
+const(qkdReadPermission="qkd.read";qkdChangePermission="qkd.change")
+type QKDNode struct{ID string `json:"id"`;Name string `json:"name"`;Role string `json:"role"`;Vendor string `json:"vendor,omitempty"`;Model string `json:"model,omitempty"`;EndpointRef string `json:"endpoint_ref,omitempty"`;KMSRef string `json:"kms_ref,omitempty"`;Status string `json:"status"`}
+type QKDLink struct{ID string `json:"id"`;SourceNodeID string `json:"source_node_id"`;TargetNodeID string `json:"target_node_id"`;QuantumChannel string `json:"quantum_channel"`;ClassicalChannel string `json:"classical_channel"`;Authenticated bool `json:"authenticated"`;Status string `json:"status"`}
+type QKDStatus struct{NodeID string `json:"node_id"`;KMSRef string `json:"kms_ref,omitempty"`;PoolState string `json:"pool_state"`;AvailableKeys uint64 `json:"available_keys"`;GenerationRateBps uint64 `json:"generation_rate_bps"`;ConsumptionRateBps uint64 `json:"consumption_rate_bps"`;Healthy bool `json:"healthy"`;FallbackMode string `json:"fallback_mode"`}
+type QKDIntent struct{Action string `json:"action"`;NodeID string `json:"node_id,omitempty"`;Consumer string `json:"consumer,omitempty"`;Policy string `json:"policy,omitempty"`;KMSRef string `json:"kms_ref,omitempty"`}
+func(a *App)qkdNodes(w http.ResponseWriter,r *http.Request){if w==nil||r==nil{return};if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"nodes":[]QKDNode{}})}
+func(a *App)qkdLinks(w http.ResponseWriter,r *http.Request){if w==nil||r==nil{return};if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"links":[]QKDLink{}})}
+func(a *App)qkdStatus(w http.ResponseWriter,r *http.Request){if w==nil||r==nil{return};if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"status":[]QKDStatus{}})}
+func(a *App)qkdKMS(w http.ResponseWriter,r *http.Request){if w==nil||r==nil{return};if !method(w,r,http.MethodGet)||!requirePermission(a,qkdReadPermission,w,r){return};jsonResponse(w,http.StatusOK,map[string]any{"kms":[]map[string]any{}})}
+func validQKDAction(action string)bool{switch action{case "provision","rotate","revoke","bind","unbind","failover":return true;default:return false}}
+func(a *App)qkdIntent(w http.ResponseWriter,r *http.Request){if w==nil||r==nil{return};if !method(w,r,http.MethodPost)||!requirePermission(a,qkdChangePermission,w,r){return};if r.Body==nil{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"invalid_json"});return};var req QKDIntent;dec:=json.NewDecoder(http.MaxBytesReader(w,r.Body,64<<10));if err:=dec.Decode(&req);err!=nil{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"invalid_json"});return};var extra any;if err:=dec.Decode(&extra);err!=io.EOF{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"multiple_json_values"});return};req.Action=strings.ToLower(strings.TrimSpace(req.Action));req.NodeID=strings.TrimSpace(req.NodeID);req.Consumer=strings.TrimSpace(req.Consumer);req.Policy=strings.TrimSpace(req.Policy);req.KMSRef=strings.TrimSpace(req.KMSRef);if len(req.Action)>32||len(req.NodeID)>256||len(req.Consumer)>256||len(req.Policy)>256||len(req.KMSRef)>256{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"field_too_long"});return};if !validQKDAction(req.Action){jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"unsupported_action"});return};if req.KMSRef==""&&req.NodeID==""{jsonResponse(w,http.StatusBadRequest,map[string]string{"error":"node_or_kms_required"});return};a.audit(r,"qkd.intent",req.NodeID,"accepted",req);jsonResponse(w,http.StatusAccepted,map[string]any{"status":"intent_accepted","execution":"approval_gated","raw_key_material":false})}
