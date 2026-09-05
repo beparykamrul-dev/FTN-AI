@@ -1,36 +1,27 @@
 package agent
 
-import "context"
+import (
+	"context"
+	"errors"
+	"strings"
+)
 
-// RouteRequest is the normalized decision input for FTN's AI layer router.
-type RouteRequest struct {
-	Scope    Scope
-	Category Category
-	Input    string
-}
-
-// LayerRuntime executes one registered AI layer.
-type LayerRuntime interface {
-	Run(ctx context.Context, request RouteRequest) (Response, error)
-}
-
-// Router selects the approved layer and keeps the public API independent of the model provider.
-type Router struct {
-	registry *LayerRegistry
-	runtimes map[string]LayerRuntime
-}
-
-func NewRouter(registry *LayerRegistry, runtimes map[string]LayerRuntime) *Router {
-	return &Router{registry: registry, runtimes: runtimes}
-}
-
+type RouteRequest struct { Scope Scope; Category Category; Input string }
+type LayerRuntime interface { Run(ctx context.Context, request RouteRequest) (Response, error) }
+type Router struct { registry *LayerRegistry; runtimes map[string]LayerRuntime }
+func NewRouter(registry *LayerRegistry, runtimes map[string]LayerRuntime) *Router { return &Router{registry: registry, runtimes: runtimes} }
 func (r *Router) Handle(ctx context.Context, request RouteRequest) (Response, error) {
+	if r == nil || r.registry == nil { return Response{}, errors.New("AI layer registry unavailable") }
+	if ctx == nil { return Response{}, errors.New("context is required") }
+	select { case <-ctx.Done(): return Response{}, ctx.Err(); default: }
+	request.Input = strings.TrimSpace(request.Input)
+	if request.Input == "" { return Response{}, errors.New("input is required") }
 	layer, err := r.registry.Resolve(request.Category)
 	if err != nil { return Response{}, err }
+	if layer == nil { return Response{}, errors.New("AI layer unavailable") }
 	runtime, ok := r.runtimes[layer.ID]
-	if !ok { return Response{}, &layerUnavailableError{ID: layer.ID} }
+	if !ok || runtime == nil { return Response{}, &layerUnavailableError{ID: layer.ID} }
 	return runtime.Run(ctx, request)
 }
-
 type layerUnavailableError struct{ ID string }
 func (e *layerUnavailableError) Error() string { return "AI layer runtime unavailable: " + e.ID }
