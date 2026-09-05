@@ -1,6 +1,9 @@
 package agent
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // Decision describes why a layer was selected and whether escalation is allowed.
 type Decision struct {
@@ -12,6 +15,9 @@ type Decision struct {
 
 // Decide keeps routing explainable: FTN can inspect why a layer was selected.
 func Decide(ctx context.Context, registry *LayerRegistry, category Category, capability string, allowEscalation bool) (Decision, error) {
+	if ctx == nil {
+		return Decision{}, fmt.Errorf("context is required")
+	}
 	if err := ctx.Err(); err != nil {
 		return Decision{}, err
 	}
