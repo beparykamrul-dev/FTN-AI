@@ -12,8 +12,8 @@ const (
 )
 
 type HealthCheck struct {
-	Interval    time.Duration
-	Timeout     time.Duration
+	Interval     time.Duration
+	Timeout      time.Duration
 	FailureLimit int
 	SuccessLimit int
 }
@@ -23,8 +23,8 @@ func DefaultHealthCheck() HealthCheck {
 }
 
 type HealthTracker struct {
-	State HealthState
-	Failures int
+	State     HealthState
+	Failures  int
 	Successes int
 }
 
@@ -33,14 +33,22 @@ func (h *HealthTracker) Observe(success bool, policy HealthCheck) HealthState {
 		h.Failures = 0
 		h.Successes++
 		limit := policy.SuccessLimit
-		if limit <= 0 { limit = 2 }
-		if h.Successes >= limit { h.State = HealthHealthy }
+		if limit <= 0 {
+			limit = 2
+		}
+		if h.Successes >= limit {
+			h.State = HealthHealthy
+		}
 		return h.State
 	}
 	h.Successes = 0
 	h.Failures++
 	limit := policy.FailureLimit
-	if limit <= 0 { limit = 3 }
-	if h.Failures >= limit { h.State = HealthUnhealthy }
+	if limit <= 0 {
+		limit = 3
+	}
+	if h.Failures >= limit {
+		h.State = HealthUnhealthy
+	}
 	return h.State
 }
