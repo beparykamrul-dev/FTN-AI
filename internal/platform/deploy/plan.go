@@ -15,8 +15,14 @@ type Plan struct {
 }
 
 func NewPlan(id, projectID string, target Target, artifact, strategy string) (Plan, error) {
-	if err := target.Validate(); err != nil { return Plan{}, err }
-	if id == "" || projectID == "" || artifact == "" { return Plan{}, errors.New("id, project_id and artifact are required") }
-	if strategy == "" { strategy = "rolling" }
+	if err := target.Validate(); err != nil {
+		return Plan{}, err
+	}
+	if id == "" || projectID == "" || artifact == "" {
+		return Plan{}, errors.New("id, project_id and artifact are required")
+	}
+	if strategy == "" {
+		strategy = "rolling"
+	}
 	return Plan{ID: id, ProjectID: projectID, TargetID: target.ID, Artifact: artifact, Strategy: strategy, CreatedAt: time.Now().UTC()}, nil
 }
