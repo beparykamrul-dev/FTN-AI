@@ -23,11 +23,16 @@ type PTRStore interface {
 }
 
 func ValidatePTR(record PTRRecord) error {
-	if strings.TrimSpace(record.Address) == "" || strings.TrimSpace(record.Hostname) == "" {
+	address := strings.TrimSpace(record.Address)
+	hostname := strings.TrimSuffix(strings.TrimSpace(record.Hostname), ".")
+	if address == "" || hostname == "" {
 		return fmt.Errorf("PTR address and hostname are required")
 	}
-	if _, err := netip.ParseAddr(strings.TrimSpace(record.Address)); err != nil {
+	if _, err := netip.ParseAddr(address); err != nil {
 		return fmt.Errorf("invalid PTR address: %w", err)
+	}
+	if strings.ContainsAny(hostname, " \t\r\n") {
+		return fmt.Errorf("invalid PTR hostname")
 	}
 	if record.TTL == 0 {
 		return fmt.Errorf("PTR TTL must be greater than zero")
