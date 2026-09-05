@@ -26,3 +26,5 @@ func NewPlan(id, projectID string, target Target, artifact, strategy string) (Pl
 	}
 	return Plan{ID: id, ProjectID: projectID, TargetID: target.ID, Artifact: artifact, Strategy: strategy, CreatedAt: time.Now().UTC()}, nil
 }
+
+// Formatting and validation for deployment plans remain part of the controlled repair batch.
