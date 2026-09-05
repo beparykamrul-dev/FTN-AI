@@ -13,9 +13,28 @@ type MeshAdapter interface { Name() string; Snapshot(context.Context) (MeshSnaps
 
 func (s MeshSnapshot) Validate() error {
 	seen := make(map[string]struct{}, len(s.Nodes))
-	for _, n := range s.Nodes { id:=strings.TrimSpace(n.ID); if id=="" { return errInvalid("node id is required") }; if _,ok:=seen[id];ok{return errInvalid("duplicate node id: "+id)}; seen[id]=struct{}{} }
-	for _, l := range s.Links { id,a,b:=strings.TrimSpace(l.ID),strings.TrimSpace(l.A),strings.TrimSpace(l.B); if id==""||a==""||b==""{return errInvalid("link id and endpoints are required")}; if a==b{return errInvalid("self-link is not allowed: "+id)}; if l.CapacityMbps==0{return errInvalid("link capacity must be positive: "+id)}; if l.LatencyMs<0{return errInvalid("link latency cannot be negative: "+id)}; if l.LossPct<0||l.LossPct>100{return errInvalid("link loss must be between 0 and 100: "+id)} }
-	for _, r := range s.Routes { id,prefix,source:=strings.TrimSpace(r.ID),strings.TrimSpace(r.Prefix),strings.TrimSpace(r.Source); if id==""||prefix==""||source==""{return errInvalid("route id, prefix and source are required")}; if r.Approved&&len(r.Targets)==0{return errInvalid("approved route requires a target: "+id)} }
+	for _, n := range s.Nodes {
+		id := strings.TrimSpace(n.ID)
+		if id == "" { return errInvalid("node id is required") }
+		if _, ok := seen[id]; ok { return errInvalid("duplicate node id: "+id) }
+		seen[id] = struct{}{}
+	}
+	for _, l := range s.Links {
+		id, a, b := strings.TrimSpace(l.ID), strings.TrimSpace(l.A), strings.TrimSpace(l.B)
+		if id == "" || a == "" || b == "" { return errInvalid("link id and endpoints are required") }
+		if a == b { return errInvalid("self-link is not allowed: "+id) }
+		if _, ok := seen[a]; !ok { return errInvalid("link endpoint node not found: "+a) }
+		if _, ok := seen[b]; !ok { return errInvalid("link endpoint node not found: "+b) }
+		if l.CapacityMbps == 0 { return errInvalid("link capacity must be positive: "+id) }
+		if l.LatencyMs < 0 { return errInvalid("link latency cannot be negative: "+id) }
+		if l.LossPct < 0 || l.LossPct > 100 { return errInvalid("link loss must be between 0 and 100: "+id) }
+	}
+	for _, r := range s.Routes {
+		id, prefix, source := strings.TrimSpace(r.ID), strings.TrimSpace(r.Prefix), strings.TrimSpace(r.Source)
+		if id == "" || prefix == "" || source == "" { return errInvalid("route id, prefix and source are required") }
+		if _, ok := seen[source]; !ok { return errInvalid("route source node not found: "+source) }
+		if r.Approved && len(r.Targets) == 0 { return errInvalid("approved route requires a target: "+id) }
+	}
 	return nil
 }
 type validationError string
