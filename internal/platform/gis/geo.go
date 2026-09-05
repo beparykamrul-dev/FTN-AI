@@ -6,12 +6,16 @@ import (
 )
 
 type GeoMetric struct {
-	DistanceM  float64   `json:"distance_m"`
-	BearingDeg float64   `json:"bearing_deg"`
+	DistanceM  float64    `json:"distance_m"`
+	BearingDeg float64    `json:"bearing_deg"`
 	Midpoint   FiberPoint `json:"midpoint"`
 }
 
 func GeoMetrics(a, b FiberPoint) (GeoMetric, error) {
+	if math.IsNaN(a.Lat) || math.IsNaN(a.Lng) || math.IsNaN(b.Lat) || math.IsNaN(b.Lng) ||
+		math.IsInf(a.Lat, 0) || math.IsInf(a.Lng, 0) || math.IsInf(b.Lat, 0) || math.IsInf(b.Lng, 0) {
+		return GeoMetric{}, fmt.Errorf("invalid coordinates")
+	}
 	if math.Abs(a.Lat) > 90 || math.Abs(b.Lat) > 90 || math.Abs(a.Lng) > 180 || math.Abs(b.Lng) > 180 {
 		return GeoMetric{}, fmt.Errorf("invalid coordinates")
 	}
