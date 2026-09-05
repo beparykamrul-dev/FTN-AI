@@ -33,8 +33,17 @@ func NewOrchestrator(fleet *Fleet, runtimes map[Category]CategoryRuntime) (*Orch
 }
 
 func (o *Orchestrator) Handle(ctx context.Context, request CategoryRequest) (Response, error) {
+	if o == nil {
+		return Response{}, fmt.Errorf("agent orchestrator is required")
+	}
+	if ctx == nil {
+		return Response{}, fmt.Errorf("context is required")
+	}
+	if err := ctx.Err(); err != nil {
+		return Response{}, err
+	}
 	runtime, ok := o.runtimes[request.Category]
-	if !ok {
+	if !ok || runtime == nil {
 		return Response{}, fmt.Errorf("unsupported agent category: %s", request.Category)
 	}
 	return runtime.Run(ctx, request)
