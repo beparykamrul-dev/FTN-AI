@@ -23,7 +23,6 @@ func (d *QueryDeduper) Do(ctx context.Context, key string, fn ResolveFunc) (Reso
 	if call, ok := d.calls[key]; ok { d.mu.Unlock(); select { case <-call.done: return call.result, call.err; case <-ctx.Done(): return ResolveResult{}, ctx.Err() } }
 	call := &dedupCall{done: make(chan struct{})}; d.calls[key] = call; d.mu.Unlock()
 	call.result, call.err = fn(ctx, ResolveRequest{Key: key})
-	close(call.done)
-	d.mu.Lock(); delete(d.calls, key); d.mu.Unlock()
+	d.mu.Lock(); delete(d.calls, key); d.mu.Unlock(); close(call.done)
 	return call.result, call.err
 }
