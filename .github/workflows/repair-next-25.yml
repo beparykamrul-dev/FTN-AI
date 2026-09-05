@@ -1,0 +1,68 @@
+name: FTN Go Repair Next 25
+
+on:
+  pull_request_target:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ftn-go-repair-next-25-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@3041bf56c941b39c61721a86cd64f0c5d6a506f # v5.2.0
+        with:
+          go-version: '1.24.x'
+
+      - name: Repair next 25 unformatted Go files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find . -type f -name '*.go' \
+            -not -path './.git/*' \
+            -not -path './vendor/*' \
+            -print0 | xargs -0 gofmt -l | sort | head -25)
+          printf '%s\n' "${files[@]}"
+          if ((${#files[@]} > 0)); then
+            gofmt -w "${files[@]}"
+          fi
+          if git diff --quiet --exit-code; then
+            echo 'No unformatted Go files found in the next batch.'
+            exit 0
+          fi
+
+      - name: Verify formatting
+        run: |
+          set -euo pipefail
+          if [ -n "$(gofmt -l $(find . -type f -name '*.go' -not -path './.git/*' -not -path './vendor/*'))" ]; then
+            echo 'Repository still contains unformatted Go files.'
+            gofmt -l $(find . -type f -name '*.go' -not -path './.git/*' -not -path './vendor/*')
+            exit 1
+          fi
+
+      - name: Commit repaired batch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet --exit-code; then
+            echo 'Nothing to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- '*.go'
+          git commit -m 'chore: repair next 25 Go files'
+          git push origin "HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
