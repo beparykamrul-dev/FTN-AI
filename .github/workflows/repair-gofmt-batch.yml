@@ -3,12 +3,14 @@ name: FTN Go Format Repair Batch
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 concurrency:
-  group: ftn-gofmt-repair-${{ github.ref }}
+  group: ftn-gofmt-repair-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -90,4 +92,4 @@ jobs:
             services/control-plane/flow_listener.go \
             internal/platform/ai/workflow.go
           git commit -m 'chore: repair next 25 Go files'
-          git push origin HEAD:main
+          git push origin "HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
