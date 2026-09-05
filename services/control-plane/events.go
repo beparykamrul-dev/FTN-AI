@@ -17,8 +17,8 @@ type EventOffset struct { ConsumerID string `json:"consumer_id"`; TenantID strin
 
 const maxEventBodyBytes = 1 << 20
 
-func decodeEventBody(r *http.Request, dst any) error {
-    r.Body = http.MaxBytesReader(nil, r.Body, maxEventBodyBytes)
+func decodeEventBody(w http.ResponseWriter, r *http.Request, dst any) error {
+    r.Body = http.MaxBytesReader(w, r.Body, maxEventBodyBytes)
     dec := json.NewDecoder(r.Body)
     if err := dec.Decode(dst); err != nil { return err }
     var extra any
@@ -39,7 +39,7 @@ func appendEventTx(tx pgx.Tx, ctx context.Context, tenantID, eventType, correlat
 
 func (a *App) appendEvent(w http.ResponseWriter,r *http.Request){
     if !method(w,r,http.MethodPost)||!requirePermission(a,"event.append",w,r){return};var e DurableEvent
-    if err:=decodeEventBody(r,&e);err!=nil||strings.TrimSpace(e.Type)==""{jsonResponse(w,400,map[string]string{"error":"invalid_event"});return}
+    if err:=decodeEventBody(w,r,&e);err!=nil||strings.TrimSpace(e.Type)==""{jsonResponse(w,400,map[string]string{"error":"invalid_event"});return}
     rc:=requestInfo(r);if rc.TenantID==""{jsonResponse(w,400,map[string]string{"error":"tenant_required"});return};if e.CorrelationID==""{e.CorrelationID=rc.CorrelationID};if a.db==nil{jsonResponse(w,503,map[string]string{"error":"database_required"});return}
     tx,err:=a.db.Begin(r.Context());if err!=nil{jsonResponse(w,500,map[string]string{"error":"event_begin_failed"});return};defer tx.Rollback(r.Context())
     out,err:=appendEventTx(tx,r.Context(),rc.TenantID,e.Type,e.CorrelationID,e.CausationID,e.AggregateID,e.Payload);if err!=nil{jsonResponse(w,500,map[string]string{"error":"event_append_failed"});return}
@@ -53,7 +53,7 @@ func (a *App) readEvents(w http.ResponseWriter,r *http.Request){
 }
 
 func (a *App) commitEventOffset(w http.ResponseWriter,r *http.Request){
-    if !method(w,r,http.MethodPost)||!requirePermission(a,"event.commit",w,r){return};var o EventOffset;if err:=decodeEventBody(r,&o);err!=nil||strings.TrimSpace(o.ConsumerID)==""||o.Sequence<0{jsonResponse(w,400,map[string]string{"error":"invalid_offset"});return};rc:=requestInfo(r);if rc.TenantID==""{jsonResponse(w,400,map[string]string{"error":"tenant_required"});return};if o.TenantID!=""&&o.TenantID!=rc.TenantID{jsonResponse(w,403,map[string]string{"error":"tenant_mismatch"});return};o.TenantID=rc.TenantID;if a.db==nil{jsonResponse(w,503,map[string]string{"error":"database_required"});return}
+    if !method(w,r,http.MethodPost)||!requirePermission(a,"event.commit",w,r){return};var o EventOffset;if err:=decodeEventBody(w,r,&o);err!=nil||strings.TrimSpace(o.ConsumerID)==""||o.Sequence<0{jsonResponse(w,400,map[string]string{"error":"invalid_offset"});return};rc:=requestInfo(r);if rc.TenantID==""{jsonResponse(w,400,map[string]string{"error":"tenant_required"});return};if o.TenantID!=""&&o.TenantID!=rc.TenantID{jsonResponse(w,403,map[string]string{"error":"tenant_mismatch"});return};o.TenantID=rc.TenantID;if a.db==nil{jsonResponse(w,503,map[string]string{"error":"database_required"});return}
     _,err:=a.db.Exec(r.Context(),`insert into event_consumer_offsets(consumer_id,tenant_id,sequence) values($1,$2::uuid,$3) on conflict(consumer_id,tenant_id) do update set sequence=greatest(event_consumer_offsets.sequence,excluded.sequence),updated_at=now()`,o.ConsumerID,o.TenantID,o.Sequence);if err!=nil{jsonResponse(w,500,map[string]string{"error":"offset_commit_failed"});return};a.audit(r,"event.offset.commit",o.ConsumerID,"accepted",o);jsonResponse(w,202,o)
 }
 
