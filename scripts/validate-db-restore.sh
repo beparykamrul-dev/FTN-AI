@@ -43,8 +43,13 @@ for required in "${MIGRATIONS[@]}"; do test -f "$required"; done
 echo "Starting isolated PostgreSQL validation instance"
 docker run -d --name "$NAME" -e POSTGRES_DB=ftn -e POSTGRES_USER=ftn -e POSTGRES_PASSWORD=ci-only-password "$POSTGRES_IMAGE" >/dev/null
 ready_deadline=$((SECONDS + 90))
-until docker exec "$NAME" pg_isready -U ftn -d ftn >/dev/null 2>&1; do
+until docker exec "$NAME" pg_isready -U ftn >/dev/null 2>&1; do
   if (( SECONDS >= ready_deadline )); then echo "PostgreSQL readiness timeout" >&2; exit 1; fi
+  sleep 1
+done
+
+until docker exec "$NAME" psql -At -U ftn -d postgres -c "SELECT 1 FROM pg_database WHERE datname='ftn';" | grep -qx 1; do
+  if (( SECONDS >= ready_deadline )); then echo "PostgreSQL database initialization timeout" >&2; exit 1; fi
   sleep 1
 done
 
@@ -107,26 +112,21 @@ test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM data
 
 echo "Validating verifier identity column"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='durable_jobs' AND column_name='verified_by');")" = "t"
-
 echo "Validating execution-attempt integrity triggers"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_execution_integrity';")" = "1"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='execution_attempts_job_integrity';")" = "1"
-
 echo "Validating outbound queue lease schema"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ftn_mail_outbound_queue' AND column_name IN ('lease_token','lease_expires_at');")" = "2"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='idx_ftn_mail_outbound_processing_lease');")" = "t"
-
 echo "Creating custom-format backup"
 docker exec "$NAME" pg_dump -U ftn -d ftn -Fc > "$DUMP"
 test -s "$DUMP"
 docker exec "$NAME" createdb -U ftn ftn_restore
 docker exec -i "$NAME" pg_restore -U ftn -d ftn_restore --exit-on-error < "$DUMP"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn_restore -c "SELECT count(*) FROM tenants WHERE slug='ci-restore';")" = "1"
-
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='durable_jobs_event_journal';")" = "1"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM pg_trigger WHERE tgname='change_approvals_lifecycle_event';")" = "1"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT count(*) FROM schema_migrations WHERE version >= 11 AND version <= 25;")" = "15"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='service_requests_tenant_idx');")" = "t"
 test "$(docker exec "$NAME" psql -At -U ftn -d ftn -c "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='data_requests_tenant_request_hash_uidx');")" = "t"
-
 echo "PostgreSQL migration + backup + restore validation passed."
