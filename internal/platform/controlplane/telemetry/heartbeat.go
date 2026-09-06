@@ -1,6 +1,10 @@
 package telemetry
 
-import "time"
+import (
+	"math"
+	"strings"
+	"time"
+)
 
 type Heartbeat struct {
 	NodeID string `json:"node_id"`
@@ -13,10 +17,17 @@ type Heartbeat struct {
 }
 
 func (h Heartbeat) Valid() bool {
-	return h.NodeID != "" && !h.ObservedAt.IsZero() && h.CPUPercent >= 0 && h.CPUPercent <= 100 && h.MemoryPercent >= 0 && h.MemoryPercent <= 100 && h.NetworkMbps >= 0 && h.DNSQPS >= 0
+	return strings.TrimSpace(h.NodeID) != "" && !h.ObservedAt.IsZero() && finiteRange(h.CPUPercent, 0, 100) && finiteRange(h.MemoryPercent, 0, 100) && finiteRange(h.NetworkMbps, 0, math.MaxFloat64) && finiteRange(h.DNSQPS, 0, math.MaxFloat64)
+}
+
+func finiteRange(v, min, max float64) bool {
+	return !math.IsNaN(v) && !math.IsInf(v, 0) && v >= min && v <= max
 }
 
 func Fresh(h Heartbeat, now time.Time, maxAge time.Duration) bool {
-	if !h.Valid() || maxAge < 0 { return false }
-	return now.Sub(h.ObservedAt) <= maxAge
+	if !h.Valid() || maxAge < 0 || now.IsZero() { return false }
+	now = now.UTC()
+	observed := h.ObservedAt.UTC()
+	if observed.After(now) { return false }
+	return now.Sub(observed) <= maxAge
 }
