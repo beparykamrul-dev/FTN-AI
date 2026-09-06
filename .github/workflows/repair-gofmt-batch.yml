@@ -28,29 +28,35 @@ jobs:
         with:
           go-version: '1.24.x'
 
-      - name: Format next 20-file repair batch
+      - name: Format next 25-file repair batch
         run: |
+          set -euo pipefail
           gofmt -w \
-            internal/platform/dns/adapters.go \
-            internal/platform/dns/powerdns_sdk.go \
-            internal/platform/dns/provider_adapter.go \
-            internal/platform/dns/powerdns_adapter.go \
-            internal/platform/builder/types.go \
-            internal/platform/networkresearch/types.go \
-            services/ftn-dns/adapter.go \
-            internal/platform/gis/api.go \
-            internal/platform/gis/geo.go \
-            internal/platform/gis/map.go \
-            services/ftn-proxy/health.go \
-            services/ftn-proxy/policy.go \
-            internal/platform/dns/dkim.go \
-            services/dns-domain/ptr.go \
-            contracts/v1/ftnftp.go \
-            contracts/v1/local_media.go \
-            os/ftn-os/runtime/health.go \
-            apps/ftn-social/realtime/delivery.go \
-            apps/ftn-social/realtime/protocol.go \
-            apps/ftn-social/realtime/transport.go
+            internal/platform/edge/android_network.go \
+            internal/platform/edge/client_enrollment.go \
+            internal/platform/edge/client_profiles.go \
+            internal/platform/edge/client_tunnel.go \
+            internal/platform/edge/fastly_patterns.go \
+            internal/platform/edge/intent.go \
+            internal/platform/edge/olt.go \
+            internal/platform/edge/production_adapter.go \
+            internal/platform/control/approval.go \
+            internal/platform/control/operations.go \
+            internal/platform/control/registry.go \
+            internal/platform/control/ws_protocol.go \
+            internal/platform/control/operations_next_batch_test.go \
+            internal/platform/control/operations_regression_test.go \
+            services/control-plane/active_defense_adapters.go \
+            services/control-plane/active_defense_adapters_test.go \
+            services/control-plane/active_defense_execution.go \
+            services/control-plane/active_defense_execution_test.go \
+            services/control-plane/approvals.go \
+            services/control-plane/certificate_manager.go \
+            services/control-plane/core_network_orchestrator.go \
+            services/control-plane/core_network_orchestrator_test.go \
+            apps/ftn-social/contracts/message.go \
+            apps/ftn-social/contracts/message_next_batch_test.go \
+            apps/ftn-social/contracts/message_regression_test.go
 
       - name: Commit repaired files
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -62,27 +68,32 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
-            internal/platform/dns/adapters.go \
-            internal/platform/dns/powerdns_sdk.go \
-            internal/platform/dns/provider_adapter.go \
-            internal/platform/dns/powerdns_adapter.go \
-            internal/platform/builder/types.go \
-            internal/platform/networkresearch/types.go \
-            services/ftn-dns/adapter.go \
-            internal/platform/gis/api.go \
-            internal/platform/gis/geo.go \
-            internal/platform/gis/map.go \
-            services/ftn-proxy/health.go \
-            services/ftn-proxy/policy.go \
-            internal/platform/dns/dkim.go \
-            services/dns-domain/ptr.go \
-            contracts/v1/ftnftp.go \
-            contracts/v1/local_media.go \
-            os/ftn-os/runtime/health.go \
-            apps/ftn-social/realtime/delivery.go \
-            apps/ftn-social/realtime/protocol.go \
-            apps/ftn-social/realtime/transport.go
-          git commit -m 'chore: repair next 20 Go files'
+            internal/platform/edge/android_network.go \
+            internal/platform/edge/client_enrollment.go \
+            internal/platform/edge/client_profiles.go \
+            internal/platform/edge/client_tunnel.go \
+            internal/platform/edge/fastly_patterns.go \
+            internal/platform/edge/intent.go \
+            internal/platform/edge/olt.go \
+            internal/platform/edge/production_adapter.go \
+            internal/platform/control/approval.go \
+            internal/platform/control/operations.go \
+            internal/platform/control/registry.go \
+            internal/platform/control/ws_protocol.go \
+            internal/platform/control/operations_next_batch_test.go \
+            internal/platform/control/operations_regression_test.go \
+            services/control-plane/active_defense_adapters.go \
+            services/control-plane/active_defense_adapters_test.go \
+            services/control-plane/active_defense_execution.go \
+            services/control-plane/active_defense_execution_test.go \
+            services/control-plane/approvals.go \
+            services/control-plane/certificate_manager.go \
+            services/control-plane/core_network_orchestrator.go \
+            services/control-plane/core_network_orchestrator_test.go \
+            apps/ftn-social/contracts/message.go \
+            apps/ftn-social/contracts/message_next_batch_test.go \
+            apps/ftn-social/contracts/message_regression_test.go
+          git commit -m 'chore: repair next 25 Go files'
           git push origin HEAD:main
 
       - name: Verify formatting on pull requests
