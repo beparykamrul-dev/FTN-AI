@@ -32,23 +32,22 @@ jobs:
         run: |
           set -euo pipefail
           gofmt -w \
-            internal/platform/router/router.go \
-            services/ftn-controlplane/action_digest.go \
-            services/ftn-proxy/security/posture.go \
-            services/ftn-dns/adapters/godns.go \
-            services/ftn-controlplane/orchestrator.go \
-            services/ftn-dns/adapters/dnssec_policy.go \
-            services/ftn-dns/adapters/powerdns.go \
-            services/ftn-dns/adapters/query.go \
-            services/ftn-controlplane/policy_gate.go \
-            services/control-plane/placement.go \
-            services/control-plane/ftn_platform_registry.go \
-            services/control-plane/ftn_universal_interface.go \
-            internal/platform/builder/types.go \
-            internal/platform/networkresearch/types.go \
-            internal/platform/control/operations.go \
-            internal/platform/control/registry.go \
-            internal/platform/control/ws_protocol.go \
+            internal/platform/ftndns/query_dedup.go \
+            internal/platform/ftndns/cloud_state.go \
+            internal/platform/ftndns/mesh_health.go \
+            internal/platform/ftndns/edge_cache.go \
+            internal/platform/controlplane/server_target.go \
+            internal/platform/edge/local_router.go \
+            internal/platform/edge/core_router.go \
+            services/control-plane/flow_metrics.go \
+            services/control-plane/flow_sequence.go \
+            services/control-plane/ftn_main_server_service_plane.go \
+            services/control-plane/ftn_service_protocol.go \
+            services/control-plane/exrouter.go \
+            services/control-plane/job_events.go \
+            services/control-plane/rollback.go \
+            services/control-plane/heartbeat.go \
+            services/control-plane/ftn_routed.go \
             internal/platform/edge/client_enrollment.go \
             internal/platform/edge/client_profiles.go \
             internal/platform/edge/client_tunnel.go \
@@ -68,23 +67,22 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
-            internal/platform/router/router.go \
-            services/ftn-controlplane/action_digest.go \
-            services/ftn-proxy/security/posture.go \
-            services/ftn-dns/adapters/godns.go \
-            services/ftn-controlplane/orchestrator.go \
-            services/ftn-dns/adapters/dnssec_policy.go \
-            services/ftn-dns/adapters/powerdns.go \
-            services/ftn-dns/adapters/query.go \
-            services/ftn-controlplane/policy_gate.go \
-            services/control-plane/placement.go \
-            services/control-plane/ftn_platform_registry.go \
-            services/control-plane/ftn_universal_interface.go \
-            internal/platform/builder/types.go \
-            internal/platform/networkresearch/types.go \
-            internal/platform/control/operations.go \
-            internal/platform/control/registry.go \
-            internal/platform/control/ws_protocol.go \
+            internal/platform/ftndns/query_dedup.go \
+            internal/platform/ftndns/cloud_state.go \
+            internal/platform/ftndns/mesh_health.go \
+            internal/platform/ftndns/edge_cache.go \
+            internal/platform/controlplane/server_target.go \
+            internal/platform/edge/local_router.go \
+            internal/platform/edge/core_router.go \
+            services/control-plane/flow_metrics.go \
+            services/control-plane/flow_sequence.go \
+            services/control-plane/ftn_main_server_service_plane.go \
+            services/control-plane/ftn_service_protocol.go \
+            services/control-plane/exrouter.go \
+            services/control-plane/job_events.go \
+            services/control-plane/rollback.go \
+            services/control-plane/heartbeat.go \
+            services/control-plane/ftn_routed.go \
             internal/platform/edge/client_enrollment.go \
             internal/platform/edge/client_profiles.go \
             internal/platform/edge/client_tunnel.go \
