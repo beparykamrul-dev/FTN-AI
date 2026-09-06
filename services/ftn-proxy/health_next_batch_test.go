@@ -16,6 +16,6 @@ func TestHealthTrackerTransitionsAfterThreshold(t *testing.T) {
 	var h HealthTracker
 	if h.Observe(false, p) != HealthUnknown { t.Fatal("first failure should not mark unhealthy") }
 	if h.Observe(false, p) != HealthUnhealthy { t.Fatal("failure threshold not reached") }
-	if h.Observe(true, p) != HealthUnknown { t.Fatal("first success should not mark healthy") }
+	if h.Observe(true, p) != HealthUnhealthy { t.Fatal("state should remain unhealthy until success threshold") }
 	if h.Observe(true, p) != HealthHealthy { t.Fatal("success threshold not reached") }
 }
