@@ -28,34 +28,34 @@ jobs:
         with:
           go-version: '1.24.x'
 
-      - name: Format next 25-file repair batch
+      - name: Format latest 25-file repair batch
         run: |
           gofmt -w \
+            services/ftn-codec/codec.go \
+            services/ftn-mesh/contracts.go \
+            services/ftn-dns/adapters/rr.go \
+            apps/ftn-social/realtime/hub.go \
+            internal/platform/agent/quota.go \
+            internal/platform/agent/usage.go \
+            internal/platform/agent/router.go \
+            internal/platform/agent/fleet.go \
+            internal/platform/agent/orchestrator.go \
+            internal/platform/agent/health.go \
+            internal/platform/agent/layers.go \
+            internal/platform/agent/decision.go \
+            internal/platform/agent/heartbeat.go \
+            services/ftnwan-router/contracts/router.go \
+            internal/platform/edge/core_router.go \
+            internal/platform/edge/local_router.go \
+            internal/platform/control/command_router.go \
+            services/control-plane/core_router.go \
+            services/control-plane/core_router_integration.go \
+            services/control-plane/routeros_adapter.go \
             services/control-plane/events.go \
             services/control-plane/dns_guard.go \
             services/control-plane/qkd_contract.go \
             services/control-plane/ftn_routed_bgp_live.go \
-            services/control-plane/exrouter.go \
-            services/control-plane/ftn_native_protocol_engine.go \
-            services/control-plane/verify.go \
-            services/control-plane/approvals.go \
-            services/control-plane/wazuh_pipeline.go \
-            services/control-plane/foundation.go \
-            services/control-plane/jobs.go \
-            services/ftn-mail/outbound/smtp_sender.go \
-            services/ftn-mail/transport/smtp_session.go \
-            services/ftn-controlplane/event_journal_remote.go \
-            services/ftn-proxy/policy.go \
-            services/ftn-codec/codec.go \
-            services/ftn-mesh/contracts.go \
-            services/dns-domain/ptr.go \
-            os/ftn-os/runtime/health.go \
-            services/acme/certificate_manager.go \
-            internal/platform/deploy/plan.go \
-            internal/platform/kernel/wrapper.go \
-            internal/platform/fiber/api.go \
-            services/control-plane/flow_listener.go \
-            internal/platform/ai/workflow.go
+            services/control-plane/exrouter.go
 
       - name: Commit repaired files
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -67,32 +67,32 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
+            services/ftn-codec/codec.go \
+            services/ftn-mesh/contracts.go \
+            services/ftn-dns/adapters/rr.go \
+            apps/ftn-social/realtime/hub.go \
+            internal/platform/agent/quota.go \
+            internal/platform/agent/usage.go \
+            internal/platform/agent/router.go \
+            internal/platform/agent/fleet.go \
+            internal/platform/agent/orchestrator.go \
+            internal/platform/agent/health.go \
+            internal/platform/agent/layers.go \
+            internal/platform/agent/decision.go \
+            internal/platform/agent/heartbeat.go \
+            services/ftnwan-router/contracts/router.go \
+            internal/platform/edge/core_router.go \
+            internal/platform/edge/local_router.go \
+            internal/platform/control/command_router.go \
+            services/control-plane/core_router.go \
+            services/control-plane/core_router_integration.go \
+            services/control-plane/routeros_adapter.go \
             services/control-plane/events.go \
             services/control-plane/dns_guard.go \
             services/control-plane/qkd_contract.go \
             services/control-plane/ftn_routed_bgp_live.go \
-            services/control-plane/exrouter.go \
-            services/control-plane/ftn_native_protocol_engine.go \
-            services/control-plane/verify.go \
-            services/control-plane/approvals.go \
-            services/control-plane/wazuh_pipeline.go \
-            services/control-plane/foundation.go \
-            services/control-plane/jobs.go \
-            services/ftn-mail/outbound/smtp_sender.go \
-            services/ftn-mail/transport/smtp_session.go \
-            services/ftn-controlplane/event_journal_remote.go \
-            services/ftn-proxy/policy.go \
-            services/ftn-codec/codec.go \
-            services/ftn-mesh/contracts.go \
-            services/dns-domain/ptr.go \
-            os/ftn-os/runtime/health.go \
-            services/acme/certificate_manager.go \
-            internal/platform/deploy/plan.go \
-            internal/platform/kernel/wrapper.go \
-            internal/platform/fiber/api.go \
-            services/control-plane/flow_listener.go \
-            internal/platform/ai/workflow.go
-          git commit -m 'chore: repair next 25 Go files'
+            services/control-plane/exrouter.go
+          git commit -m 'chore: repair latest 25 Go files'
           git push origin HEAD:main
 
       - name: Verify formatting on pull requests
