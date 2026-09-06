@@ -32,8 +32,14 @@ jobs:
         run: |
           set -euo pipefail
           gofmt -w \
+            internal/platform/mesh/probe_scheduler.go \
+            internal/platform/dns/anycast_scheduler.go \
+            internal/platform/ftndns/resolver_workload.go \
+            internal/platform/ftndns/resolver_prefetch.go \
+            internal/platform/authenticator/authenticator.go \
             services/ftn-mail/transport/listener.go \
             services/ftn-mail/transport/delivery.go \
+            services/ftn-mail/transport/admission.go \
             services/ftn-mail/transport/smtp_policy.go \
             services/ftn-mail/transport/rate_limiter.go \
             services/ftn-mail/transport/auth_exchange.go \
@@ -47,15 +53,10 @@ jobs:
             services/ftn-mail/transport/smtp_session.go \
             services/ftn-mail/outbound/smtp_sender.go \
             services/ftn-sms/transport/transport.go \
+            internal/platform/controlplane/dns/fleet.go \
+            internal/platform/agent/audit.go \
             internal/platform/mesh/events.go \
-            internal/platform/mesh/probe_scheduler.go \
-            internal/platform/dns/anycast_scheduler.go \
-            internal/platform/ftndns/resolver_workload.go \
-            internal/platform/ftndns/resolver_prefetch.go \
-            internal/platform/authenticator/authenticator.go \
-            internal/platform/dns/active_probe.go \
-            internal/platform/dns/bgp_gobgp_adapter.go \
-            internal/platform/dns/mesh_anycast.go
+            services/control-plane/ftn_service_protocol.go
 
       - name: Commit repaired files
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -67,8 +68,14 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
+            internal/platform/mesh/probe_scheduler.go \
+            internal/platform/dns/anycast_scheduler.go \
+            internal/platform/ftndns/resolver_workload.go \
+            internal/platform/ftndns/resolver_prefetch.go \
+            internal/platform/authenticator/authenticator.go \
             services/ftn-mail/transport/listener.go \
             services/ftn-mail/transport/delivery.go \
+            services/ftn-mail/transport/admission.go \
             services/ftn-mail/transport/smtp_policy.go \
             services/ftn-mail/transport/rate_limiter.go \
             services/ftn-mail/transport/auth_exchange.go \
@@ -82,15 +89,10 @@ jobs:
             services/ftn-mail/transport/smtp_session.go \
             services/ftn-mail/outbound/smtp_sender.go \
             services/ftn-sms/transport/transport.go \
+            internal/platform/controlplane/dns/fleet.go \
+            internal/platform/agent/audit.go \
             internal/platform/mesh/events.go \
-            internal/platform/mesh/probe_scheduler.go \
-            internal/platform/dns/anycast_scheduler.go \
-            internal/platform/ftndns/resolver_workload.go \
-            internal/platform/ftndns/resolver_prefetch.go \
-            internal/platform/authenticator/authenticator.go \
-            internal/platform/dns/active_probe.go \
-            internal/platform/dns/bgp_gobgp_adapter.go \
-            internal/platform/dns/mesh_anycast.go
+            services/control-plane/ftn_service_protocol.go
           git commit -m 'chore: repair next 25 Go files'
           git push origin HEAD:main
 
