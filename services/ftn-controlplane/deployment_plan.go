@@ -1,30 +1,8 @@
 package controlplane
 
-import (
-	"crypto/sha256"
-	"encoding/hex"
-)
+import("crypto/sha256";"encoding/hex";"strings")
 
-// DeploymentEnvelope binds an approved plan to its exact content before it is
-// handed to a transport layer. It contains no credentials or private keys.
-type DeploymentEnvelope struct {
-	Plan   DeploymentPlan
-	Digest string
-}
+type DeploymentEnvelope struct{Plan DeploymentPlan `json:"plan"`;Digest string `json:"digest"`}
 
-func SealPlan(p DeploymentPlan) DeploymentEnvelope {
-	h := sha256.New()
-	h.Write([]byte(p.ServerID))
-	h.Write([]byte{0})
-	for _, service := range p.Services {
-		h.Write([]byte(service))
-		h.Write([]byte{0})
-	}
-	if p.Approved { h.Write([]byte("approved")) }
-	return DeploymentEnvelope{Plan: p, Digest: hex.EncodeToString(h.Sum(nil))}
-}
-
-// Verify checks that an envelope still represents the same approved plan.
-func VerifyEnvelope(e DeploymentEnvelope) bool {
-	return e.Plan.Approved && e.Digest == SealPlan(e.Plan).Digest
-}
+func SealPlan(p DeploymentPlan)DeploymentEnvelope{h:=sha256.New();write:=func(v string){h.Write([]byte(v));h.Write([]byte{0})};write(strings.TrimSpace(p.ServerID));write(strings.TrimSpace(p.Reason));for _,service:=range p.Services{write(strings.TrimSpace(service))};if p.Approved{write("approved")}else{write("rejected")};return DeploymentEnvelope{Plan:p,Digest:hex.EncodeToString(h.Sum(nil))}}
+func VerifyEnvelope(e DeploymentEnvelope)bool{if !e.Plan.Approved||len(e.Digest)!=64{return false};if _,err:=hex.DecodeString(e.Digest);err!=nil{return false};return e.Digest==SealPlan(e.Plan).Digest}
