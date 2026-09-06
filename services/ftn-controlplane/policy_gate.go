@@ -1,30 +1,9 @@
 package controlplane
 
+import "strings"
+
 // PolicyGate is the mandatory boundary between analysis and deployment.
-type PolicyGate struct {
-	RequireHealthy bool
-	RequireKnownServer bool
-	RequireExplicitApproval bool
-}
+type PolicyGate struct{RequireHealthy bool;RequireKnownServer bool;RequireExplicitApproval bool}
+type DeploymentPlan struct{ServerID string `json:"server_id"`;Services []string `json:"services"`;Approved bool `json:"approved"`;Reason string `json:"reason"`}
 
-// DeploymentPlan is an immutable-by-convention plan produced after policy
-// validation. Execution is intentionally outside this layer.
-type DeploymentPlan struct {
-	ServerID string
-	Services []string
-	Approved bool
-	Reason string
-}
-
-func (g PolicyGate) Validate(a AnalysisResult, serverKnown, approved bool) DeploymentPlan {
-	if g.RequireKnownServer && !serverKnown {
-		return DeploymentPlan{ServerID: a.ServerID, Reason: "server is not enrolled"}
-	}
-	if g.RequireHealthy && !a.Healthy {
-		return DeploymentPlan{ServerID: a.ServerID, Reason: "server health policy rejected deployment"}
-	}
-	if g.RequireExplicitApproval && !approved {
-		return DeploymentPlan{ServerID: a.ServerID, Reason: "explicit approval required"}
-	}
-	return DeploymentPlan{ServerID: a.ServerID, Services: append([]string(nil), a.Desired.Services...), Approved: true, Reason: "deployment policy accepted"}
-}
+func (g PolicyGate)Validate(a AnalysisResult,serverKnown,approved bool)DeploymentPlan{serverID:=strings.TrimSpace(a.ServerID);if serverID==""{serverID=strings.TrimSpace(a.Desired.ServerID)};reject:=func(reason string)DeploymentPlan{return DeploymentPlan{ServerID:serverID,Approved:false,Reason:reason}};if serverID==""{return reject("server id is required")};if g.RequireKnownServer&&!serverKnown{return reject("server is not enrolled")};if g.RequireHealthy&&!a.Healthy{return reject("server health policy rejected deployment")};if g.RequireExplicitApproval&&!approved{return reject("explicit approval required")};services:=make([]string,0,len(a.Desired.Services));seen:=make(map[string]struct{},len(a.Desired.Services));for _,service:=range a.Desired.Services{service=strings.TrimSpace(service);if service==""{continue};if _,ok:=seen[service];ok{continue};seen[service]=struct{}{};services=append(services,service)};return DeploymentPlan{ServerID:serverID,Services:services,Approved:true,Reason:"deployment policy accepted"}}
