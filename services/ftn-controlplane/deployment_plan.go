@@ -1,8 +1,5 @@
 package controlplane
-
-import("crypto/sha256";"encoding/hex";"strings")
-
+import("crypto/sha256";"crypto/subtle";"encoding/hex";"strings")
 type DeploymentEnvelope struct{Plan DeploymentPlan `json:"plan"`;Digest string `json:"digest"`}
-
-func SealPlan(p DeploymentPlan)DeploymentEnvelope{h:=sha256.New();write:=func(v string){h.Write([]byte(v));h.Write([]byte{0})};write(strings.TrimSpace(p.ServerID));write(strings.TrimSpace(p.Reason));for _,service:=range p.Services{write(strings.TrimSpace(service))};if p.Approved{write("approved")}else{write("rejected")};return DeploymentEnvelope{Plan:p,Digest:hex.EncodeToString(h.Sum(nil))}}
-func VerifyEnvelope(e DeploymentEnvelope)bool{if !e.Plan.Approved||len(e.Digest)!=64{return false};if _,err:=hex.DecodeString(e.Digest);err!=nil{return false};return e.Digest==SealPlan(e.Plan).Digest}
+func SealPlan(p DeploymentPlan)DeploymentEnvelope{p.ServerID=strings.TrimSpace(p.ServerID);p.Reason=strings.TrimSpace(p.Reason);services:=make([]string,0,len(p.Services));seen:=map[string]struct{}{};for _,s:=range p.Services{s=strings.TrimSpace(s);if s==""{continue};if _,ok:=seen[s];ok{continue};seen[s]=struct{}{};services=append(services,s)};p.Services=services;h:=sha256.New();write:=func(v string){h.Write([]byte(v));h.Write([]byte{0})};write(p.ServerID);write(p.Reason);for _,service:=range p.Services{write(service)};if p.Approved{write("approved")}else{write("rejected")};return DeploymentEnvelope{Plan:p,Digest:hex.EncodeToString(h.Sum(nil))}}
+func VerifyEnvelope(e DeploymentEnvelope)bool{if !e.Plan.Approved||len(e.Digest)!=64{return false};digest,err:=hex.DecodeString(e.Digest);if err!=nil{return false};expected:=SealPlan(e.Plan).Digest;actual:=hex.EncodeToString(digest);return subtle.ConstantTimeCompare([]byte(actual),[]byte(expected))==1}
