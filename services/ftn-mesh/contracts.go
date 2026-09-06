@@ -2,6 +2,7 @@ package ftnmesh
 
 import (
 	"context"
+	"math"
 	"strings"
 )
 
@@ -13,44 +14,11 @@ type MeshAdapter interface { Name() string; Snapshot(context.Context) (MeshSnaps
 
 func (s MeshSnapshot) Validate() error {
 	seen := make(map[string]struct{}, len(s.Nodes))
-	for _, n := range s.Nodes {
-		id := strings.TrimSpace(n.ID)
-		if id == "" { return errInvalid("node id is required") }
-		if _, ok := seen[id]; ok { return errInvalid("duplicate node id: "+id) }
-		seen[id] = struct{}{}
-	}
+	if len(s.Nodes) > 100000 || len(s.Links) > 200000 || len(s.Routes) > 200000 { return errInvalid("mesh snapshot is too large") }
+	for _, n := range s.Nodes { id := strings.TrimSpace(n.ID); if id == "" { return errInvalid("node id is required") }; if len(id) > 256 { return errInvalid("node id is too long") }; if _, ok := seen[id]; ok { return errInvalid("duplicate node id: "+id) }; seen[id] = struct{}{} }
 	linkSeen := make(map[string]struct{}, len(s.Links))
-	for _, l := range s.Links {
-		id, a, b := strings.TrimSpace(l.ID), strings.TrimSpace(l.A), strings.TrimSpace(l.B)
-		if id == "" || a == "" || b == "" { return errInvalid("link id and endpoints are required") }
-		if _, ok := linkSeen[id]; ok { return errInvalid("duplicate link id: "+id) }
-		linkSeen[id] = struct{}{}
-		if a == b { return errInvalid("self-link is not allowed: "+id) }
-		if _, ok := seen[a]; !ok { return errInvalid("link endpoint node not found: "+a) }
-		if _, ok := seen[b]; !ok { return errInvalid("link endpoint node not found: "+b) }
-		if l.CapacityMbps == 0 { return errInvalid("link capacity must be positive: "+id) }
-		if l.LatencyMs < 0 { return errInvalid("link latency cannot be negative: "+id) }
-		if l.LossPct < 0 || l.LossPct > 100 { return errInvalid("link loss must be between 0 and 100: "+id) }
-	}
-	routeSeen := make(map[string]struct{}, len(s.Routes))
-	for _, r := range s.Routes {
-		id, prefix, source := strings.TrimSpace(r.ID), strings.TrimSpace(r.Prefix), strings.TrimSpace(r.Source)
-		if id == "" || prefix == "" || source == "" { return errInvalid("route id, prefix and source are required") }
-		if _, ok := routeSeen[id]; ok { return errInvalid("duplicate route id: "+id) }
-		routeSeen[id] = struct{}{}
-		if _, ok := seen[source]; !ok { return errInvalid("route source node not found: "+source) }
-		if r.Approved && len(r.Targets) == 0 { return errInvalid("approved route requires a target: "+id) }
-		if len(r.Targets) > 0 {
-			targetSeen := make(map[string]struct{}, len(r.Targets))
-			for _, target := range r.Targets {
-				target = strings.TrimSpace(target)
-				if target == "" { return errInvalid("route target cannot be empty: "+id) }
-				if _, ok := seen[target]; !ok { return errInvalid("route target node not found: "+target) }
-				if _, ok := targetSeen[target]; ok { return errInvalid("duplicate route target: "+target) }
-				targetSeen[target] = struct{}{}
-			}
-		}
-	}
+	for _, l := range s.Links { id,a,b := strings.TrimSpace(l.ID),strings.TrimSpace(l.A),strings.TrimSpace(l.B); if id==""||a==""||b=="" { return errInvalid("link id and endpoints are required") }; if len(id)>256||len(a)>256||len(b)>256{return errInvalid("link identity is too long")}; if _,ok:=linkSeen[id];ok{return errInvalid("duplicate link id: "+id)}; linkSeen[id]=struct{}{}; if a==b{return errInvalid("self-link is not allowed: "+id)}; if _,ok:=seen[a];!ok{return errInvalid("link endpoint node not found: "+a)}; if _,ok:=seen[b];!ok{return errInvalid("link endpoint node not found: "+b)}; if l.CapacityMbps==0{return errInvalid("link capacity must be positive: "+id)}; if l.LatencyMs<0||math.IsNaN(l.LatencyMs)||math.IsInf(l.LatencyMs,0){return errInvalid("link latency is invalid: "+id)}; if l.LossPct<0||l.LossPct>100||math.IsNaN(l.LossPct)||math.IsInf(l.LossPct,0){return errInvalid("link loss is invalid: "+id)} }
+	routeSeen:=make(map[string]struct{},len(s.Routes));for _,r:=range s.Routes{id,prefix,source:=strings.TrimSpace(r.ID),strings.TrimSpace(r.Prefix),strings.TrimSpace(r.Source);if id==""||prefix==""||source==""{return errInvalid("route id, prefix and source are required")};if len(id)>256||len(prefix)>128||len(source)>256{return errInvalid("route identity is too long")};if _,ok:=routeSeen[id];ok{return errInvalid("duplicate route id: "+id)};routeSeen[id]=struct{}{};if _,ok:=seen[source];!ok{return errInvalid("route source node not found: "+source)};if r.Approved&&len(r.Targets)==0{return errInvalid("approved route requires a target: "+id)};if len(r.Targets)>1024{return errInvalid("too many route targets: "+id)};targetSeen:=make(map[string]struct{},len(r.Targets));for _,target:=range r.Targets{target=strings.TrimSpace(target);if target==""||len(target)>256{return errInvalid("route target is invalid: "+id)};if _,ok:=seen[target];!ok{return errInvalid("route target node not found: "+target)};if _,ok:=targetSeen[target];ok{return errInvalid("duplicate route target: "+target)};targetSeen[target]=struct{}{}}}
 	return nil
 }
 type validationError string
