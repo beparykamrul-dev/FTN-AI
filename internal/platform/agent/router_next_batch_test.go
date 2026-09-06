@@ -1,7 +1,12 @@
 package agent
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
-func TestRouteRequestRequiresScopeIdentity(t *testing.T) {
-	if _, err := NewRouter(nil); err == nil { t.Fatal("nil registry must fail") }
+func TestRouterHandleFailsClosed(t *testing.T) {
+	r := NewRouter(nil, nil)
+	if _, err := r.Handle(context.Background(), RouteRequest{Input:"status"}); err == nil { t.Fatal("missing registry must fail") }
+	if _, err := r.Handle(nil, RouteRequest{Input:"status"}); err == nil { t.Fatal("nil context must fail") }
 }
