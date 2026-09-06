@@ -13,5 +13,6 @@ func TestDNSProbeValidationRequiresHostPort(t *testing.T) {
 
 func TestDNSProbeNilContextFailsClosed(t *testing.T) {
 	p := DNSProbe{Address: "127.0.0.1:53", Name: "example.com", Timeout: time.Second}
-	if r := p.Probe(context.TODO()); r.Reachable { t.Fatal("unreachable test endpoint must not be reported reachable") }
+	var ctx context.Context
+	if r := p.Probe(ctx); r.Reachable { t.Fatal("nil context must fail closed") }
 }
