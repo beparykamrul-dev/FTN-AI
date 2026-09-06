@@ -6,7 +6,7 @@ cd "$root"
 
 mapfile -t tracked_go < <(git ls-files -- '*.go')
 : > /tmp/ftn-gofmt.txt
-if command -v go >/dev/null 2>&1 && ((${#tracked_go[@]})); then
+if ((${#tracked_go[@]})); then
   gofmt -l "${tracked_go[@]}" > /tmp/ftn-gofmt.txt
 fi
 if [[ -s /tmp/ftn-gofmt.txt ]]; then
@@ -14,9 +14,17 @@ if [[ -s /tmp/ftn-gofmt.txt ]]; then
   exit 1
 fi
 
-GOPROXY=direct go test ./...
-if [[ -f services/control-plane/go.mod ]]; then
-  (cd services/control-plane && GOPROXY=direct go test ./...)
+mapfile -t modules < <(git ls-files 'go.mod' | sort -u)
+if ((${#modules[@]} == 0)); then
+  echo 'no Go modules found' >&2
+  exit 1
 fi
+for mod in "${modules[@]}"; do
+  dir="$(dirname "$mod")"
+  echo "testing module: $dir"
+  (cd "$dir" && GOPROXY=direct go test ./...)
+  echo "building module: $dir"
+  (cd "$dir" && GOPROXY=direct go build -trimpath ./...)
+done
 
 echo "FTN final integrity check: PASS"
