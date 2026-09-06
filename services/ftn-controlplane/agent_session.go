@@ -1,20 +1,6 @@
 package controlplane
 
-import "time"
+import("strings";"time")
 
-// AgentSession represents a short-lived, authenticated control-plane session.
-// Session state contains no private key material or customer payloads.
-type AgentSession struct {
-	ServerID    string
-	Fingerprint string
-	IssuedAt    time.Time
-	ExpiresAt   time.Time
-	Revoked     bool
-}
-
-func (s AgentSession) Valid(now time.Time) bool {
-	if s.ServerID == "" || s.Fingerprint == "" || s.Revoked {
-		return false
-	}
-	return !now.Before(s.IssuedAt) && now.Before(s.ExpiresAt)
-}
+type AgentSession struct{ServerID string;Fingerprint string;IssuedAt time.Time;ExpiresAt time.Time;Revoked bool}
+func(s AgentSession)Valid(now time.Time)bool{if strings.TrimSpace(s.ServerID)==""||strings.TrimSpace(s.Fingerprint)==""||s.Revoked||s.IssuedAt.IsZero()||s.ExpiresAt.IsZero()||!s.ExpiresAt.After(s.IssuedAt){return false};if now.IsZero(){now=time.Now().UTC()}else{now=now.UTC()};return !now.Before(s.IssuedAt)&&now.Before(s.ExpiresAt)}
