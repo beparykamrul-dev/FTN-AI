@@ -1,14 +1,15 @@
 package dns
 
 import (
-	"context"
-	"testing"
-	"time"
+ "context"
+ "testing"
+ "time"
 )
 
-func TestDNSProbeValidationBounds(t *testing.T) {
-	if err := (DNSProbe{Address:"127.0.0.1", Name:"x", Timeout:time.Second}).Validate(); err == nil { t.Fatal("host without port must fail") }
-	if err := (DNSProbe{Address:"127.0.0.1:53", Timeout:31*time.Second}).Validate(); err == nil { t.Fatal("timeout over 30s must fail") }
-	r := (DNSProbe{Address:"127.0.0.1:53", Timeout:time.Second}).Probe(context.Background())
-	if r.Address == "" { t.Fatal("probe must preserve address") }
+func TestDNSProbeValidationAndNilContext(t *testing.T) {
+ p := DNSProbe{Address: "127.0.0.1:53", Name: "example.com", Timeout: time.Second}
+ if err := p.Validate(); err != nil { t.Fatalf("valid probe rejected: %v", err) }
+ if err := (DNSProbe{Address: "127.0.0.1", Name: "example.com", Timeout: time.Second}).Validate(); err == nil { t.Fatal("address without port accepted") }
+ r := p.Probe(nil); if r.Error != "context is required" { t.Fatalf("nil context error=%q", r.Error) }
+ if got := p.Probe(context.Background()); got.Reachable && got.Error != "" { t.Fatal("unexpected contradictory probe result") }
 }

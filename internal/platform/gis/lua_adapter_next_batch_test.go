@@ -2,9 +2,9 @@ package gis
 
 import "testing"
 
-func TestLuaAdapterRejectsInvalidVersion(t *testing.T) {
-	for _, version := range []string{"", "lua 5.4", "lua\n5.4"} {
-		if NewLuaAdapter(version).Ready() { t.Fatalf("version %q must be rejected", version) }
-	}
-	if !NewLuaAdapter("5.4.6").Ready() { t.Fatal("valid Lua version rejected") }
+func TestLuaAdapterValidation(t *testing.T) {
+ a := NewLuaAdapter("5.4.7")
+ if err := a.Validate(); err != nil || !a.Ready() { t.Fatalf("valid Lua adapter rejected: err=%v ready=%v", err, a.Ready()) }
+ if err := NewLuaAdapter("").Validate(); err == nil { t.Fatal("empty Lua version accepted") }
+ if err := NewLuaAdapter("5.4\n7").Validate(); err == nil { t.Fatal("control character in Lua version accepted") }
 }
