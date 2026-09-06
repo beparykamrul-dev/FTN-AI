@@ -32,31 +32,31 @@ jobs:
         run: |
           set -euo pipefail
           gofmt -w \
-            internal/platform/mesh/probe_scheduler.go \
-            internal/platform/dns/anycast_scheduler.go \
-            internal/platform/ftndns/resolver_workload.go \
-            internal/platform/ftndns/resolver_prefetch.go \
-            internal/platform/authenticator/authenticator.go \
-            services/ftn-mail/transport/listener.go \
-            services/ftn-mail/transport/delivery.go \
-            services/ftn-mail/transport/admission.go \
-            services/ftn-mail/transport/smtp_policy.go \
-            services/ftn-mail/transport/rate_limiter.go \
-            services/ftn-mail/transport/auth_exchange.go \
-            services/ftn-mail/transport/smtp_receiver.go \
-            services/ftn-mail/transport/identity_auth.go \
-            services/ftn-mail/transport/auth_throttle.go \
-            services/ftn-mail/transport/admission_guard.go \
-            services/ftn-mail/transport/credential_verify.go \
-            services/ftn-mail/transport/mailbox_authorizer.go \
-            services/ftn-mail/transport/admission_middleware.go \
-            services/ftn-mail/transport/smtp_session.go \
-            services/ftn-mail/outbound/smtp_sender.go \
-            services/ftn-sms/transport/transport.go \
-            internal/platform/controlplane/dns/fleet.go \
-            internal/platform/agent/audit.go \
-            internal/platform/mesh/events.go \
-            services/control-plane/ftn_service_protocol.go
+            internal/platform/router/router.go \
+            services/ftn-controlplane/action_digest.go \
+            services/ftn-proxy/security/posture.go \
+            services/ftn-dns/adapters/godns.go \
+            services/ftn-controlplane/orchestrator.go \
+            services/ftn-dns/adapters/dnssec_policy.go \
+            services/ftn-dns/adapters/powerdns.go \
+            services/ftn-dns/adapters/query.go \
+            services/ftn-controlplane/policy_gate.go \
+            services/control-plane/placement.go \
+            services/control-plane/ftn_platform_registry.go \
+            services/control-plane/ftn_universal_interface.go \
+            internal/platform/builder/types.go \
+            internal/platform/networkresearch/types.go \
+            internal/platform/control/operations.go \
+            internal/platform/control/registry.go \
+            internal/platform/control/ws_protocol.go \
+            internal/platform/edge/client_enrollment.go \
+            internal/platform/edge/client_profiles.go \
+            internal/platform/edge/client_tunnel.go \
+            internal/platform/edge/android_network.go \
+            internal/platform/edge/fastly_patterns.go \
+            internal/platform/edge/intent.go \
+            internal/platform/edge/production_adapter.go \
+            internal/platform/edge/olt.go
 
       - name: Commit repaired files
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -68,31 +68,31 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
-            internal/platform/mesh/probe_scheduler.go \
-            internal/platform/dns/anycast_scheduler.go \
-            internal/platform/ftndns/resolver_workload.go \
-            internal/platform/ftndns/resolver_prefetch.go \
-            internal/platform/authenticator/authenticator.go \
-            services/ftn-mail/transport/listener.go \
-            services/ftn-mail/transport/delivery.go \
-            services/ftn-mail/transport/admission.go \
-            services/ftn-mail/transport/smtp_policy.go \
-            services/ftn-mail/transport/rate_limiter.go \
-            services/ftn-mail/transport/auth_exchange.go \
-            services/ftn-mail/transport/smtp_receiver.go \
-            services/ftn-mail/transport/identity_auth.go \
-            services/ftn-mail/transport/auth_throttle.go \
-            services/ftn-mail/transport/admission_guard.go \
-            services/ftn-mail/transport/credential_verify.go \
-            services/ftn-mail/transport/mailbox_authorizer.go \
-            services/ftn-mail/transport/admission_middleware.go \
-            services/ftn-mail/transport/smtp_session.go \
-            services/ftn-mail/outbound/smtp_sender.go \
-            services/ftn-sms/transport/transport.go \
-            internal/platform/controlplane/dns/fleet.go \
-            internal/platform/agent/audit.go \
-            internal/platform/mesh/events.go \
-            services/control-plane/ftn_service_protocol.go
+            internal/platform/router/router.go \
+            services/ftn-controlplane/action_digest.go \
+            services/ftn-proxy/security/posture.go \
+            services/ftn-dns/adapters/godns.go \
+            services/ftn-controlplane/orchestrator.go \
+            services/ftn-dns/adapters/dnssec_policy.go \
+            services/ftn-dns/adapters/powerdns.go \
+            services/ftn-dns/adapters/query.go \
+            services/ftn-controlplane/policy_gate.go \
+            services/control-plane/placement.go \
+            services/control-plane/ftn_platform_registry.go \
+            services/control-plane/ftn_universal_interface.go \
+            internal/platform/builder/types.go \
+            internal/platform/networkresearch/types.go \
+            internal/platform/control/operations.go \
+            internal/platform/control/registry.go \
+            internal/platform/control/ws_protocol.go \
+            internal/platform/edge/client_enrollment.go \
+            internal/platform/edge/client_profiles.go \
+            internal/platform/edge/client_tunnel.go \
+            internal/platform/edge/android_network.go \
+            internal/platform/edge/fastly_patterns.go \
+            internal/platform/edge/intent.go \
+            internal/platform/edge/production_adapter.go \
+            internal/platform/edge/olt.go
           git commit -m 'chore: repair next 25 Go files'
           git push origin HEAD:main
 
