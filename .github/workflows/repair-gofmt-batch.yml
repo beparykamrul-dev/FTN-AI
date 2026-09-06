@@ -3,7 +3,7 @@ name: FTN Go Format Repair Batch
 on:
   push:
     branches: [main]
-  pull_request_target:
+  pull_request:
     branches: [main]
 
 permissions:
@@ -18,15 +18,13 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR head
+      - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
         with:
           go-version: '1.24.x'
 
@@ -60,6 +58,7 @@ jobs:
             internal/platform/ai/workflow.go
 
       - name: Commit repaired files
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           if git diff --quiet; then
             echo 'No formatting changes required in this batch.'
@@ -94,4 +93,8 @@ jobs:
             services/control-plane/flow_listener.go \
             internal/platform/ai/workflow.go
           git commit -m 'chore: repair next 25 Go files'
-          git push origin "HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          git push origin HEAD:main
+
+      - name: Verify formatting on pull requests
+        if: github.event_name == 'pull_request'
+        run: test -z "$(gofmt -l .)"
