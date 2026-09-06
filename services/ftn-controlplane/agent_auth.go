@@ -1,35 +1,9 @@
 package controlplane
 
-import (
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/hex"
-)
+import("crypto/sha256";"crypto/subtle";"encoding/hex";"strings")
 
-// AgentIdentity is the public identity presented by an enrolled FTN agent.
-type AgentIdentity struct {
-	ServerID    string
-	Fingerprint string
-	Enrolled    bool
-	Revoked     bool
-}
+type AgentIdentity struct{ServerID string;Fingerprint string;Enrolled bool;Revoked bool}
 
-// AuthorizeAgent provides a constant-time comparison for the identity
-// fingerprint. Cryptographic proof of possession remains the responsibility
-// of the mTLS transport layer.
-func AuthorizeAgent(expected, presented AgentIdentity) bool {
-	if expected.ServerID == "" || presented.ServerID == "" || expected.ServerID != presented.ServerID {
-		return false
-	}
-	if !expected.Enrolled || !presented.Enrolled || expected.Revoked || presented.Revoked || expected.Fingerprint == "" || presented.Fingerprint == "" {
-		return false
-	}
-	return subtle.ConstantTimeCompare([]byte(expected.Fingerprint), []byte(presented.Fingerprint)) == 1
-}
+func AuthorizeAgent(expected,presented AgentIdentity)bool{es:=strings.TrimSpace(expected.ServerID);ps:=strings.TrimSpace(presented.ServerID);ef:=strings.ToLower(strings.TrimSpace(expected.Fingerprint));pf:=strings.ToLower(strings.TrimSpace(presented.Fingerprint));if es==""||ps==""||es!=ps{return false};if !expected.Enrolled||!presented.Enrolled||expected.Revoked||presented.Revoked||ef==""||pf==""{return false};if len(ef)!=64||len(pf)!=64{return false};if _,err:=hex.DecodeString(ef);err!=nil{return false};if _,err:=hex.DecodeString(pf);err!=nil{return false};return subtle.ConstantTimeCompare([]byte(ef),[]byte(pf))==1}
 
-// Fingerprint derives a stable public identity fingerprint from identity material.
-// Private key material must never be passed here.
-func Fingerprint(identityMaterial []byte) string {
-	sum := sha256.Sum256(identityMaterial)
-	return hex.EncodeToString(sum[:])
-}
+func Fingerprint(identityMaterial []byte)string{sum:=sha256.Sum256(identityMaterial);return hex.EncodeToString(sum[:])}
