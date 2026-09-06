@@ -32,31 +32,30 @@ jobs:
         run: |
           set -euo pipefail
           gofmt -w \
-            internal/platform/dns/adapters.go \
-            internal/platform/dns/powerdns_sdk.go \
-            internal/platform/dns/provider_adapter.go \
-            internal/platform/dns/powerdns_adapter.go \
-            services/ftn-dns/adapter.go \
-            internal/platform/gis/api.go \
-            internal/platform/gis/geo.go \
-            internal/platform/gis/map.go \
-            services/ftn-proxy/health.go \
-            services/ftn-proxy/policy.go \
-            internal/platform/dns/dkim.go \
-            services/dns-domain/ptr.go \
-            contracts/v1/ftnftp.go \
-            contracts/v1/local_media.go \
-            os/ftn-os/runtime/health.go \
-            apps/ftn-social/realtime/delivery.go \
-            apps/ftn-social/realtime/protocol.go \
-            apps/ftn-social/realtime/transport.go \
-            internal/platform/modules/fiber/module.go \
-            internal/platform/modules/dns/definition.go \
-            internal/platform/modules/mesh/definition.go \
-            internal/platform/modules/fiber/definition.go \
-            internal/platform/modules/monitoring/definition.go \
-            internal/platform/gis/ipam.go \
-            internal/platform/gis/fiber.go
+            services/ftn-mail/transport/listener.go \
+            services/ftn-mail/transport/delivery.go \
+            services/ftn-mail/transport/smtp_policy.go \
+            services/ftn-mail/transport/rate_limiter.go \
+            services/ftn-mail/transport/auth_exchange.go \
+            services/ftn-mail/transport/smtp_receiver.go \
+            services/ftn-mail/transport/identity_auth.go \
+            services/ftn-mail/transport/auth_throttle.go \
+            services/ftn-mail/transport/admission_guard.go \
+            services/ftn-mail/transport/credential_verify.go \
+            services/ftn-mail/transport/mailbox_authorizer.go \
+            services/ftn-mail/transport/admission_middleware.go \
+            services/ftn-mail/transport/smtp_session.go \
+            services/ftn-mail/outbound/smtp_sender.go \
+            services/ftn-sms/transport/transport.go \
+            internal/platform/mesh/events.go \
+            internal/platform/mesh/probe_scheduler.go \
+            internal/platform/dns/anycast_scheduler.go \
+            internal/platform/ftndns/resolver_workload.go \
+            internal/platform/ftndns/resolver_prefetch.go \
+            internal/platform/authenticator/authenticator.go \
+            internal/platform/dns/active_probe.go \
+            internal/platform/dns/bgp_gobgp_adapter.go \
+            internal/platform/dns/mesh_anycast.go
 
       - name: Commit repaired files
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -68,31 +67,30 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
-            internal/platform/dns/adapters.go \
-            internal/platform/dns/powerdns_sdk.go \
-            internal/platform/dns/provider_adapter.go \
-            internal/platform/dns/powerdns_adapter.go \
-            services/ftn-dns/adapter.go \
-            internal/platform/gis/api.go \
-            internal/platform/gis/geo.go \
-            internal/platform/gis/map.go \
-            services/ftn-proxy/health.go \
-            services/ftn-proxy/policy.go \
-            internal/platform/dns/dkim.go \
-            services/dns-domain/ptr.go \
-            contracts/v1/ftnftp.go \
-            contracts/v1/local_media.go \
-            os/ftn-os/runtime/health.go \
-            apps/ftn-social/realtime/delivery.go \
-            apps/ftn-social/realtime/protocol.go \
-            apps/ftn-social/realtime/transport.go \
-            internal/platform/modules/fiber/module.go \
-            internal/platform/modules/dns/definition.go \
-            internal/platform/modules/mesh/definition.go \
-            internal/platform/modules/fiber/definition.go \
-            internal/platform/modules/monitoring/definition.go \
-            internal/platform/gis/ipam.go \
-            internal/platform/gis/fiber.go
+            services/ftn-mail/transport/listener.go \
+            services/ftn-mail/transport/delivery.go \
+            services/ftn-mail/transport/smtp_policy.go \
+            services/ftn-mail/transport/rate_limiter.go \
+            services/ftn-mail/transport/auth_exchange.go \
+            services/ftn-mail/transport/smtp_receiver.go \
+            services/ftn-mail/transport/identity_auth.go \
+            services/ftn-mail/transport/auth_throttle.go \
+            services/ftn-mail/transport/admission_guard.go \
+            services/ftn-mail/transport/credential_verify.go \
+            services/ftn-mail/transport/mailbox_authorizer.go \
+            services/ftn-mail/transport/admission_middleware.go \
+            services/ftn-mail/transport/smtp_session.go \
+            services/ftn-mail/outbound/smtp_sender.go \
+            services/ftn-sms/transport/transport.go \
+            internal/platform/mesh/events.go \
+            internal/platform/mesh/probe_scheduler.go \
+            internal/platform/dns/anycast_scheduler.go \
+            internal/platform/ftndns/resolver_workload.go \
+            internal/platform/ftndns/resolver_prefetch.go \
+            internal/platform/authenticator/authenticator.go \
+            internal/platform/dns/active_probe.go \
+            internal/platform/dns/bgp_gobgp_adapter.go \
+            internal/platform/dns/mesh_anycast.go
           git commit -m 'chore: repair next 25 Go files'
           git push origin HEAD:main
 
