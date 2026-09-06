@@ -1,6 +1,9 @@
 package dns
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 type nextProviderAdapter struct{}
 func (nextProviderAdapter) Type() ProviderType { return ProviderPowerDNS }
