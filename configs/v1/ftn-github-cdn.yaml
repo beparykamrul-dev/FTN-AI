@@ -1,0 +1,44 @@
+version: "1"
+name: ftn-github-cdn
+
+# GitHub is the immutable source/version registry. CDN delivery is provided
+# by an external, authorized CDN; GitHub is not treated as network transit.
+origin:
+  provider: github
+  repository: beparykamrul-dev/FTN-AI
+  branch: main
+  production_versioning: immutable_ref
+
+cdn:
+  provider: jsdelivr
+  endpoint_template: "https://cdn.jsdelivr.net/gh/beparykamrul-dev/FTN-AI@{ref}/{path}"
+  cacheable_content:
+    - public static assets
+    - versioned application assets
+    - documentation assets
+    - public release artifacts
+  non_cacheable_content:
+    - credentials
+    - private configuration
+    - customer data
+    - privileged APIs
+
+routing:
+  mode: content_delivery_only
+  bgp_transit: false
+  user_traffic_origin: edge
+
+security:
+  secrets_in_git: false
+  production_refs_are_immutable: true
+  privileged_changes_require_approval: true
+  customer_data_via_cdn: false
+
+observability:
+  emit_manifest: true
+  include_git_ref: true
+  include_sha256: true
+  provider_health: true
+
+# Actual Internet transit/peering remains a separate FTN Core/BGP plane.
+# CDN traffic must never be represented as ISP transit capacity.
