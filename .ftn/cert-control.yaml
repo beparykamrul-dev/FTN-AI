@@ -1,0 +1,11 @@
+version: 1
+service: ftn-cert-control
+mode: integrated
+policy:
+  privileged_actions: approval_required
+  synthetic_data: false
+  secrets_in_git: false
+endpoints:
+  health: /api/health
+  readiness: /api/readyz
+  metrics: /api/metrics
