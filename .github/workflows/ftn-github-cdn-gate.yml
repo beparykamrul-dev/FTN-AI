@@ -1,0 +1,42 @@
+name: FTN GitHub CDN Gate
+
+on:
+  push:
+    paths:
+      - 'configs/v1/ftn-github-cdn.yaml'
+      - 'docs/architecture/FTN-GITHUB-CDN-GLOBAL.md'
+      - '.github/workflows/ftn-github-cdn-gate.yml'
+  pull_request:
+    paths:
+      - 'configs/v1/ftn-github-cdn.yaml'
+      - 'docs/architecture/FTN-GITHUB-CDN-GLOBAL.md'
+      - '.github/workflows/ftn-github-cdn-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate CDN boundary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s configs/v1/ftn-github-cdn.yaml
+          test -s docs/architecture/FTN-GITHUB-CDN-GLOBAL.md
+          grep -q 'provider: github' configs/v1/ftn-github-cdn.yaml
+          grep -q 'provider: jsdelivr' configs/v1/ftn-github-cdn.yaml
+          grep -q 'bgp_transit: false' configs/v1/ftn-github-cdn.yaml
+          grep -q 'production_versioning: immutable_ref' configs/v1/ftn-github-cdn.yaml
+          grep -q 'secrets_in_git: false' configs/v1/ftn-github-cdn.yaml
+
+      - name: Print versioned CDN endpoint pattern
+        shell: bash
+        run: |
+          echo 'https://cdn.jsdelivr.net/gh/beparykamrul-dev/FTN-AI@<immutable-ref>/<path>'
