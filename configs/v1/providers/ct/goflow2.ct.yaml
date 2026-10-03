@@ -1,0 +1,11 @@
+version: v1
+kind: FTNProviderCT
+id: goflow2
+provider_name: GoFlow2
+category: telemetry
+source_repo: https://github.com/netsampler/goflow2
+adapter_kind: telemetry-agent
+capabilities: [netflow, ipfix, sflow]
+policy_mode: standard
+agent_transition: [discovered, normalized, validated, approved, agent_ready]
+production_gates: [source_provenance, license_record, vulnerability_scan, healthcheck, signed_policy]

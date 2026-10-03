@@ -1,0 +1,11 @@
+version: v1
+kind: FTNProviderCT
+id: unbound
+provider_name: Unbound
+category: recursive_dns
+source_repo: https://github.com/NLnetLabs/unbound
+adapter_kind: dns-resolver
+capabilities: [recursive_dns, dnssec, validation]
+policy_mode: standard
+agent_transition: [discovered, normalized, validated, approved, agent_ready]
+production_gates: [source_provenance, license_record, vulnerability_scan, healthcheck, signed_policy]

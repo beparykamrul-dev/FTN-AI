@@ -1,0 +1,209 @@
+version: v1
+name: ftn-global-provider-ct-catalog
+purpose: provider-specific CT metadata for fast database ingestion and later agent onboarding
+
+schema:
+  required: [id, provider_name, category, source_repo, adapter_kind, capabilities, policy_mode]
+  identity: provider_name
+  provenance: source_repo
+  network_identity: [asn, ipv4_prefixes, ipv6_prefixes]
+  credentials: external_secret_ref
+  agent_transition: [discovered, normalized, validated, approved, agent_ready]
+
+providers:
+  - id: powerdns
+    provider_name: PowerDNS
+    category: authoritative_dns
+    source_repo: https://github.com/PowerDNS/pdns
+    adapter_kind: dns-server
+    capabilities: [authoritative_dns, api, dnssec]
+    policy_mode: standard
+  - id: coredns
+    provider_name: CoreDNS
+    category: recursive_dns
+    source_repo: https://github.com/coredns/coredns
+    adapter_kind: dns-server
+    capabilities: [recursive_dns, plugin_dns, api]
+    policy_mode: standard
+  - id: unbound
+    provider_name: Unbound
+    category: recursive_dns
+    source_repo: https://github.com/NLnetLabs/unbound
+    adapter_kind: dns-resolver
+    capabilities: [recursive_dns, dnssec, validation]
+    policy_mode: standard
+  - id: dnsdist
+    provider_name: dnsdist
+    category: dns_proxy
+    source_repo: https://github.com/PowerDNS/dnsdist
+    adapter_kind: dns-proxy
+    capabilities: [dns_load_balancing, health_check, traffic_policy]
+    policy_mode: standard
+  - id: caddy
+    provider_name: Caddy
+    category: edge_tls
+    source_repo: https://github.com/caddyserver/caddy
+    adapter_kind: edge-server
+    capabilities: [tls, acme, http, reverse_proxy]
+    policy_mode: standard
+  - id: wireguard
+    provider_name: WireGuard
+    category: vpn_transport
+    source_repo: https://github.com/WireGuard/wireguard-go
+    adapter_kind: transport-agent
+    capabilities: [encrypted_tunnel, peer_management]
+    policy_mode: restricted
+  - id: openvpn
+    provider_name: OpenVPN
+    category: vpn_transport
+    source_repo: https://github.com/OpenVPN/openvpn
+    adapter_kind: transport-agent
+    capabilities: [encrypted_tunnel, client_server]
+    policy_mode: restricted
+  - id: sing-box
+    provider_name: sing-box
+    category: transport_framework
+    source_repo: https://github.com/SagerNet/sing-box
+    adapter_kind: transport-agent
+    capabilities: [multi_transport, proxy_runtime]
+    policy_mode: restricted
+  - id: hysteria2
+    provider_name: Hysteria 2
+    category: transport
+    source_repo: https://github.com/apernet/hysteria
+    adapter_kind: transport-agent
+    capabilities: [encrypted_transport, congestion_control]
+    policy_mode: restricted
+  - id: xray-core
+    provider_name: Xray-core
+    category: transport_framework
+    source_repo: https://github.com/XTLS/Xray-core
+    adapter_kind: transport-agent
+    capabilities: [multi_transport, proxy_runtime]
+    policy_mode: restricted
+  - id: netbird
+    provider_name: NetBird
+    category: zero_trust_mesh
+    source_repo: https://github.com/netbirdio/netbird
+    adapter_kind: mesh-agent
+    capabilities: [zero_trust_mesh, peer_management, management_api]
+    policy_mode: restricted
+  - id: gobgp
+    provider_name: GoBGP
+    category: routing
+    source_repo: https://github.com/osrg/gobgp
+    adapter_kind: routing-agent
+    capabilities: [bgp, bmp, routing_policy]
+    policy_mode: privileged
+  - id: frr
+    provider_name: FRRouting
+    category: routing
+    source_repo: https://github.com/FRRouting/frr
+    adapter_kind: routing-agent
+    capabilities: [bgp, ospf, isis, evpn, routing_policy]
+    policy_mode: privileged
+  - id: goflow2
+    provider_name: GoFlow2
+    category: telemetry
+    source_repo: https://github.com/netsampler/goflow2
+    adapter_kind: telemetry-agent
+    capabilities: [netflow, ipfix, sflow]
+    policy_mode: standard
+  - id: yaf
+    provider_name: YAF
+    category: flow_telemetry
+    source_repo: https://github.com/bbayles/yaf
+    adapter_kind: telemetry-agent
+    capabilities: [ipfix, flow_analysis]
+    policy_mode: standard
+  - id: silk
+    provider_name: SiLK
+    category: flow_analysis
+    source_repo: https://github.com/bbayles/SiLK
+    adapter_kind: analytics-agent
+    capabilities: [flow_storage, flow_analysis]
+    policy_mode: standard
+  - id: pmacct
+    provider_name: pmacct
+    category: traffic_accounting
+    source_repo: https://github.com/pmacct/pmacct
+    adapter_kind: telemetry-agent
+    capabilities: [netflow, ipfix, bgp, traffic_accounting]
+    policy_mode: standard
+  - id: opentelemetry
+    provider_name: OpenTelemetry
+    category: observability
+    source_repo: https://github.com/open-telemetry/opentelemetry-collector
+    adapter_kind: telemetry-agent
+    capabilities: [metrics, logs, traces, otlp]
+    policy_mode: standard
+  - id: wazuh
+    provider_name: Wazuh
+    category: security_observability
+    source_repo: https://github.com/wazuh/wazuh
+    adapter_kind: security-agent
+    capabilities: [host_monitoring, security_events, vulnerability_detection]
+    policy_mode: standard
+
+provider_integrations:
+  - id: letsencrypt
+    provider_name: Let's Encrypt
+    category: public_acme
+    source_repo: https://github.com/letsencrypt/boulder
+    adapter_kind: acme-client
+    capabilities: [certificate_issuance, certificate_renewal, dns01]
+    policy_mode: standard
+  - id: cloudflare
+    provider_name: Cloudflare
+    category: dns_edge
+    source_repo: https://github.com/cloudflare/cloudflare-go
+    adapter_kind: provider-api
+    capabilities: [dns_api, edge_api, certificate_api]
+    policy_mode: privileged
+  - id: dnspod
+    provider_name: Tencent Cloud DNSPod
+    category: dns_provider
+    source_repo: https://github.com/tencentcloud/tencentcloud-sdk-go
+    adapter_kind: provider-api
+    capabilities: [dns_api, dns01]
+    policy_mode: privileged
+  - id: porkbun
+    provider_name: Porkbun
+    category: domain_dns
+    source_repo: https://github.com/porkbun/porkbun-api
+    adapter_kind: provider-api
+    capabilities: [domain_api, dns_api]
+    policy_mode: privileged
+  - id: duckdns
+    provider_name: DuckDNS
+    category: dynamic_dns
+    source_repo: https://github.com/linuxserver/docker-duckdns
+    adapter_kind: provider-api
+    capabilities: [dynamic_dns]
+    policy_mode: privileged
+  - id: akamai
+    provider_name: Akamai
+    category: edge_dns
+    source_repo: https://github.com/akamai/akamai-open
+    adapter_kind: provider-api
+    capabilities: [dns_api, edge_api]
+    policy_mode: privileged
+
+ct_policy:
+  credentials_from_git: false
+  secrets_external_only: true
+  source_provenance_required: true
+  source_license_record_required: true
+  image_digest_required_before_production: true
+  vulnerability_scan_required: true
+  healthcheck_required: true
+  signed_policy_required: true
+  privileged_actions_require_control_panel_approval: true
+  unknown_provider_default: deny
+
+agent_transition:
+  discovered: metadata_only
+  normalized: schema_validated
+  validated: source_and_runtime_verified
+  approved: control_panel_policy_approved
+  agent_ready: healthcheck_passed_and_identity_bound

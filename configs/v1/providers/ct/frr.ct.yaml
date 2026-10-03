@@ -1,0 +1,11 @@
+version: v1
+kind: FTNProviderCT
+id: frr
+provider_name: FRRouting
+category: routing
+source_repo: https://github.com/FRRouting/frr
+adapter_kind: routing-agent
+capabilities: [bgp, ospf, isis, evpn, routing_policy]
+policy_mode: privileged
+agent_transition: [discovered, normalized, validated, approved, agent_ready]
+production_gates: [source_provenance, license_record, vulnerability_scan, healthcheck, signed_policy, control_panel_approval]

@@ -1,0 +1,11 @@
+version: v1
+kind: FTNProviderCT
+id: dnsdist
+provider_name: dnsdist
+category: dns_proxy
+source_repo: https://github.com/PowerDNS/dnsdist
+adapter_kind: dns-proxy
+capabilities: [dns_load_balancing, health_check, traffic_policy]
+policy_mode: standard
+agent_transition: [discovered, normalized, validated, approved, agent_ready]
+production_gates: [source_provenance, license_record, vulnerability_scan, healthcheck, signed_policy]
